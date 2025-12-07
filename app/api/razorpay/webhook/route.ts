@@ -1,9 +1,10 @@
 export const runtime = "nodejs";
 
 import crypto from "crypto";
-import dbConnect from "../../lib/dbConnect";
-import User from "../../models/User";
+import dbConnect from "../../../lib/dbConnect";
+import User from "../../../models/User";
 import { NextResponse } from "next/server";
+
 
 export async function POST(req: Request) {
   await dbConnect();
