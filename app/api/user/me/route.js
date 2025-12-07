@@ -1,11 +1,11 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
+import dbConnect from "@/app/lib/dbConnect";
+import User from "@/app/models/User";
+
 
 export async function GET() {
   try {
-    // Get user session
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user?.id) {
@@ -14,14 +14,12 @@ export async function GET() {
 
     await dbConnect();
 
-    // Get user from DB
     const user = await User.findById(session.user.id).lean();
 
     if (!user) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Return user data
     return Response.json({
       id: user._id,
       name: user.name,

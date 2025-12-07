@@ -1,9 +1,16 @@
 "use client";
 import { useState } from "react";
 
+// Razorpay को define करना (TypeScript error fix)
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 export default function PricingPage() {
-  const [billing, setBilling] = useState("monthly"); 
-  const [currency, setCurrency] = useState("INR");   
+  const [billing, setBilling] = useState("monthly");
+  const [currency, setCurrency] = useState("INR");
   const [loading, setLoading] = useState(false);
 
   // REAL INDIA PLANS
@@ -47,8 +54,8 @@ export default function PricingPage() {
     },
   };
 
-  // GET PLAN ID BASED ON USER REGION
-  const getPlanId = (plan) => {
+  // GET PLAN ID
+  const getPlanId = (plan: string) => {
     if (plan === "free") return null;
     if (plan === "prelaunch") return process.env.NEXT_PUBLIC_PLAN_PRELAUNCH;
 
@@ -57,11 +64,9 @@ export default function PricingPage() {
       : GLOBAL_PLAN_IDS[plan][billing];
   };
 
-  // ---------------------------------------------------
-  // ⭐ RAZORPAY CHECKOUT HANDLER
-  // ---------------------------------------------------
-  const subscribe = async (plan) => {
-    const planId = getPlanId(plan);
+  // ⭐ RAZORPAY SUBSCRIBE PROCESS
+  const subscribe = async (planKey: string) => {
+    const planId = getPlanId(planKey);
 
     if (!planId) {
       alert("Free plan activated successfully!");
@@ -70,11 +75,11 @@ export default function PricingPage() {
 
     setLoading(true);
 
-    // STEP 1 — CREATE SUBSCRIPTION ON BACKEND
-    const res = await fetch("/api/razorpay/subscribe", {
+    // CREATE SUBSCRIPTION
+    const res = await fetch("/api/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ planId }),
+      body: JSON.stringify({ planId, planKey }),
     });
 
     const data = await res.json();
@@ -85,15 +90,15 @@ export default function PricingPage() {
       return;
     }
 
-    // STEP 2 — RAZORPAY CHECKOUT
+    // OPEN RAZORPAY
     const options = {
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
       subscription_id: data.subscriptionId,
       name: "Trustverse AI",
-      description: `Subscription for ${plan.toUpperCase()} Plan`,
+      description: `Subscription for ${planKey.toUpperCase()} Plan`,
       image: "/logo.png",
 
-      handler: function (response) {
+      handler: function () {
         alert("Payment successful!");
         window.location.href = "/dashboard";
       },
@@ -105,10 +110,8 @@ export default function PricingPage() {
     razorpay.open();
   };
 
-  // ---------------------------------------------------
-  // CARD COMPONENT
-  // ---------------------------------------------------
-  const Card = ({ title, planKey, features, highlight }) => {
+  // ⭐ CARD COMPONENT — highlight = false (default)
+  const Card = ({ title, planKey, features, highlight = false }) => {
     const price = PRICES[currency][planKey];
 
     return (
@@ -151,15 +154,13 @@ export default function PricingPage() {
     );
   };
 
-  // ---------------------------------------------------
-  // UI STARTS
-  // ---------------------------------------------------
+  // UI START
   return (
     <div className="max-w-7xl mx-auto p-6 text-white">
 
       <h1 className="text-4xl font-bold text-center mb-10">Trustverse Pricing</h1>
 
-      {/* Billing Toggle */}
+      {/* BILLING SWITCH */}
       <div className="flex justify-center gap-4 mb-6">
         <button
           className={`px-5 py-2 rounded ${billing === "monthly" ? "bg-blue-600" : "bg-gray-700"}`}
@@ -176,7 +177,7 @@ export default function PricingPage() {
         </button>
       </div>
 
-      {/* Currency Toggle */}
+      {/* CURRENCY SWITCH */}
       <div className="flex justify-center gap-4 mb-12">
         <button
           className={`px-5 py-2 rounded ${currency === "INR" ? "bg-green-600" : "bg-gray-700"}`}
@@ -193,7 +194,7 @@ export default function PricingPage() {
         </button>
       </div>
 
-      {/* TOP — PRE-LAUNCH SPECIAL PLAN */}
+      {/* PRE-LAUNCH OFFER */}
       <div className="mb-16">
         <Card
           title="🚀 Pre-Launch Special Offer"
@@ -207,48 +208,31 @@ export default function PricingPage() {
         />
       </div>
 
-      {/* MAIN 4 PLANS */}
+      {/* MAIN PLANS */}
       <div className="grid md:grid-cols-4 gap-6">
-
         <Card
           title="Free"
           planKey="free"
-          features={[
-            "50 Review Requests",
-            "Free Badge",
-            "Basic Dashboard",
-          ]}
+          features={["50 Review Requests", "Free Badge", "Basic Dashboard"]}
         />
 
         <Card
           title="Essential"
           planKey="essential"
-          features={[
-            "Unlimited Basic Checks",
-            "10 Advanced Checks",
-            "5 PDF Reports",
-          ]}
+          features={["Unlimited Basic Checks", "10 Advanced Checks", "5 PDF Reports"]}
         />
 
         <Card
           title="Pro"
           planKey="pro"
           highlight={true}
-          features={[
-            "Unlimited Advanced Checks",
-            "Unlimited PDF Reports",
-            "AI Scam Detector",
-          ]}
+          features={["Unlimited Advanced Checks", "Unlimited PDF Reports", "AI Scam Detector"]}
         />
 
         <Card
           title="Enterprise"
           planKey="enterprise"
-          features={[
-            "Team Accounts",
-            "Bulk Verification",
-            "API Access",
-          ]}
+          features={["Team Accounts", "Bulk Verification", "API Access"]}
         />
       </div>
     </div>

@@ -42,12 +42,12 @@ export async function POST(req: Request) {
     // HEADER
     drawText("TRUSTVERSE AI - TRUST REPORT", 150, 760, 20);
 
-    // USER + REPORT INFO
+    // USER INFO
     drawText(`Generated For: ${decoded.name}`, 50, 710);
     drawText(`Email: ${decoded.email}`, 50, 690);
     drawText(`Date: ${new Date().toLocaleString()}`, 50, 670);
 
-    // SCORE BLOCK
+    // SCORE
     drawText("Trust Score:", 50, 630, 16);
     drawText(`${record.score}/100`, 180, 630, 20);
 
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     drawText("AI Analysis:", 50, 470, 16);
     drawText(record.analysis, 50, 450, 12);
 
-    // Recommendations
+    // RECOMMENDATION
     drawText("AI Recommendations:", 50, 410, 16);
     drawText(
       record.score > 80
@@ -79,13 +79,17 @@ export async function POST(req: Request) {
 
     const pdfBytes = await pdfDoc.save();
 
-    return new NextResponse(pdfBytes, {
+    // ⭐ FINAL & CORRECT FIX → Uint8Array (supported by NextResponse)
+    const uint8 = new Uint8Array(pdfBytes);
+
+    return new NextResponse(uint8, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": "attachment; filename=trust_report.pdf",
       },
     });
+
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Server Error" }, { status: 500 });

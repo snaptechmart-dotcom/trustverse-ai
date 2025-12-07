@@ -1,31 +1,26 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI!;
+const MONGO_URL = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
-  throw new Error("❌ MONGODB_URI is missing in .env.local");
+if (!MONGO_URL) {
+  throw new Error("❌ MONGODB_URI missing in .env file");
 }
 
-let cached = (global as any).mongoose || { conn: null, promise: null };
+let cached: any = (global as any).mongoose;
+
+if (!cached) {
+  cached = (global as any).mongoose = { conn: null, promise: null };
+}
 
 export default async function dbConnect() {
-  if (cached.conn) {
-    return cached.conn;
-  }
+  if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
     cached.promise = mongoose
-      .connect(MONGODB_URI, {
-        dbName: "trustverse",
-      })
-      .then((mongoose) => {
-        console.log("✅ MongoDB Connected");
-        return mongoose;
-      });
+      .connect(MONGO_URL, { dbName: "trustverse" })
+      .then((mongoose) => mongoose);
   }
 
   cached.conn = await cached.promise;
   return cached.conn;
 }
-
-(global as any).mongoose = cached;

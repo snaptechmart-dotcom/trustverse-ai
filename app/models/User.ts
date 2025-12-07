@@ -1,57 +1,38 @@
-import mongoose from "mongoose";
+import mongoose, { Schema, Document, Model } from "mongoose";
 
-const UserSchema = new mongoose.Schema(
+export interface IUser extends Document {
+  name?: string;
+  email: string;
+  password?: string;
+  plan?: string;
+  subscriptionId?: string;
+  subscriptionStatus?: string;
+  planValidTill?: Date;
+  trustChecksUsed?: number;
+  reportsUsed?: number;
+  lastPaymentId?: string;
+}
+
+const UserSchema: Schema<IUser> = new Schema(
   {
     name: { type: String },
+    email: { type: String, required: true, unique: true },
+    password: { type: String },
 
-    email: { type: String, unique: true, required: true },
+    plan: { type: String, default: "free" },
+    subscriptionId: { type: String },
+    subscriptionStatus: { type: String, default: "inactive" },
+    planValidTill: { type: Date },
 
-    password: { type: String, required: true },
+    trustChecksUsed: { type: Number, default: 0 },
+    reportsUsed: { type: Number, default: 0 },
 
-    // ⭐ CURRENT ACTIVE PLAN
-    plan: {
-      type: String,
-      enum: ["free", "prelaunch", "essential", "pro", "enterprise"],
-      default: "free",
-    },
-
-    // ⭐ PLAN EXPIRY DATE (for monthly/yearly subscriptions)
-    planValidTill: {
-      type: Date,
-      default: null,
-    },
-
-    // ⭐ USAGE LIMIT TRACKING (per billing cycle)
-    trustChecksUsed: {
-      type: Number,
-      default: 0,
-    },
-
-    reportsUsed: {
-      type: Number,
-      default: 0,
-    },
-
-    // ⭐ Razorpay Subscription ID
-    subscriptionId: {
-      type: String,
-      default: null,
-    },
-
-    // ⭐ Razorpay Payment ID (optional: last payment)
-    lastPaymentId: {
-      type: String,
-      default: null,
-    },
-
-    // ⭐ Subscription status
-    subscriptionStatus: {
-      type: String,
-      enum: ["active", "cancelled", "paused", "inactive"],
-      default: "inactive",
-    },
+    lastPaymentId: { type: String }
   },
   { timestamps: true }
 );
 
-export default mongoose.models.User || mongoose.model("User", UserSchema);
+const User: Model<IUser> =
+  mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+
+export default User;
