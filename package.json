@@ -15,13 +15,10 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.555.0",
     "mongoose": "^9.0.0",
-
-    "next": "15.1.6",       // 🔥 UPDATED
+    "next": "15.1.6",
     "next-auth": "^4.24.13",
-
     "pdf-lib": "^1.17.1",
     "razorpay": "^2.9.6",
-
     "react": "19.2.0",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "19.2.0"
@@ -32,7 +29,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.1.6",   // 🔥 same Next.js version
+    "eslint-config-next": "15.1.6",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
