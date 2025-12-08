@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/app/lib/mongodb";
 import User from "@/app/models/User";
-import { History } from "@/app/models/History";
+import { History } from "@/models/History";
+
 
 export async function POST(req: Request) {
   try {
