@@ -3,10 +3,10 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { connectDB } from "@/app/lib/mongodb";
 import User from "@/app/models/User";
 
-const handler = NextAuth({
+export const authOptions = {
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
@@ -22,7 +22,7 @@ const handler = NextAuth({
         if (!isValid) return null;
 
         return {
-          id: user._id.toString(),
+          id: user._id,
           name: user.name,
           email: user.email,
         };
@@ -32,7 +32,8 @@ const handler = NextAuth({
 
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
-});
+};
 
-// ✅ Sir DEKH LO — Yahaan koi authOptions export NAHI HO RAHA
+const handler = NextAuth(authOptions);
+
 export { handler as GET, handler as POST };

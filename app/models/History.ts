@@ -1,16 +1,13 @@
-import { Schema, model, models } from "mongoose";
+import mongoose from "mongoose";
 
-const HistorySchema = new Schema(
+const HistorySchema = new mongoose.Schema(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User" },
-    name: String,
-    info: String,
-    score: Number,
-    analysis: String,
+    userId: { type: String, required: true },
+    input: String,
+    output: String,
+    createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
 
-const HistoryModel = models.History || model("History", HistorySchema);
-
-export default HistoryModel;   // ✅ सबसे जरूरी fix (default export)
+export default mongoose.models.History || mongoose.model("History", HistorySchema);
