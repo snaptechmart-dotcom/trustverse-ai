@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/app/lib/mongodb";
-import { History } from "@/app/models/History"; // ✔ Correct import
+import { History } from "@/app/models/History";
 
 export async function POST(req: Request) {
   try {
@@ -8,15 +8,16 @@ export async function POST(req: Request) {
 
     const { id } = await req.json();
 
-    const deleted = await History.findByIdAndDelete(id); // ✔ Now works
+    // ⭐ FIX: No more type error
+    const deleted = await History.deleteOne({ _id: id });
 
-    if (!deleted) {
+    if (!deleted || deleted.deletedCount === 0) {
       return NextResponse.json({ success: false, message: "Not found" });
     }
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("DELETE ERROR:", err);
+    console.error("DELETE HISTORY ERROR:", err);
     return NextResponse.json({ success: false });
   }
 }
