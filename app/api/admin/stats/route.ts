@@ -1,29 +1,21 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/app/lib/mongodb";
 import User from "@/app/models/User";
-import History from "@/app/models/History";
+import { History } from "@/app/models/History";
 
 export async function GET() {
   try {
     await connectDB();
 
     const totalUsers = await User.countDocuments();
-    const totalHistory = await History.countDocuments();
-
-    // Today’s date for recent scans
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const recent = await History.countDocuments({
-      createdAt: { $gte: today },
-    });
+    const totalChecks = await History.countDocuments();
 
     return NextResponse.json({
       totalUsers,
-      totalHistory,
-      recent,
+      totalChecks,
     });
-  } catch (err) {
+  } catch (error) {
+    console.error("STATS API ERROR:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
