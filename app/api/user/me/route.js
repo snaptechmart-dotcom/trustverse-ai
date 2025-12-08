@@ -1,38 +1,39 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";  // FIXED IMPORT
-import { connectDB } from "@/app/lib/mongodb";                      // FIXED DB IMPORT
+import NextAuth from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { connectDB } from "@/app/lib/mongodb";
 import User from "@/app/models/User";
 
-export async function GET() {
-  try {
-    const session = await getServerSession(authOptions);
+export const authOptions = {
+  providers: [
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
 
-    if (!session || !session.user?.id) {
-      return Response.json({ error: "Not authenticated" }, { status: 401 });
-    }
+      async authorize(credentials) {
+        await connectDB();
 
-    await connectDB();
+        const user = await User.findOne({ email: credentials.email });
+        if (!user) return null;
 
-    const user = await User.findById(session.user.id).lean();
+        const isValid = credentials.password === user.password;
+        if (!isValid) return null;
 
-    if (!user) {
-      return Response.json({ error: "User not found" }, { status: 404 });
-    }
+        return {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+        };
+      },
+    }),
+  ],
 
-    return Response.json({
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      plan: user.plan,
-      planValidTill: user.planValidTill,
-      trustChecksUsed: user.trustChecksUsed,
-      reportsUsed: user.reportsUsed,
-      subscriptionId: user.subscriptionId,
-      subscriptionStatus: user.subscriptionStatus,
-      lastPaymentId: user.lastPaymentId,
-    });
-  } catch (err) {
-    console.error("USER ME API ERROR:", err);
-    return Response.json({ error: "Server error" }, { status: 500 });
-  }
-}
+  session: { strategy: "jwt" },
+  pages: { signIn: "/login" },
+};
+
+const handler = NextAuth(authOptions);
+
+export { handler as GET, handler as POST };
