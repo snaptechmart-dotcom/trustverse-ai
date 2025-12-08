@@ -1,37 +1,19 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/app/lib/mongodb";
-import History from "@/app/models/History";
-import jwt from "jsonwebtoken";
+import { History } from "@/app/models/History";
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     await connectDB();
 
-    // Read user token
-    const token = req.headers.get("cookie")?.split("token=")[1]?.split(";")[0];
-    const decoded: any = jwt.decode(token);
-
-    if (!decoded?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Fetch last 20 scores
-    const items = await History.find({ userId: decoded.id })
+    const history = await History.find({})
       .sort({ createdAt: -1 })
-      .limit(20);
+      .limit(50)
+      .lean();
 
-    // Prepare chart data
-    const labels = items.map((i) =>
-      new Date(i.createdAt).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      })
-    );
-
-    const scores = items.map((i) => i.score);
-
-    return NextResponse.json({ labels, scores });
-  } catch (e) {
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json({ success: true, history });
+  } catch (err) {
+    console.error("HISTORY CHART ERROR:", err);
+    return NextResponse.json({ success: false, error: "Server error" });
   }
 }
