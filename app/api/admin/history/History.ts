@@ -11,6 +11,5 @@ const HistorySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// IMPORTANT FIX → use mongoose.models NOT "models"
 export const History =
   mongoose.models.History || mongoose.model("History", HistorySchema);
