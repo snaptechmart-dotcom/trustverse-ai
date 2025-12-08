@@ -7,38 +7,21 @@ export const authOptions = {
   providers: [
     CredentialsProvider({
       name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
       async authorize(credentials) {
         await connectDB();
-
         const user = await User.findOne({ email: credentials.email });
+
         if (!user) return null;
 
-        const isValid = credentials.password === user.password;
-        if (!isValid) return null;
+        if (credentials.password !== user.password) return null;
 
-        return {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-        };
-      },
-    }),
+        return { id: user._id, email: user.email };
+      }
+    })
   ],
-
-  session: {
-    strategy: "jwt",
-  },
-
-  pages: {
-    signIn: "/login",
-  },
+  session: { strategy: "jwt" },
 };
 
-// ⭐ Correct Next.js 15 Route Handler
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
