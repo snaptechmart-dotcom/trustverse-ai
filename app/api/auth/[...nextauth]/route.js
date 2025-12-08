@@ -18,7 +18,6 @@ export const authOptions = {
         const user = await User.findOne({ email: credentials.email });
         if (!user) return null;
 
-        // ⚠️ यदि आपके DB में password hashed नहीं है — बाद में हम hashing जोड़ देंगे।
         const isValid = credentials.password === user.password;
         if (!isValid) return null;
 
@@ -30,13 +29,11 @@ export const authOptions = {
       },
     }),
   ],
-
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
 };
 
-// ✅ App Router compliant NextAuth handler
 const handler = NextAuth(authOptions);
 
+// ❗ Next.js expects GET and POST exports only
 export { handler as GET, handler as POST };
-export default handler;   // ⭐ Required for Vercel + TS builds
