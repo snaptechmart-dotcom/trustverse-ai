@@ -1,4 +1,4 @@
-import mongoose, { Schema, model, models } from "mongoose";
+import mongoose, { Schema, models, model } from "mongoose";
 
 const HistorySchema = new Schema(
   {
@@ -11,5 +11,8 @@ const HistorySchema = new Schema(
   { timestamps: true }
 );
 
-// Correct export
-export const History = models.History || model("History", HistorySchema);
+// FIXED: Correct model export for Next.js + Mongoose
+const History = models.History || model("History", HistorySchema);
+
+export default History;
+export { History };

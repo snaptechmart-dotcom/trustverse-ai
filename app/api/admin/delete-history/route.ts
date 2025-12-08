@@ -11,6 +11,7 @@ export async function POST(req: Request) {
     // FIX: Correct TS-callable mongoose method
     const deleted = await History.findByIdAndDelete(id);
 
+
     if (!deleted) {
       return NextResponse.json({ success: false, message: "Not found" });
     }
