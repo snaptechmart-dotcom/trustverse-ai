@@ -1,8 +1,8 @@
-import mongoose, { Schema, models } from "mongoose";
+import mongoose from "mongoose";
 
-const HistorySchema = new Schema(
+const HistorySchema = new mongoose.Schema(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User" },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     name: String,
     info: String,
     score: Number,
@@ -11,6 +11,6 @@ const HistorySchema = new Schema(
   { timestamps: true }
 );
 
-// ✔ Correct model export
+// IMPORTANT FIX → use mongoose.models NOT "models"
 export const History =
-  models.History || mongoose.model("History", HistorySchema);
+  mongoose.models.History || mongoose.model("History", HistorySchema);
