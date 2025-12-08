@@ -4,6 +4,7 @@ import User from "@/app/models/User";
 import { History } from "@/models/History";
 
 
+
 export async function GET() {
   try {
     await connectDB();
