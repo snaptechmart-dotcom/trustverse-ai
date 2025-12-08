@@ -3,7 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { connectDB } from "@/app/lib/mongodb";
 import User from "@/app/models/User";
 
-export const authOptions = {
+const handler = NextAuth({
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -32,9 +32,7 @@ export const authOptions = {
 
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
-};
+});
 
-// 🚀 NEXTAUTH HANDLER (CORRECT EXPORT FORMAT FOR APP ROUTER)
-const handler = NextAuth(authOptions);
-
+// ✅ Sir DEKH LO — Yahaan koi authOptions export NAHI HO RAHA
 export { handler as GET, handler as POST };
