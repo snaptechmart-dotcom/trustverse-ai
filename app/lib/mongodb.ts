@@ -1,21 +1,20 @@
 import mongoose from "mongoose";
 
+let isConnected = false;
+
 export async function connectDB() {
-  if (mongoose.connection.readyState >= 1) return;
+  if (isConnected) return;
 
-  const uri = process.env.MONGODB_URI;
-
-  if (!uri) {
-    throw new Error("❌ MONGODB_URI is missing in environment variables.");
+  if (!process.env.MONGODB_URI) {
+    throw new Error("❌ MONGODB_URI is missing in environment variables");
   }
 
   try {
-    await mongoose.connect(uri, {
-      dbName: "trustverse",
-    });
+    const db = await mongoose.connect(process.env.MONGODB_URI);
+    isConnected = db.connections[0].readyState === 1;
     console.log("✅ MongoDB Connected");
-  } catch (err) {
-    console.error("MongoDB Error:", err);
-    throw err;
+  } catch (error) {
+    console.error("❌ MongoDB connection failed:", error);
+    throw error;
   }
 }

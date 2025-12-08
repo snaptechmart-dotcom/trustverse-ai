@@ -3,7 +3,6 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { connectDB } from "@/app/lib/mongodb";
 import User from "@/app/models/User";
 
-
 export const authOptions = {
   providers: [
     CredentialsProvider({
@@ -12,9 +11,8 @@ export const authOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-
       async authorize(credentials) {
-        await connectDB(); // ⭐ REQUIRED
+        await connectDB();
 
         const user = await User.findOne({ email: credentials.email });
         if (!user) return null;
@@ -40,6 +38,7 @@ export const authOptions = {
   },
 };
 
+// ⭐ Correct Next.js 15 Route Handler
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
