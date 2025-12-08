@@ -11,5 +11,5 @@ const HistorySchema = new Schema(
   { timestamps: true }
 );
 
-// FIX: model ko correct type ke saath export karo
+// Correct export
 export const History = models.History || model("History", HistorySchema);
