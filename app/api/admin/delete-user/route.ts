@@ -1,40 +1,27 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/app/lib/mongodb";
 import User from "@/app/models/User";
-import History from "@/models/History";
-
-
-
+import History from "@/app/models/History";
 
 export async function POST(req: Request) {
   try {
     await connectDB();
 
-    const { id } = await req.json();
+    const { userId } = await req.json();
 
-    if (!id) {
+    if (!userId) {
       return NextResponse.json(
-        { success: false, message: "User ID missing" },
+        { success: false, message: "userId required" },
         { status: 400 }
       );
     }
 
-    // ⭐ FIX: Remove findByIdAndDelete (CAUSES TS ERROR)
-    const deletedUser = await User.deleteOne({ _id: id });
+    await User.findByIdAndDelete(userId);
+    await History.deleteMany({ userId });
 
-    if (!deletedUser || deletedUser.deletedCount === 0) {
-      return NextResponse.json(
-        { success: false, message: "User not found" },
-        { status: 404 }
-      );
-    }
-
-    // ⭐ Delete all history for this user
-    await History.deleteMany({ userId: id });
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("DELETE USER ERROR:", err);
+    return NextResponse.json({ success: true, message: "User deleted" });
+  } catch (error) {
+    console.error("DELETE USER ERROR:", error);
     return NextResponse.json(
       { success: false, message: "Server error" },
       { status: 500 }
