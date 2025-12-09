@@ -3,9 +3,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@/models/*": ["app/models/*"],
-      "@/lib/*": ["app/lib/*"],
-      "@/auth/*": ["app/api/auth/*"]
+      "@/app/*": ["app/*"],
+      "@/app/models/*": ["app/models/*"]
     }
   }
 }

@@ -1,8 +1,19 @@
-import mongoose from "mongoose";
+// app/models/History.ts
+import mongoose, { Schema, model, models, Model, Document } from "mongoose";
 
-const HistorySchema = new mongoose.Schema(
+interface IHistory extends Document {
+  userId?: mongoose.Types.ObjectId;
+  name?: string;
+  info?: string;
+  score?: number;
+  analysis?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+const HistorySchema = new Schema<IHistory>(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User" },
     name: String,
     info: String,
     score: Number,
@@ -11,6 +22,9 @@ const HistorySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ⭐ Only ONE named export — NO DEFAULT EXPORT
-export const History =
-  mongoose.models.History || mongoose.model("History", HistorySchema);
+// Ensure correct typing and single model creation
+const History: Model<IHistory> =
+  (models.History as Model<IHistory>) || model<IHistory>("History", HistorySchema);
+
+export default History;
+export type { IHistory };
