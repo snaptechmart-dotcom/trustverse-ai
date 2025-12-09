@@ -1,40 +1,23 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/app/lib/mongodb";
-import User from "@/app/models/User";
-import History from "@/models/History";
+import History from "@/app/models/History";
 
-
-
-
-
-
-
-export async function POST(req: Request) {
+export async function GET() {
   try {
     await connectDB();
 
-    const allHistory = await (History as any).find({}).lean();
+    // रिपोर्ट के लिए पूरी history लाओ
+    const allHistory = await History.find({}).lean();
 
-
-    if (!userId || !info || score === undefined) {
-      return NextResponse.json(
-        { error: "Missing fields" },
-        { status: 400 }
-      );
-    }
-
-    const history = await History.create({
-      userId,
-      info,
-      score,
-      analysis,
+    return NextResponse.json({
+      success: true,
+      count: allHistory.length,
+      data: allHistory,
     });
-
-    return NextResponse.json({ success: true, history });
   } catch (error) {
-    console.error("REPORT API ERROR:", error);
+    console.error("GENERATE REPORT ERROR:", error);
     return NextResponse.json(
-      { error: "Server error" },
+      { success: false, message: "Server error" },
       { status: 500 }
     );
   }
