@@ -8,11 +8,13 @@ import History from "@/models/History";
 
 
 
+
 export async function POST(req: Request) {
   try {
     await connectDB();
 
-    const { userId, info, score, analysis } = await req.json();
+    const allHistory = await (History as any).find({}).lean();
+
 
     if (!userId || !info || score === undefined) {
       return NextResponse.json(

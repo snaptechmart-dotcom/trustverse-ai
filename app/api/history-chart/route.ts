@@ -5,14 +5,13 @@ import History from "@/models/History";
 
 
 
+
 export async function GET() {
   try {
     await connectDB();
 
-    const history = await History.find({})
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean();
+   const allHistory = await (History as any).find({}).lean();
+
 
     return NextResponse.json({ success: true, history });
   } catch (err) {

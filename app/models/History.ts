@@ -1,30 +1,19 @@
 // app/models/History.ts
-import mongoose, { Schema, model, models, Model, Document } from "mongoose";
+import mongoose, { Schema, model, models } from "mongoose";
 
-interface IHistory extends Document {
-  userId?: mongoose.Types.ObjectId;
-  name?: string;
-  info?: string;
-  score?: number;
-  analysis?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-const HistorySchema = new Schema<IHistory>(
+const HistorySchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User" },
-    name: String,
-    info: String,
-    score: Number,
-    analysis: String,
+    name: { type: String },
+    info: { type: String },
+    score: { type: Number },
+    analysis: { type: String },
   },
   { timestamps: true }
 );
 
-// Ensure correct typing and single model creation
-const History: Model<IHistory> =
-  (models.History as Model<IHistory>) || model<IHistory>("History", HistorySchema);
+// Ensure correct typing for TS: prefer exporting default model
+const History = (models.History as mongoose.Model<any>) || model("History", HistorySchema);
 
 export default History;
-export type { IHistory };
+
