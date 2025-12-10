@@ -1,25 +1,21 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/app/lib/mongodb";
-import History from "@/app/models/History";
+import { connectDB } from "@/lib/mongodb";
+import History from "@/models/History";
 
 export async function GET() {
   try {
     await connectDB();
 
-    const chartData = await History.find({})
-      .select("score createdAt")
-      .sort({ createdAt: 1 })
-      .lean();
+    const history = await History.find().sort({ createdAt: 1 });
 
-    return NextResponse.json({
-      success: true,
-      data: chartData,
-    });
+    const chartData = history.map(item => ({
+      date: item.createdAt,
+      count: 1
+    }));
+
+    return NextResponse.json({ chartData });
   } catch (error) {
-    console.error("HISTORY CHART ERROR:", error);
-    return NextResponse.json(
-      { success: false, message: "Server error" },
-      { status: 500 }
-    );
+    console.error("History Chart Error:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

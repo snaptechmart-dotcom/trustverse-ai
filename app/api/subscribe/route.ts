@@ -1,52 +1,23 @@
-import Razorpay from "razorpay";
-import dbConnect from "@/app/lib/dbConnect";
-import User from "@/app/models/User";
-
-import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/mongodb";
+import User from "@/models/User";
 
 export async function POST(req: Request) {
   try {
-    await dbConnect();
+    await connectDB();
 
-    const session = await auth();
+    const { email } = await req.json();
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    const exists = await User.findOne({ email });
+    if (exists) {
+      return NextResponse.json({ message: "Already subscribed" });
     }
 
-    const { planId } = await req.json();
+    await User.create({ email });
 
-    if (!planId) {
-      return NextResponse.json({ error: "Plan ID missing" }, { status: 400 });
-    }
-
-    const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID!,
-      key_secret: process.env.RAZORPAY_KEY_SECRET!,
-    });
-
-    const subscription = await razorpay.subscriptions.create({
-      plan_id: planId,
-      total_count: 120,
-      quantity: 1,
-      customer_notify: 1,
-    });
-
-    await User.findByIdAndUpdate(session.user.id, {
-      subscriptionId: subscription.id,
-      subscriptionStatus: "created",
-    });
-
-    return NextResponse.json({
-      success: true,
-      subscriptionId: subscription.id,
-    });
-  } catch (err) {
-    console.error("Subscribe Error:", err);
-    return NextResponse.json(
-      { error: "Subscription failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Subscribe Error:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
