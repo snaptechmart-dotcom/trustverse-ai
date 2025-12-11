@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/app/lib/mongodb";
-import User from "@/app/models/User";
-import History from "@/app/models/History";
+import { connectDB } from "@/lib/mongodb";
+import User from "@/models/User";
+import History from "@/models/History";
 
 export async function POST(req: Request) {
   try {
@@ -10,24 +10,18 @@ export async function POST(req: Request) {
     const { userId } = await req.json();
 
     if (!userId) {
-      return NextResponse.json(
-        { success: false, message: "userId required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "User ID missing" }, { status: 400 });
     }
 
-    // Delete user
-    await User.findByIdAndDelete(userId);
+    // DELETE USER
+    await User.deleteOne({ _id: userId });
 
-    // Delete user history
+    // DELETE USER HISTORY
     await History.deleteMany({ userId });
 
-    return NextResponse.json({ success: true, message: "User deleted" });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("DELETE USER ERROR:", error);
-    return NextResponse.json(
-      { success: false, message: "Server error" },
-      { status: 500 }
-    );
+    console.error("Delete Error:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

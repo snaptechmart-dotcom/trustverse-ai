@@ -1,25 +1,35 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { connectDB } from "@/app/lib/mongodb";
-import User from "@/app/models/User";
+import { connectDB } from "@/lib/mongodb";
+import User from "@/models/User";
+import bcrypt from "bcryptjs";
 
-const authOptions = {
+const handler = NextAuth({
   providers: [
     CredentialsProvider({
-      name: "credentials",
+      name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
 
-      async authorize(credentials) {
+      async authorize(credentials: any) {
         await connectDB();
 
         const user = await User.findOne({ email: credentials.email });
-        if (!user) return null;
 
-        const isValid = credentials.password === user.password;
-        if (!isValid) return null;
+        if (!user) {
+          throw new Error("User not found");
+        }
+
+        const isValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
+
+        if (!isValid) {
+          throw new Error("Invalid password");
+        }
 
         return {
           id: user._id.toString(),
@@ -31,10 +41,18 @@ const authOptions = {
   ],
 
   session: { strategy: "jwt" },
-  pages: { signIn: "/login" },
-};
 
-// ⭐ ROUTE EXPORTS (only allowed exports)
-const handler = NextAuth(authOptions);
+  callbacks: {
+    async jwt({ token, user }: any) {
+      if (user) token.id = user.id;
+      return token;
+    },
+
+    async session({ session, token }: any) {
+      if (token) session.user.id = token.id;
+      return session;
+    },
+  },
+});
 
 export { handler as GET, handler as POST };

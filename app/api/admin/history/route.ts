@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/app/lib/mongodb";
-import History from "@/app/models/History";
+import { connectDB } from "@/lib/mongodb";
+import History from "@/models/History";
 
 export async function GET() {
   try {
     await connectDB();
 
-    const allHistory = await History.find({}).lean();
+    const history = await History.find({})
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
 
-    return NextResponse.json(allHistory);
+    return NextResponse.json(history);
   } catch (error) {
-    console.error("ADMIN HISTORY ERROR:", error);
-    return NextResponse.json(
-      { success: false, message: "Server error" },
-      { status: 500 }
-    );
+    console.error("History Fetch Error:", error);
+    return NextResponse.json({ error: "Failed to fetch history" }, { status: 500 });
   }
 }

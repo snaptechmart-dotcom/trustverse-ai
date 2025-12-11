@@ -1,23 +1,16 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/app/lib/mongodb";
-import History from "@/app/models/History";
+import { connectDB } from "@/lib/mongodb";
+import History from "@/models/History";
 
 export async function GET() {
   try {
     await connectDB();
 
-    const allHistory = await History.find({}).lean();
+    const history = await History.find().sort({ createdAt: -1 });
 
-    return NextResponse.json({
-      success: true,
-      count: allHistory.length,
-      data: allHistory,
-    });
+    return NextResponse.json({ history });
   } catch (error) {
-    console.error("GENERATE REPORT ERROR:", error);
-    return NextResponse.json(
-      { success: false, message: "Server error" },
-      { status: 500 }
-    );
+    console.error("Report Error:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

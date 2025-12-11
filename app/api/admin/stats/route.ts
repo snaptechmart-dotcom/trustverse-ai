@@ -1,25 +1,21 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/app/lib/mongodb";
-import User from "@/app/models/User";
-import History from "@/app/models/History";
-
-
-
-
+import { connectDB } from "@/lib/mongodb";
+import User from "@/models/User";
+import History from "@/models/History";
 
 export async function GET() {
   try {
     await connectDB();
 
     const totalUsers = await User.countDocuments();
-    const totalChecks = await History.countDocuments();
+    const totalHistory = await History.countDocuments();
 
     return NextResponse.json({
-      totalUsers,
-      totalChecks,
+      users: totalUsers,
+      history: totalHistory,
     });
   } catch (error) {
-    console.error("STATS API ERROR:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    console.error("Stats Error:", error);
+    return NextResponse.json({ error: "Server Error" }, { status: 500 });
   }
 }
