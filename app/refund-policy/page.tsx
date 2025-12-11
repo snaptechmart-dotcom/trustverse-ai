@@ -1,44 +1,40 @@
 export default function RefundPolicy() {
   return (
-    <div className="max-w-4xl mx-auto p-6 text-white">
-      <h1 className="text-3xl font-bold mb-4">Refund & Cancellation Policy</h1>
-      <p>Last Updated: 12 December 2025</p>
+    <div className="max-w-4xl mx-auto px-6 py-12">
+      <h1 className="text-3xl font-bold mb-6 text-center">Refund Policy</h1>
 
-      <h2 className="text-xl font-semibold mt-6">1. No Refund Policy</h2>
-      <p>
-        All purchases made on Trustverse AI are final. Since all services are
-        digital and instantly accessible, we do not provide refunds under any
-        circumstances.
+      <p className="mb-4">
+        At <strong>Trustverse AI</strong>, we are committed to providing high quality AI tools 
+        and services. However, due to the nature of digital products, all purchases made 
+        on Trustverse AI are <strong>non-refundable</strong>.
       </p>
 
-      <h2 className="text-xl font-semibold mt-6">2. Automatic Subscription Renewal</h2>
+      <h2 className="text-xl font-semibold mt-6 mb-2">📝 When Refunds Are Not Provided</h2>
+      <ul className="list-disc ml-6 space-y-2">
+        <li>AI Credits once used cannot be reversed.</li>
+        <li>No refund for subscription plans after activation.</li>
+        <li>No refund if tools or features are fully accessible after payment.</li>
+      </ul>
+
+      <h2 className="text-xl font-semibold mt-6 mb-2">📌 Exceptional Cases</h2>
+      <p className="mb-4">
+        Refunds may be considered only if:
+      </p>
+      <ul className="list-disc ml-6 space-y-2">
+        <li>You were charged incorrectly.</li>
+        <li>Duplicate payment was made accidentally.</li>
+      </ul>
+
+      <h2 className="text-xl font-semibold mt-6 mb-2">📩 Contact Us</h2>
       <p>
-        Subscriptions renew automatically unless cancelled before the renewal
-        date.
+        If you believe you are eligible for a refund, please contact our support team at:  
+        <br />
+        <strong>support@trustverseai.com</strong>
       </p>
 
-      <h2 className="text-xl font-semibold mt-6">3. Cancellation Policy</h2>
-      <p>
-        You may cancel your subscription anytime by contacting us at
-        support@trustverseai.com. Cancellation does not provide a refund but will
-        stop future charges.
+      <p className="mt-10 text-center text-gray-500">
+        Last Updated: {new Date().getFullYear()}
       </p>
-
-      <h2 className="text-xl font-semibold mt-6">4. Failed Transactions</h2>
-      <p>
-        If money is deducted but access is not provided, contact us with your
-        payment details. We will verify and activate your access.
-      </p>
-
-      <h2 className="text-xl font-semibold mt-6">5. Razorpay Payment Policies</h2>
-      <p>
-        All payments follow Razorpay's secure processing and banking guidelines.
-      </p>
-
-      <h2 className="text-xl font-semibold mt-6">6. Contact Us</h2>
-      <p>Email: support@trustverseai.com</p>
-
-      <p className="mt-8 font-semibold">Trustverse AI – Verify Anything with Confidence</p>
     </div>
   );
 }
