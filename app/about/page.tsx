@@ -1,50 +1,25 @@
 export default function About() {
   return (
-    <div className="max-w-3xl mx-auto p-6 text-white">
-      <h1 className="text-3xl font-bold mb-4">About Us</h1>
+    <div className="max-w-3xl mx-auto py-16 px-4">
+      <h1 className="text-3xl font-bold mb-6">About Trustverse AI</h1>
 
-      <p className="mb-6">
-        Trustverse AI is an advanced identity verification and trust scoring
-        platform designed to protect users from fraud, fake profiles, and
-        online scams.
+      <p className="text-lg text-gray-700 leading-relaxed">
+        Trustverse AI एक advanced verification & analysis platform है जो 
+        AI-powered tools की मदद से users को online trust बनाने में मदद करता है।
       </p>
 
-      <h2 className="text-xl font-semibold mb-2">Our Mission</h2>
-      <p className="mb-6">
-        To make the internet a safer and more trustworthy place using the
-        power of AI.
+      <br />
+
+      <p className="text-lg text-gray-700 leading-relaxed">
+        हमारा मिशन है कि हर व्यक्ति बिना डर और confusion के किसी भी number, profile,
+        message या document को verify कर सके — completely automated AI system के साथ।
       </p>
 
-      <h2 className="text-xl font-semibold mb-2">What We Do</h2>
-      <ul className="list-disc ml-6 mb-6">
-        <li>AI-powered Identity Verification</li>
-        <li>Profile Trust Score Analysis</li>
-        <li>Phone Number & Email Authenticity Check</li>
-        <li>Social Media Risk Assessment</li>
-        <li>Fraud Detection Patterns</li>
-        <li>Advanced AI Reports</li>
-      </ul>
+      <br />
 
-      <h2 className="text-xl font-semibold mb-2">Why We Built Trustverse AI</h2>
-      <p className="mb-6">
-        Millions of users face online scams every day. Fake accounts, fraud
-        calls, misleading profiles, identity misuse — these problems are
-        growing rapidly. Trustverse AI helps users instantly detect risk and
-        stay safe.
-      </p>
-
-      <h2 className="text-xl font-semibold mb-2">Our Values</h2>
-      <ul className="list-disc ml-6 mb-6">
-        <li>Transparency</li>
-        <li>Safety</li>
-        <li>Privacy</li>
-        <li>Innovation</li>
-        <li>Reliability</li>
-      </ul>
-
-      <p className="mt-6">
-        Thank you for trusting Trustverse AI. Together, let's build a safer
-        digital world.
+      <p className="text-lg text-gray-700 leading-relaxed">
+        Trustverse AI पूरी तरह से safe, secure और privacy-focused technology पर बनाया गया है।
+        हम user data को misuse नहीं करते और न ही store करते हैं।
       </p>
     </div>
   );
