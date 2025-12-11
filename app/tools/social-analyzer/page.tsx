@@ -1,150 +1,102 @@
-// app/tools/social-analyzer/page.tsx
 "use client";
-
 import { useState } from "react";
 
 export default function SocialAnalyzer() {
-  const [platform, setPlatform] = useState("Instagram");
-  const [handle, setHandle] = useState("");
-  const [result, setResult] = useState<any>(null);
+  const [platform, setPlatform] = useState("Facebook");
+  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
+  const [analysis, setAnalysis] = useState<any>(null);
 
   const analyze = async () => {
-    if (!handle.trim()) {
-      alert("Please enter a handle/username");
-      return;
-    }
     setLoading(true);
-    try {
-      const res = await fetch("/api/social-analyzer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ platform, handle }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        alert(data.error);
-      } else {
-        setResult(data.analysis);
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Server error");
-    } finally {
-      setLoading(false);
-    }
+    setAnalysis(null);
+
+    const res = await fetch("/api/social-analyzer", {
+      method: "POST",
+      body: JSON.stringify({ platform, username }),
+    });
+
+    const json = await res.json();
+    setAnalysis(json.analysis);
+    setLoading(false);
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-4">Social Analyzer</h1>
+    <div className="max-w-3xl mx-auto mt-10 p-5">
+      <h1 className="text-3xl font-bold text-center mb-6">
+        🌐 Social Profile Analyzer
+      </h1>
 
-      <div className="bg-white p-6 rounded-xl shadow border">
-        <label className="block font-semibold">Platform</label>
+      <div className="bg-gray-900 p-6 rounded-lg space-y-4">
         <select
+          className="w-full p-3 rounded bg-gray-800 text-white border"
           value={platform}
           onChange={(e) => setPlatform(e.target.value)}
-          className="w-full p-3 border rounded mt-2 mb-4"
         >
-          <option>Instagram</option>
-          <option>Twitter/X</option>
-          <option>LinkedIn</option>
           <option>Facebook</option>
-          <option>YouTube</option>
-          <option>Telegram</option>
-          <option>Other</option>
+          <option>Instagram</option>
+          <option>Twitter</option>
+          <option>LinkedIn</option>
         </select>
 
-        <label className="block font-semibold">Handle / Username</label>
         <input
-          value={handle}
-          onChange={(e) => setHandle(e.target.value)}
-          className="w-full p-3 border rounded mt-2 mb-4"
-          placeholder="e.g. @company_official or username123"
+          type="text"
+          placeholder="Enter username..."
+          className="w-full p-3 rounded bg-gray-800 text-white border"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
         />
 
-        <div className="flex gap-4">
-          <button
-            onClick={analyze}
-            className="px-4 py-2 bg-black text-white rounded"
-            disabled={loading}
-          >
-            {loading ? "Analyzing..." : "Analyze"}
-          </button>
-
-          <button
-            onClick={() => {
-              setHandle("");
-              setResult(null);
-            }}
-            className="px-4 py-2 border rounded"
-          >
-            Reset
-          </button>
-        </div>
+        <button
+          onClick={analyze}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-lg font-semibold"
+          disabled={loading}
+        >
+          {loading ? "Analyzing..." : "Analyze Profile"}
+        </button>
       </div>
 
-      {result && (
-        <div className="mt-6 bg-white p-6 rounded-xl shadow border">
-          <h2 className="text-2xl font-bold mb-2">Analysis Result</h2>
+      {analysis && (
+        <div className="mt-8 p-6 bg-gray-800 text-white rounded-lg shadow-lg">
+          <h2 className="text-xl font-semibold mb-4">📊 Results</h2>
 
-          <div className="mb-3">
-            <b>Platform:</b> {result.platform}
-          </div>
+          <p>
+            <strong>Platform:</strong> {analysis.platform}
+          </p>
 
-          <div className="mb-3">
-            <b>Handle:</b> {result.handle}
-          </div>
+          <p>
+            <strong>Username:</strong> {analysis.username}
+          </p>
 
-          <div className="mb-3">
-            <b>Trust Score:</b>{" "}
-            <span className="text-2xl font-bold">{result.score}/100</span>
-          </div>
+          <p>
+            <strong>Profile Exists:</strong>{" "}
+            <span className={analysis.profileExists ? "text-green-400" : "text-red-400"}>
+              {analysis.profileExists ? "Yes" : "No"}
+            </span>
+          </p>
 
-          <div className="mb-3">
-            <b>Scam Probability:</b> {result.scamProbability}%
-          </div>
+          <p>
+            <strong>Followers:</strong> {analysis.followers}
+          </p>
 
-          <div className="mb-3">
-            <b>Flags:</b>
-            <ul className="list-disc pl-6 mt-1">
-              {result.flags.map((f: string, i: number) => (
-                <li key={i}>{f}</li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="mb-3">
-            <b>Recommendations:</b>
-            <ul className="list-disc pl-6 mt-1">
-              {result.recommendations.map((r: string, i: number) => (
-                <li key={i}>{r}</li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="mt-4 flex gap-3">
-            <button
-              onClick={() => {
-                // optionally scroll to history or show more options
-                window.location.href = "/dashboard/history";
-              }}
-              className="px-4 py-2 bg-gray-800 text-white rounded"
+          <p>
+            <strong>Risk Level:</strong>{" "}
+            <span
+              className={
+                analysis.risk === "Low"
+                  ? "text-green-400"
+                  : analysis.risk === "Medium"
+                  ? "text-yellow-400"
+                  : "text-red-400"
+              }
             >
-              View History
-            </button>
+              {analysis.risk}
+            </span>
+          </p>
 
-            <button
-              onClick={() => {
-                // quick copy json
-                navigator.clipboard.writeText(JSON.stringify(result, null, 2));
-                alert("Analysis copied to clipboard");
-              }}
-              className="px-4 py-2 border rounded"
-            >
-              Copy JSON
-            </button>
-          </div>
+          <p>
+            <strong>Activity Score:</strong> {analysis.activityScore}%
+          </p>
         </div>
       )}
     </div>

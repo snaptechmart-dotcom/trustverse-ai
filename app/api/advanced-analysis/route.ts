@@ -1,58 +1,28 @@
 import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/mongodb";
+import History from "@/models/History";
 
 export async function POST(req: Request) {
   try {
-    const { name, info } = await req.json();
+    await connectDB();
 
-    if (!name || !info) {
-      return NextResponse.json(
-        { error: "Name and information are required" },
-        { status: 400 }
-      );
-    }
+    const { text } = await req.json();
 
-    // 🔥 ADVANCED AI LOGIC (Offline pseudo-GPT reasoning)
+    // Dummy analysis logic (later upgrade with real AI)
+    const analysis = {
+      redFlags: text.length > 50 ? "Possible scam indicators found" : "Low risk",
+      complexity: text.length,
+      probability: Math.min(100, text.length * 1.5),
+    };
 
-    const positiveWords = ["verified", "genuine", "authentic", "trusted", "secure"];
-    const negativeWords = ["fraud", "scam", "fake", "spam", "suspicious", "risky"];
-    
-    let positivity = 0;
-    let negativity = 0;
-
-    positiveWords.forEach(w => {
-      if (info.toLowerCase().includes(w)) positivity += 1;
+    await History.create({
+      prompt: text,
+      response: JSON.stringify(analysis),
     });
 
-    negativeWords.forEach(w => {
-      if (info.toLowerCase().includes(w)) negativity += 1;
-    });
-
-    const scamProbability = Math.min(95, negativity * 20);
-    const trustScore = Math.max(5, 90 - scamProbability + positivity * 5);
-
-    const insights = [];
-
-    if (negativity > 0) insights.push("⚠ Some negative keywords detected in the profile.");
-    if (positivity > 0) insights.push("✔ Positive reputation markers found.");
-    if (info.length > 200) insights.push("✔ Detailed information increases trust signal.");
-    if (info.length < 50) insights.push("⚠ Very short description reduces trust confidence.");
-
-    const verdict =
-      trustScore > 80
-        ? "Highly Trustworthy"
-        : trustScore > 60
-        ? "Moderately Trustworthy"
-        : "Low Trust – Needs Deep Verification";
-
-    return NextResponse.json({
-      name,
-      trustScore,
-      scamProbability,
-      insights,
-      verdict,
-    });
-
-  } catch (e) {
-    return NextResponse.json({ error: "Server Error" }, { status: 500 });
+    return NextResponse.json(analysis);
+  } catch (error) {
+    console.error("Advanced AI Error:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

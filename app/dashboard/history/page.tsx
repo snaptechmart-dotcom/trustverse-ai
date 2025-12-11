@@ -3,71 +3,45 @@
 import { useEffect, useState } from "react";
 
 export default function HistoryPage() {
-  const [items, setItems] = useState([]);
+  const [history, setHistory] = useState([]);
 
-  // FETCH HISTORY FROM API
   useEffect(() => {
-    fetch("/api/history")
-      .then((res) => res.json())
-      .then((data) => setItems(data.history));
+    async function fetchHistory() {
+      try {
+        const response = await fetch("/api/history-chart");
+        const data = await response.json();
+
+        setHistory(data.history || []);
+      } catch (error) {
+        console.error("Error fetching history:", error);
+      }
+    }
+
+    fetchHistory();
   }, []);
 
-  // DOWNLOAD REPORT FUNCTION
-  const downloadReport = async (id: string) => {
-    const res = await fetch("/api/generate-report", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scoreId: id }),
-    });
-
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "trust_report.pdf";
-    a.click();
-
-    window.URL.revokeObjectURL(url);
-  };
-
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">Trust Score History</h1>
+    <div className="p-10">
+      <h1 className="text-3xl font-bold mb-6">Your Activity History</h1>
 
-      <table className="w-full bg-white border rounded-xl shadow">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="p-3 border">Name</th>
-            <th className="p-3 border">Score</th>
-            <th className="p-3 border">Analysis</th>
-            <th className="p-3 border">Date</th>
-            <th className="p-3 border">Report</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {items.map((item: any, index) => (
-            <tr key={index} className="text-center">
-              <td className="p-3 border">{item.name}</td>
-              <td className="p-3 border font-bold">{item.score}</td>
-              <td className="p-3 border">{item.analysis}</td>
-              <td className="p-3 border">
-                {new Date(item.createdAt).toLocaleString()}
-              </td>
-
-              <td className="p-3 border">
-                <button
-                  onClick={() => downloadReport(item._id)}
-                  className="px-3 py-1 bg-black text-white rounded"
-                >
-                  Download PDF
-                </button>
-              </td>
-            </tr>
+      {history.length === 0 ? (
+        <p className="text-gray-500">No activity found.</p>
+      ) : (
+        <div className="space-y-4">
+          {history.map((item, index) => (
+            <div
+              key={index}
+              className="p-4 bg-white shadow rounded-lg border border-gray-100"
+            >
+              <h2 className="text-lg font-semibold">{item.type}</h2>
+              <p className="text-gray-600">{item.input}</p>
+              <p className="text-sm text-gray-400 mt-1">
+                {new Date(item.date).toLocaleString()}
+              </p>
+            </div>
           ))}
-        </tbody>
-      </table>
+        </div>
+      )}
     </div>
   );
 }

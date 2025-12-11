@@ -8,14 +8,29 @@ export async function POST(req: Request) {
 
     const { text } = await req.json();
 
-    const trustScore = Math.min(100, text.length * 2); // Example logic
+    if (!text) {
+      return NextResponse.json({ error: "Text required" }, { status: 400 });
+    }
+
+    const trustScore = Math.min(100, Math.floor(Math.random() * 95) + 5);
+
+    const scoreData = {
+      trustScore,
+      risk:
+        trustScore > 80
+          ? "Low"
+          : trustScore > 50
+          ? "Medium"
+          : "High",
+      confidence: `${Math.floor(Math.random() * 40) + 60}%`,
+    };
 
     await History.create({
       prompt: text,
-      response: JSON.stringify({ trustScore }),
+      response: JSON.stringify(scoreData),
     });
 
-    return NextResponse.json({ trustScore });
+    return NextResponse.json(scoreData);
   } catch (error) {
     console.error("Trust Score Error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

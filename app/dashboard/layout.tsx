@@ -1,34 +1,16 @@
-import Link from "next/link";
+// app/dashboard/layout.tsx
+import Sidebar from "@/components/Sidebar";
 
-export default function DashboardLayout({ children }) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-gray-100">
+      {/* Sidebar */}
+      <Sidebar />
 
-      {/* SIDEBAR */}
-      <aside className="w-64 bg-gray-900 text-white p-6 space-y-6">
-        <h2 className="text-2xl font-bold">Trustverse AI</h2>
-
-        <nav className="flex flex-col space-y-4 mt-8">
-          <Link className="hover:text-gray-300" href="/dashboard">
-            📊 Dashboard
-          </Link>
-
-          <Link className="hover:text-gray-300" href="/tools">
-            🛠 AI Tools
-          </Link>
-
-          <Link className="hover:text-gray-300" href="/profile">
-            👤 Profile
-          </Link>
-
-          <Link className="hover:text-gray-300" href="/logout">
-            🚪 Logout
-          </Link>
-        </nav>
-      </aside>
-
-      {/* MAIN CONTENT */}
-      <main className="flex-1 p-8 bg-gray-100">{children}</main>
+      {/* Main content */}
+      <div className="flex-1 p-6">
+        {children}
+      </div>
     </div>
   );
 }
