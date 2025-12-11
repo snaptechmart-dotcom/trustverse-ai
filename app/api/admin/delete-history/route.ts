@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "User ID missing" }, { status: 400 });
     }
 
-    // DELETE USER (SAFE METHOD)
+    // DELETE USER
     await User.deleteOne({ _id: userId });
 
     // DELETE USER HISTORY
