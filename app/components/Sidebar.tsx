@@ -29,7 +29,7 @@ export default function Sidebar() {
               key={href}
               href={href}
               className={`flex items-center gap-3 p-3 mb-2 rounded-lg transition 
-              ${active ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"}`}
+                ${active ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"}`}
             >
               <Icon size={20} />
               {name}
