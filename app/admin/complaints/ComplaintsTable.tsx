@@ -17,30 +17,52 @@ export default function ComplaintsTable() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
+    // 🔒 VERY IMPORTANT — Vercel build guard
+    if (typeof window === "undefined") return;
+
     fetchComplaints();
   }, []);
 
   const fetchComplaints = async () => {
-    const res = await fetch("/api/admin/complaints");
-    const data = await res.json();
-    setComplaints(data);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/admin/complaints", {
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        console.error("Failed to fetch complaints");
+        setLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+      setComplaints(data);
+    } catch (error) {
+      console.error("Error fetching complaints:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateStatus = async (
     id: string,
     status: "resolved" | "rejected"
   ) => {
-    setActionLoading(id);
+    try {
+      setActionLoading(id);
 
-    await fetch("/api/admin/complaints", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status }),
-    });
+      await fetch("/api/admin/complaints", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
 
-    await fetchComplaints();
-    setActionLoading(null);
+      await fetchComplaints();
+    } catch (error) {
+      console.error("Error updating complaint:", error);
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   if (loading) return <p>Loading complaints...</p>;
@@ -79,14 +101,14 @@ export default function ComplaintsTable() {
                       onClick={() => updateStatus(c._id, "resolved")}
                       className="px-2 py-1 bg-green-600 text-white rounded"
                     >
-                      Approve
+                      {actionLoading === c._id ? "..." : "Approve"}
                     </button>
                     <button
                       disabled={actionLoading === c._id}
                       onClick={() => updateStatus(c._id, "rejected")}
                       className="px-2 py-1 bg-red-600 text-white rounded"
                     >
-                      Reject
+                      {actionLoading === c._id ? "..." : "Reject"}
                     </button>
                   </>
                 ) : (

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+export const dynamic = "force-dynamic";
+
 
 type Complaint = {
   _id: string;
