@@ -1,11 +1,11 @@
 import "./globals.css";
-import type { Metadata } from "next";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import Providers from "./providers";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Trustverse AI",
-  description: "AI Tools, Automation & Productivity Platform",
+  description: "AI-powered trust verification platform",
 };
 
 export default function RootLayout({
@@ -15,19 +15,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-white text-black">
-        
-        {/* Top Navbar */}
-        <Navbar />
-
-        {/* Main Page Content */}
-        <main className="min-h-screen">
-          {children}
-        </main>
-
-        {/* Footer at the bottom */}
-        <Footer />
-
+      <body className="bg-[#020B14] text-white">
+        <Providers>
+          <Navbar />
+          <main className="min-h-screen">{children}</main>
+          <Footer />
+        </Providers>
       </body>
     </html>
   );

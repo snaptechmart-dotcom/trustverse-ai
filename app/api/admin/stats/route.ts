@@ -1,21 +1,23 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
+import dbConnect from "@/lib/db";
 import User from "@/models/User";
 import History from "@/models/History";
 
 export async function GET() {
   try {
-    await connectDB();
+    await dbConnect();
 
-    const totalUsers = await User.countDocuments();
-    const totalHistory = await History.countDocuments();
+    const usersCount = await User.countDocuments();
+    const historyCount = await History.countDocuments();
 
     return NextResponse.json({
-      users: totalUsers,
-      history: totalHistory,
+      users: usersCount,
+      trustEvents: historyCount,
     });
   } catch (error) {
-    console.error("Stats Error:", error);
-    return NextResponse.json({ error: "Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to load admin stats" },
+      { status: 500 }
+    );
   }
 }

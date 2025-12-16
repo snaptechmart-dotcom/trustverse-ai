@@ -1,56 +1,76 @@
 "use client";
+
 import { useEffect, useState } from "react";
 
+type HistoryItem = {
+  _id: string;
+  action: string;
+  adminEmail?: string;
+  profileUsername?: string;
+  reason?: string;
+  createdAt: string;
+};
+
 export default function AdminHistoryPage() {
-  const [items, setItems] = useState([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load history
-  const loadHistory = async () => {
-    const res = await fetch("/api/admin/history");
-    const data = await res.json();
-    setItems(data.items || []);
-  };
-
-  // Delete history record
-  const deleteHistory = async (id) => {
-    if (!confirm("Delete this history record?")) return;
-
-    await fetch("/api/admin/delete-history", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-
-    loadHistory();
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch("/api/admin/history");
+      const data = await res.json();
+      setHistory(data);
+    } catch (err) {
+      console.error("Failed to load history", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    loadHistory();
+    fetchHistory();
   }, []);
 
+  if (loading) return <p>Loading history...</p>;
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold">Admin – History</h1>
+    <div>
+      <h2 className="text-2xl font-bold mb-4">Admin Activity History</h2>
 
-      {items.length === 0 && <p className="mt-4">No history yet.</p>}
+      <div className="bg-white rounded shadow overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-3 text-left">Action</th>
+              <th className="p-3 text-left">Profile</th>
+              <th className="p-3 text-left">Admin</th>
+              <th className="p-3 text-left">Reason</th>
+              <th className="p-3 text-left">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.length === 0 && (
+              <tr>
+                <td colSpan={5} className="p-4 text-center text-gray-500">
+                  No history found
+                </td>
+              </tr>
+            )}
 
-      {items.map((item) => (
-        <div
-          key={item._id}
-          className="border p-3 mt-4 rounded shadow-sm bg-white"
-        >
-          <p><strong>User ID:</strong> {item.userId}</p>
-          <p><strong>Score:</strong> {item.score}</p>
-          <p><strong>Analysis:</strong> {item.analysis}</p>
-
-          <button
-            onClick={() => deleteHistory(item._id)}
-            className="mt-2 px-3 py-1 bg-red-600 text-white rounded"
-          >
-            Delete
-          </button>
-        </div>
-      ))}
+            {history.map((h) => (
+              <tr key={h._id} className="border-t">
+                <td className="p-3 font-medium">{h.action}</td>
+                <td className="p-3">{h.profileUsername || "—"}</td>
+                <td className="p-3">{h.adminEmail || "—"}</td>
+                <td className="p-3">{h.reason || "—"}</td>
+                <td className="p-3">
+                  {new Date(h.createdAt).toLocaleString()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

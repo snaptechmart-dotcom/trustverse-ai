@@ -1,78 +1,84 @@
-"use client";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import {
-  AiOutlineSafety,
-  AiOutlinePhone,
-  AiOutlineRobot,
-  AiOutlineHistory,
-  AiOutlineUser,
-} from "react-icons/ai";
 
-export default function ToolsHome() {
-  const tools = [
-    {
-      title: "Trust Score Analyzer",
-      desc: "AI-powered trust scoring with risk level classification.",
-      icon: <AiOutlineSafety size={40} />,
-      color: "bg-blue-600",
-      link: "/tools/trust-score",
-    },
-    {
-      title: "Phone Number Checker",
-      desc: "Detect validity, activity status, and spam probability.",
-      icon: <AiOutlinePhone size={40} />,
-      color: "bg-green-600",
-      link: "/tools/phone-check",
-    },
-    {
-      title: "Social Analyzer",
-      desc: "Analyze usernames from FB, Instagram, Twitter, LinkedIn.",
-      icon: <AiOutlineUser size={40} />,
-      color: "bg-purple-600",
-      link: "/tools/social-analyzer",
-    },
-    {
-      title: "Advanced AI Analysis",
-      desc: "Deep AI reasoning: red flags, scam signals, probability.",
-      icon: <AiOutlineRobot size={40} />,
-      color: "bg-orange-600",
-      link: "/tools/advanced",
-    },
-    {
-      title: "Report History",
-      desc: "View all previous checks and AI report logs.",
-      icon: <AiOutlineHistory size={40} />,
-      color: "bg-gray-700",
-      link: "/tools/history",
-    },
-  ];
-
+export default function ToolsPage() {
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4">Trustverse AI Tools</h1>
+    <div className="min-h-screen bg-white px-6 py-16">
+      <h1 className="text-4xl font-bold text-center mb-12">
+        Trustverse AI Tools
+      </h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tools.map((t, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className={`p-6 rounded-xl text-white shadow-lg ${t.color}`}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+
+        {/* 1 — Trust Score Analyzer */}
+        <div className="bg-blue-600 text-white p-6 rounded-xl shadow-lg">
+          <h2 className="text-2xl font-semibold mb-2">Trust Score Analyzer</h2>
+          <p className="opacity-90 mb-4">
+            AI-powered trust scoring with risk level classification.
+          </p>
+          <Link
+            href="/tools/trust-score"
+            className="bg-white text-black px-4 py-2 rounded shadow font-bold inline-block"
           >
-            <div className="mb-3">{t.icon}</div>
-            <h2 className="text-xl font-semibold">{t.title}</h2>
-            <p className="text-sm mt-2">{t.desc}</p>
+            Open Tool
+          </Link>
+        </div>
 
-            <Link
-              href={t.link}
-              className="inline-block mt-4 bg-white text-black px-4 py-2 rounded-lg font-semibold"
-            >
-              Open Tool
-            </Link>
-          </motion.div>
-        ))}
+        {/* 2 — Phone Number Checker */}
+        <div className="bg-green-600 text-white p-6 rounded-xl shadow-lg">
+          <h2 className="text-2xl font-semibold mb-2">Phone Number Checker</h2>
+          <p className="opacity-90 mb-4">
+            Detect validity, activity status, and spam probability.
+          </p>
+          <Link
+            href="/tools/phone-check"
+            className="bg-white text-black px-4 py-2 rounded shadow font-bold inline-block"
+          >
+            Open Tool
+          </Link>
+        </div>
+
+        {/* 3 — Social Analyzer */}
+        <div className="bg-purple-600 text-white p-6 rounded-xl shadow-lg">
+          <h2 className="text-2xl font-semibold mb-2">Social Analyzer</h2>
+          <p className="opacity-90 mb-4">
+            Analyze usernames from FB, Instagram, Twitter, LinkedIn.
+          </p>
+          <Link
+            href="/tools/social-analyzer"
+            className="bg-white text-black px-4 py-2 rounded shadow font-bold inline-block"
+          >
+            Open Tool
+          </Link>
+        </div>
+
+        {/* 4 — Advanced AI Analysis */}
+        <div className="bg-orange-600 text-white p-6 rounded-xl shadow-lg">
+          <h2 className="text-2xl font-semibold mb-2">Advanced AI Analysis</h2>
+          <p className="opacity-90 mb-4">
+            Deep AI reasoning, risk signals, scam probability.
+          </p>
+          <Link
+            href="/tools/advanced-ai"
+            className="bg-white text-black px-4 py-2 rounded shadow font-bold inline-block"
+          >
+            Open Tool
+          </Link>
+        </div>
+
+        {/* 5 — Report History */}
+        <div className="bg-gray-700 text-white p-6 rounded-xl shadow-lg">
+          <h2 className="text-2xl font-semibold mb-2">Report History</h2>
+          <p className="opacity-90 mb-4">
+            View previous verifications and AI reports.
+          </p>
+          <Link
+            href="/tools/history"
+            className="bg-white text-black px-4 py-2 rounded shadow font-bold inline-block"
+          >
+            Open Tool
+          </Link>
+        </div>
+
       </div>
     </div>
   );

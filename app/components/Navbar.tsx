@@ -1,85 +1,60 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { HiMenu, HiX } from "react-icons/hi";
+import { useSession, signOut } from "next-auth/react";
 
 export default function Navbar() {
-  const [open, setOpen] = useState(false);
+  const { data: session, status } = useSession();
 
   return (
-    <nav className="w-full bg-[#081b33] text-white px-6 py-4 flex items-center justify-between shadow-md">
-
-      {/* LEFT — LOGO + NAME */}
-      <Link href="/" className="flex items-center gap-3">
-        <Image
-          src="/trustverse-logo.png"
-          width={60}
-          height={60}
-          alt="Trustverse AI"
-          className="rounded-md"
-        />
-        <span className="text-2xl font-bold tracking-wide">Trustverse AI</span>
+    <nav className="w-full bg-[#061826] border-b border-white/10 px-6 py-4 flex items-center justify-between">
+      
+      {/* LOGO */}
+      <Link href="/" className="text-white font-bold text-lg">
+        Trustverse AI
       </Link>
 
-      {/* MOBILE MENU ICON */}
-      <button
-        className="md:hidden text-3xl"
-        onClick={() => setOpen(!open)}
-      >
-        {open ? <HiX /> : <HiMenu />}
-      </button>
+      {/* MENU */}
+      <div className="flex items-center gap-5">
+        <Link href="/pricing" className="text-white/80 hover:text-white">
+          Pricing
+        </Link>
 
-      {/* DESKTOP MENU */}
-      <div className="hidden md:flex items-center gap-8 text-lg">
-        <Link href="/" className="hover:text-gray-300 transition">Home</Link>
-        <Link href="/pricing" className="hover:text-gray-300 transition">Pricing</Link>
-        <Link href="/tools" className="hover:text-gray-300 transition">AI Tools</Link>
-        <Link href="/contact" className="hover:text-gray-300 transition">Contact</Link>
-      </div>
+        <Link href="/tools" className="text-white/80 hover:text-white">
+          AI Tools
+        </Link>
 
-      {/* DESKTOP BUTTONS */}
-      <div className="hidden md:flex items-center gap-4">
-        <Link
-          href="/waitlist"
-          className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-4 py-2 rounded-lg transition"
-        > Pre-Launch </Link>
+        {/* AUTH STATE */}
+        {status === "authenticated" && session?.user ? (
+          <>
+            {/* USER EMAIL */}
+            <span className="text-white/70 text-sm hidden md:block">
+              {session.user.email}
+            </span>
 
-        <Link
-          href="/login"
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition"
-        > Login </Link>
-      </div>
+            <Link
+              href="/dashboard"
+              className="px-4 py-2 rounded-lg bg-cyan-500 text-black font-semibold hover:opacity-90"
+            >
+              Dashboard
+            </Link>
 
-      {/* MOBILE MENU DROPDOWN */}
-      {open && (
-        <div className="absolute top-20 left-0 w-full bg-[#081b33] py-6 flex flex-col items-center gap-6 md:hidden shadow-lg z-50">
-
-          <Link href="/" onClick={() => setOpen(false)} className="text-lg">Home</Link>
-          <Link href="/pricing" onClick={() => setOpen(false)} className="text-lg">Pricing</Link>
-          <Link href="/tools" onClick={() => setOpen(false)} className="text-lg">AI Tools</Link>
-          <Link href="/contact" onClick={() => setOpen(false)} className="text-lg">Contact</Link>
-
-          <Link
-            href="/waitlist"
-            onClick={() => setOpen(false)}
-            className="bg-yellow-500 text-black px-4 py-2 rounded-lg font-semibold"
-          >
-            Pre-Launch
-          </Link>
-
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition"
+            >
+              Logout
+            </button>
+          </>
+        ) : (
           <Link
             href="/login"
-            onClick={() => setOpen(false)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold"
+            className="px-4 py-2 rounded-lg bg-cyan-500 text-black font-semibold hover:opacity-90"
           >
             Login
           </Link>
-
-        </div>
-      )}
-
+        )}
+      </div>
     </nav>
   );
 }

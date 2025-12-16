@@ -1,15 +1,23 @@
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6">Trustverse Admin Panel</h1>
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
-      <div className="flex gap-4 mb-6">
-        <a href="/admin" className="px-4 py-2 bg-black text-white rounded">Dashboard</a>
-        <a href="/admin/users" className="px-4 py-2 bg-gray-200 rounded">Users</a>
-        <a href="/admin/history" className="px-4 py-2 bg-gray-200 rounded">History</a>
-      </div>
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await getServerSession(authOptions);
 
-      {children}
-    </div>
-  );
+  // 🔐 Not logged in
+  if (!session) {
+    redirect("/login");
+  }
+
+  // 🔐 Not admin
+  if (session.user?.role !== "admin") {
+    redirect("/");
+  }
+
+  return <>{children}</>;
 }

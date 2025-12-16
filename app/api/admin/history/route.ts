@@ -1,19 +1,32 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
+import { requireAdmin } from "@/lib/adminAuth";
+import dbConnect from "@/lib/db";
 import History from "@/models/History";
 
 export async function GET() {
   try {
-    await connectDB();
+    // 🔐 Admin check
+    const session = await requireAdmin();
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
-    const history = await History.find({})
+    await dbConnect();
+
+    // 📜 Fetch history (latest first)
+    const history = await History.find()
       .sort({ createdAt: -1 })
-      .lean()
-      .exec();
+      .limit(100);
 
     return NextResponse.json(history);
   } catch (error) {
-    console.error("History Fetch Error:", error);
-    return NextResponse.json({ error: "Failed to fetch history" }, { status: 500 });
+    console.error("Admin history error:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }

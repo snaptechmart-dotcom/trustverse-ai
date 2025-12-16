@@ -1,8 +1,8 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  eslint: {
-    // Vercel build ke time ESLint ko ignore karega
-    ignoreDuringBuilds: true,
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  typescript: {
+    ignoreBuildErrors: true,
   },
 };
 

@@ -1,29 +1,33 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, models } from "mongoose";
 
-export interface IUser extends Document {
-  name: string;
-  email: string;
-  password: string;
-  plan?: string;          // <--- Added
-  tokensUsed?: number;    // <--- Added
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const UserSchema = new Schema<IUser>(
+const UserSchema = new Schema(
   {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
+    name: String,
 
-    // ADD THESE FIELDS
-    plan: { type: String, default: "free" },
-    tokensUsed: { type: Number, default: 0 },
+    email: {
+      type: String,
+      unique: true,
+      required: true,
+    },
+
+    // 🔐 USER ROLE (IMPORTANT FOR ADMIN)
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+    },
+
+    // 🔐 SUBSCRIPTION PLAN
+    plan: {
+      type: String,
+      enum: ["free", "pro", "business"],
+      default: "free",
+    },
+
+    // Optional future use
+    planActivatedAt: Date,
   },
   { timestamps: true }
 );
 
-const User: Model<IUser> =
-  mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
-
-export default User;
+export default models.User || mongoose.model("User", UserSchema);
