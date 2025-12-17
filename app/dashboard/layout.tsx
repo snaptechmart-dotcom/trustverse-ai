@@ -12,36 +12,35 @@ export default function DashboardLayout({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      
-      {/* Mobile Header */}
-      <MobileHeader onMenuClick={() => setOpen(true)} />
+    <div className="min-h-screen flex bg-gray-100">
 
-      <div className="flex">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:block w-64 bg-gray-900 text-white">
+        <Sidebar />
+      </aside>
 
-        {/* Desktop Sidebar */}
-        <aside className="hidden md:block w-64 bg-gray-900 text-white">
-          <Sidebar />
-        </aside>
-
-        {/* Mobile Sidebar */}
-        {open && (
-          <div className="fixed inset-0 z-50 flex md:hidden">
-            <div className="w-64 bg-gray-900 text-white">
-              <Sidebar />
-            </div>
-            <div
-              className="flex-1 bg-black/40"
-              onClick={() => setOpen(false)}
-            />
+      {/* Mobile Sidebar Overlay */}
+      {open && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div className="w-64 bg-gray-900 text-white">
+            <Sidebar />
           </div>
-        )}
+          <div
+            className="flex-1 bg-black/40"
+            onClick={() => setOpen(false)}
+          />
+        </div>
+      )}
 
-        {/* Main Content */}
-        <main className="flex-1 p-4">
-          {children}
-        </main>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
 
+        {/* Mobile Header (☰ icon) */}
+        <div className="md:hidden">
+          <MobileHeader onMenuClick={() => setOpen(true)} />
+        </div>
+
+        <main className="flex-1 p-4">{children}</main>
       </div>
     </div>
   );
