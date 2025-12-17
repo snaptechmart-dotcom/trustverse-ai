@@ -19,7 +19,7 @@ export default function DashboardLayout({
         <Sidebar />
       </aside>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Sidebar */}
       {open && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <div className="w-64 bg-gray-900 text-white">
@@ -32,10 +32,8 @@ export default function DashboardLayout({
         </div>
       )}
 
-      {/* Main Content */}
+      {/* Content */}
       <div className="flex-1 flex flex-col">
-
-        {/* Mobile Header (☰ icon) */}
         <div className="md:hidden">
           <MobileHeader onMenuClick={() => setOpen(true)} />
         </div>
