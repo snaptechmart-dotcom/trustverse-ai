@@ -1,26 +1,20 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
 import connectDB from "@/lib/mongodb";
 import Complaint from "@/models/Complaint";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user?.email !== process.env.ADMIN_EMAIL) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     await connectDB();
 
-    const complaints = await Complaint.find().sort({ createdAt: -1 });
+    const complaints = await Complaint.find({})
+      .sort({ createdAt: -1 })
+      .lean();
 
-    return NextResponse.json(complaints);
+    return NextResponse.json(complaints, { status: 200 });
   } catch (error) {
-    console.error("Admin complaints error:", error);
+    console.error("ADMIN COMPLAINTS API ERROR:", error);
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: "Failed to load complaints" },
       { status: 500 }
     );
   }

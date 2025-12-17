@@ -7,63 +7,77 @@ type Complaint = {
   profileUsername: string;
   reportedBy: string;
   reason: string;
-  status: "pending" | "resolved" | "rejected";
+  status: string;
   createdAt: string;
 };
 
 export default function ComplaintsTable() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchComplaints = async () => {
-    try {
-      const res = await fetch("/api/admin/complaints");
-
-      if (!res.ok) {
-        throw new Error("API error");
-      }
-
-      const data = await res.json();
-
-      setComplaints(Array.isArray(data) ? data : []);
-      setError(null); // ✅ IMPORTANT LINE (THIS FIXES IT)
-    } catch (err) {
-      console.error("Complaints fetch error:", err);
-      setError("Unable to load complaints");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    fetchComplaints();
+    let isMounted = true;
+
+    async function loadComplaints() {
+      try {
+        const res = await fetch("/api/admin/complaints", {
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          throw new Error("Fetch failed");
+        }
+
+        const data = await res.json();
+
+        if (isMounted && Array.isArray(data)) {
+          setComplaints(data);
+        }
+      } catch (err) {
+        console.error("CLIENT FETCH ERROR:", err);
+        if (isMounted) {
+          setComplaints([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadComplaints();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  if (loading) return <p>Loading complaints...</p>;
-  if (error) return <p className="text-red-600">{error}</p>;
-  if (complaints.length === 0) return <p>No complaints found.</p>;
+  if (loading) return <p>Loading complaints…</p>;
+
+  if (!complaints || complaints.length === 0) {
+    return <p>No complaints found.</p>;
+  }
 
   return (
     <div className="mt-6 overflow-x-auto">
-      <table className="w-full border rounded-lg text-sm">
+      <table className="w-full border text-sm">
         <thead className="bg-gray-100">
           <tr>
-            <th className="p-2 border">Profile</th>
-            <th className="p-2 border">Reported By</th>
-            <th className="p-2 border">Reason</th>
-            <th className="p-2 border">Status</th>
-            <th className="p-2 border">Date</th>
+            <th className="border p-2">Profile</th>
+            <th className="border p-2">Reported By</th>
+            <th className="border p-2">Reason</th>
+            <th className="border p-2">Status</th>
+            <th className="border p-2">Date</th>
           </tr>
         </thead>
         <tbody>
           {complaints.map((c) => (
             <tr key={c._id} className="text-center">
-              <td className="p-2 border">{c.profileUsername}</td>
-              <td className="p-2 border">{c.reportedBy}</td>
-              <td className="p-2 border">{c.reason}</td>
-              <td className="p-2 border capitalize">{c.status}</td>
-              <td className="p-2 border">
+              <td className="border p-2">{c.profileUsername}</td>
+              <td className="border p-2">{c.reportedBy}</td>
+              <td className="border p-2">{c.reason}</td>
+              <td className="border p-2 capitalize">{c.status}</td>
+              <td className="border p-2">
                 {new Date(c.createdAt).toLocaleDateString()}
               </td>
             </tr>
