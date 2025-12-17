@@ -25,9 +25,11 @@ export default function ComplaintsTable() {
       }
 
       const data = await res.json();
-      setComplaints(data);
+
+      setComplaints(Array.isArray(data) ? data : []);
+      setError(null); // ✅ IMPORTANT LINE (THIS FIXES IT)
     } catch (err) {
-      console.error(err);
+      console.error("Complaints fetch error:", err);
       setError("Unable to load complaints");
     } finally {
       setLoading(false);
