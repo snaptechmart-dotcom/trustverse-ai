@@ -1,11 +1,12 @@
 "use client";
 
 import AdminSidebar from "./AdminSidebar";
+import { ReactNode } from "react";
 
 export default function AdminLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="flex min-h-screen bg-gray-100">
