@@ -7,94 +7,92 @@ type Complaint = {
   profileUsername: string;
   reportedBy: string;
   reason: string;
-  status: "pending" | "resolved";
+  status: string;
   createdAt: string;
 };
 
 export default function ComplaintsTable() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchComplaints();
-  }, []);
-
+  // Fetch complaints
   const fetchComplaints = async () => {
     try {
+      setLoading(true);
       const res = await fetch("/api/admin/complaints");
+      if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setComplaints(data);
-    } catch (error) {
-      console.error("Failed to load complaints", error);
+    } catch (err) {
+      setError("Unable to load complaints");
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchComplaints();
+  }, []);
+
+  // Resolve complaint
   const resolveComplaint = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/complaints/resolve`, {
+      const res = await fetch("/api/admin/complaints/resolve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
 
-      if (res.ok) {
-        // UI update without reload
-        setComplaints((prev) =>
-          prev.map((c) =>
-            c._id === id ? { ...c, status: "resolved" } : c
-          )
-        );
-      }
-    } catch (error) {
-      console.error("Resolve failed", error);
+      if (!res.ok) throw new Error("Resolve failed");
+
+      // refresh list
+      fetchComplaints();
+    } catch (err) {
+      alert("Failed to resolve complaint");
     }
   };
 
   if (loading) return <p>Loading complaints...</p>;
-
-  if (complaints.length === 0) {
-    return <p>No complaints found.</p>;
-  }
+  if (error) return <p className="text-red-600">{error}</p>;
 
   return (
-    <div className="bg-white p-6 rounded shadow">
-      <h2 className="text-xl font-semibold mb-4">Admin – Complaints</h2>
-
-      <table className="w-full border-collapse border">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border p-2">Profile</th>
-            <th className="border p-2">Reported By</th>
-            <th className="border p-2">Reason</th>
-            <th className="border p-2">Status</th>
-            <th className="border p-2">Action</th>
+    <div className="overflow-x-auto">
+      <table className="w-full border border-gray-300">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="border px-3 py-2">Profile</th>
+            <th className="border px-3 py-2">Reported By</th>
+            <th className="border px-3 py-2">Reason</th>
+            <th className="border px-3 py-2">Status</th>
+            <th className="border px-3 py-2">Date</th>
+            <th className="border px-3 py-2">Action</th>
           </tr>
         </thead>
-
         <tbody>
           {complaints.map((c) => (
             <tr key={c._id}>
-              <td className="border p-2">{c.profileUsername}</td>
-              <td className="border p-2">{c.reportedBy}</td>
-              <td className="border p-2">{c.reason}</td>
-              <td className="border p-2 capitalize">{c.status}</td>
-              <td className="border p-2">
-                {c.status === "resolved" ? (
-                  <button
-                    disabled
-                    className="bg-green-500 text-white px-3 py-1 rounded opacity-70 cursor-not-allowed"
-                  >
-                    Resolved
-                  </button>
-                ) : (
+              <td className="border px-3 py-2">{c.profileUsername}</td>
+              <td className="border px-3 py-2">{c.reportedBy}</td>
+              <td className="border px-3 py-2">{c.reason}</td>
+              <td className="border px-3 py-2 capitalize">
+                {c.status}
+              </td>
+              <td className="border px-3 py-2">
+                {new Date(c.createdAt).toLocaleDateString()}
+              </td>
+              <td className="border px-3 py-2">
+                {c.status !== "resolved" ? (
                   <button
                     onClick={() => resolveComplaint(c._id)}
-                    className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                    className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
                   >
                     Resolve
                   </button>
+                ) : (
+                  <span className="text-green-700 font-semibold">
+                    Resolved
+                  </span>
                 )}
               </td>
             </tr>
