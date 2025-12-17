@@ -14,12 +14,12 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen flex bg-gray-100">
 
-      {/* Desktop Sidebar */}
+      {/* DESKTOP SIDEBAR (ONLY DESKTOP) */}
       <aside className="hidden md:block w-64 bg-gray-900 text-white">
         <Sidebar />
       </aside>
 
-      {/* Mobile Sidebar */}
+      {/* MOBILE SIDEBAR OVERLAY (ONLY MOBILE) */}
       {open && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <div className="w-64 bg-gray-900 text-white">
@@ -32,11 +32,11 @@ export default function DashboardLayout({
         </div>
       )}
 
-      {/* Right Content */}
+      {/* RIGHT CONTENT */}
       <div className="flex-1 flex flex-col">
 
-        {/* Mobile Header */}
-        <div className="md:hidden">
+        {/* MOBILE HEADER (ONLY MOBILE) */}
+        <div className="block md:hidden">
           <MobileHeader onMenuClick={() => setOpen(true)} />
         </div>
 
