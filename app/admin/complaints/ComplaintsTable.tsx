@@ -17,58 +17,34 @@ export default function ComplaintsTable() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    // 🔒 VERY IMPORTANT — Vercel build guard
-    if (typeof window === "undefined") return;
-
     fetchComplaints();
   }, []);
 
   const fetchComplaints = async () => {
-    try {
-      const res = await fetch("/api/admin/complaints", {
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        console.error("Failed to fetch complaints");
-        setLoading(false);
-        return;
-      }
-
-      const data = await res.json();
-      setComplaints(data);
-    } catch (error) {
-      console.error("Error fetching complaints:", error);
-    } finally {
-      setLoading(false);
-    }
+    const res = await fetch("/api/admin/complaints");
+    const data = await res.json();
+    setComplaints(data);
+    setLoading(false);
   };
 
   const updateStatus = async (
     id: string,
     status: "resolved" | "rejected"
   ) => {
-    try {
-      setActionLoading(id);
+    setActionLoading(id);
 
-      await fetch("/api/admin/complaints", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, status }),
-      });
+    await fetch("/api/admin/complaints", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status }),
+    });
 
-      await fetchComplaints();
-    } catch (error) {
-      console.error("Error updating complaint:", error);
-    } finally {
-      setActionLoading(null);
-    }
+    await fetchComplaints();
+    setActionLoading(null);
   };
 
   if (loading) return <p>Loading complaints...</p>;
-
-  if (complaints.length === 0)
-    return <p>No complaints found.</p>;
+  if (complaints.length === 0) return <p>No complaints found.</p>;
 
   return (
     <div className="mt-6 overflow-x-auto">
@@ -93,24 +69,24 @@ export default function ComplaintsTable() {
               <td className="p-2 border">
                 {new Date(c.createdAt).toLocaleDateString()}
               </td>
-              <td className="p-2 border space-x-2">
+              <td className="p-2 border">
                 {c.status === "pending" ? (
-                  <>
+                  <div className="space-x-2">
                     <button
                       disabled={actionLoading === c._id}
                       onClick={() => updateStatus(c._id, "resolved")}
                       className="px-2 py-1 bg-green-600 text-white rounded"
                     >
-                      {actionLoading === c._id ? "..." : "Approve"}
+                      Resolve
                     </button>
                     <button
                       disabled={actionLoading === c._id}
                       onClick={() => updateStatus(c._id, "rejected")}
                       className="px-2 py-1 bg-red-600 text-white rounded"
                     >
-                      {actionLoading === c._id ? "..." : "Reject"}
+                      Reject
                     </button>
-                  </>
+                  </div>
                 ) : (
                   <span className="text-gray-500">Done</span>
                 )}
