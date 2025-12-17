@@ -1,3 +1,5 @@
+"use client";
+
 import AdminSidebar from "./AdminSidebar";
 
 export default function AdminLayout({
@@ -7,8 +9,13 @@ export default function AdminLayout({
 }) {
   return (
     <div className="flex min-h-screen bg-gray-100">
+      {/* LEFT SIDEBAR */}
       <AdminSidebar />
-      <main className="flex-1 p-6">{children}</main>
+
+      {/* RIGHT CONTENT */}
+      <main className="flex-1 p-6">
+        {children}
+      </main>
     </div>
   );
 }
