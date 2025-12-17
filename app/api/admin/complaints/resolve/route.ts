@@ -1,33 +1,31 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
 import connectDB from "@/lib/mongodb";
 import Complaint from "@/models/Complaint";
 import History from "@/models/History";
-
-export const dynamic = "force-dynamic";
+import { requireAdmin } from "@/lib/adminAuth";
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user?.email !== process.env.ADMIN_EMAIL) {
+    // ✅ Admin check
+    const admin = await requireAdmin();
+    if (!admin) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const { complaintId } = await req.json();
+    const { id } = await req.json();
+    if (!id) {
+      return NextResponse.json(
+        { error: "Complaint ID missing" },
+        { status: 400 }
+      );
+    }
 
     await connectDB();
 
-    const complaint = await Complaint.findByIdAndUpdate(
-      complaintId,
-      { status: "resolved" },
-      { new: true }
-    );
-
+    const complaint = await Complaint.findById(id);
     if (!complaint) {
       return NextResponse.json(
         { error: "Complaint not found" },
@@ -35,18 +33,23 @@ export async function POST(req: Request) {
       );
     }
 
+    // ✅ update status
+    complaint.status = "resolved";
+    await complaint.save();
+
+    // ✅ history log
     await History.create({
       action: "Complaint Resolved",
+      adminEmail: admin.email,
       profileUsername: complaint.profileUsername,
       reason: complaint.reason,
-      adminEmail: session.user.email,
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Resolve complaint error:", error);
+    console.error("Resolve error:", error);
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: "Server error" },
       { status: 500 }
     );
   }
