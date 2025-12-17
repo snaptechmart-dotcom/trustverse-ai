@@ -1,38 +1,20 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/dbConnect";
+import connectDB from "@/lib/mongodb";
 import Complaint from "@/models/Complaint";
-import Profile from "@/models/Profile";
-import History from "@/models/History";
-import { requireAdmin } from "@/lib/adminAuth";
 
-export async function POST(req: Request) {
-  await requireAdmin();
-  await dbConnect();
+export async function PATCH(req: Request) {
+  try {
+    await connectDB();
+    const { id, status } = await req.json();
 
-  const { complaintId, action, impact } = await req.json();
+    await Complaint.findByIdAndUpdate(id, { status });
 
-  const complaint = await Complaint.findById(complaintId);
-  if (!complaint) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  complaint.status = action; // resolved / rejected
-  await complaint.save();
-
-  // Apply trust score impact
-  if (impact !== 0) {
-    await Profile.findByIdAndUpdate(
-      complaint.reportedProfileId,
-      { $inc: { trustScore: impact } }
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("UPDATE COMPLAINT ERROR:", error);
+    return NextResponse.json(
+      { error: "Failed to update complaint" },
+      { status: 500 }
     );
-
-    await History.create({
-      profileId: complaint.reportedProfileId,
-      action: "Admin Complaint Action",
-      impact,
-      reason: `Complaint ${action}`,
-    });
   }
-
-  return NextResponse.json({ success: true });
 }
