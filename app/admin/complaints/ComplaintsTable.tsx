@@ -4,92 +4,77 @@ import { useEffect, useState } from "react";
 
 type Complaint = {
   _id: string;
-  profileUsername: string;
-  reportedBy: string;
-  reason: string;
-  status: "pending" | "resolved" | "rejected";
-  createdAt: string;
+  profileUsername?: string;
+  reason?: string;
+  action?: string;
 };
 
 export default function ComplaintsTable() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
+    const fetchComplaints = async () => {
+      try {
+        const res = await fetch("/api/admin/complaints");
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch complaints");
+        }
+
+        const data = await res.json();
+
+        // 🛡️ Safety check
+        if (Array.isArray(data)) {
+          setComplaints(data);
+        } else {
+          setComplaints([]);
+        }
+      } catch (err: any) {
+        console.error("Complaints fetch error:", err);
+        setError("Unable to load complaints");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchComplaints();
   }, []);
 
-  const fetchComplaints = async () => {
-    const res = await fetch("/api/admin/complaints");
-    const data = await res.json();
-    setComplaints(data);
-    setLoading(false);
-  };
+  if (loading) {
+    return <p>Loading complaints...</p>;
+  }
 
-  const updateStatus = async (
-    id: string,
-    status: "resolved" | "rejected"
-  ) => {
-    setActionLoading(id);
+  if (error) {
+    return <p className="text-red-600">{error}</p>;
+  }
 
-    await fetch("/api/admin/complaints", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status }),
-    });
-
-    await fetchComplaints();
-    setActionLoading(null);
-  };
-
-  if (loading) return <p>Loading complaints...</p>;
-  if (complaints.length === 0) return <p>No complaints found.</p>;
+  if (complaints.length === 0) {
+    return <p>No complaints found.</p>;
+  }
 
   return (
-    <div className="mt-6 overflow-x-auto">
-      <table className="w-full border rounded-lg text-sm">
+    <div className="overflow-x-auto">
+      <table className="min-w-full border">
         <thead className="bg-gray-100">
           <tr>
-            <th className="p-2 border">Profile</th>
-            <th className="p-2 border">Reported By</th>
-            <th className="p-2 border">Reason</th>
-            <th className="p-2 border">Status</th>
-            <th className="p-2 border">Date</th>
-            <th className="p-2 border">Action</th>
+            <th className="border p-2">Username</th>
+            <th className="border p-2">Reason</th>
+            <th className="border p-2">Action</th>
           </tr>
         </thead>
         <tbody>
           {complaints.map((c) => (
-            <tr key={c._id} className="text-center">
-              <td className="p-2 border">{c.profileUsername}</td>
-              <td className="p-2 border">{c.reportedBy}</td>
-              <td className="p-2 border">{c.reason}</td>
-              <td className="p-2 border capitalize">{c.status}</td>
-              <td className="p-2 border">
-                {new Date(c.createdAt).toLocaleDateString()}
+            <tr key={c._id}>
+              <td className="border p-2">
+                {c.profileUsername || "N/A"}
               </td>
-              <td className="p-2 border">
-                {c.status === "pending" ? (
-                  <div className="space-x-2">
-                    <button
-                      disabled={actionLoading === c._id}
-                      onClick={() => updateStatus(c._id, "resolved")}
-                      className="px-2 py-1 bg-green-600 text-white rounded"
-                    >
-                      Resolve
-                    </button>
-                    <button
-                      disabled={actionLoading === c._id}
-                      onClick={() => updateStatus(c._id, "rejected")}
-                      className="px-2 py-1 bg-red-600 text-white rounded"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                ) : (
-                  <span className="text-gray-500">Done</span>
-                )}
+              <td className="border p-2">
+                {c.reason || "N/A"}
+              </td>
+              <td className="border p-2">
+                {c.action || "Pending"}
               </td>
             </tr>
           ))}
