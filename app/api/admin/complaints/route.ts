@@ -3,18 +3,30 @@ import connectDB from "@/lib/mongodb";
 import Complaint from "@/models/Complaint";
 
 export async function GET() {
+  await connectDB();
+  const complaints = await Complaint.find().sort({ createdAt: -1 });
+  return NextResponse.json(complaints);
+}
+
+export async function PATCH(req: Request) {
   try {
     await connectDB();
+    const { id, status } = await req.json();
 
-    const complaints = await Complaint.find({})
-      .sort({ createdAt: -1 })
-      .lean();
+    if (!id || !status) {
+      return NextResponse.json(
+        { error: "Missing id or status" },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json(complaints, { status: 200 });
-  } catch (error) {
-    console.error("ADMIN COMPLAINTS API ERROR:", error);
+    await Complaint.findByIdAndUpdate(id, { status });
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("PATCH ERROR:", err);
     return NextResponse.json(
-      { error: "Failed to load complaints" },
+      { error: "Update failed" },
       { status: 500 }
     );
   }
