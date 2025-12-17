@@ -4,77 +4,65 @@ import { useEffect, useState } from "react";
 
 type Complaint = {
   _id: string;
-  profileUsername?: string;
-  reason?: string;
-  action?: string;
+  profileUsername: string;
+  reportedBy: string;
+  reason: string;
+  status: "pending" | "resolved" | "rejected";
+  createdAt: string;
 };
 
 export default function ComplaintsTable() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchComplaints = async () => {
+    try {
+      const res = await fetch("/api/admin/complaints");
+
+      if (!res.ok) {
+        throw new Error("API error");
+      }
+
+      const data = await res.json();
+      setComplaints(data);
+    } catch (err) {
+      console.error(err);
+      setError("Unable to load complaints");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchComplaints = async () => {
-      try {
-        const res = await fetch("/api/admin/complaints");
-
-        if (!res.ok) {
-          throw new Error("Failed to fetch complaints");
-        }
-
-        const data = await res.json();
-
-        // 🛡️ Safety check
-        if (Array.isArray(data)) {
-          setComplaints(data);
-        } else {
-          setComplaints([]);
-        }
-      } catch (err: any) {
-        console.error("Complaints fetch error:", err);
-        setError("Unable to load complaints");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchComplaints();
   }, []);
 
-  if (loading) {
-    return <p>Loading complaints...</p>;
-  }
-
-  if (error) {
-    return <p className="text-red-600">{error}</p>;
-  }
-
-  if (complaints.length === 0) {
-    return <p>No complaints found.</p>;
-  }
+  if (loading) return <p>Loading complaints...</p>;
+  if (error) return <p className="text-red-600">{error}</p>;
+  if (complaints.length === 0) return <p>No complaints found.</p>;
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full border">
+    <div className="mt-6 overflow-x-auto">
+      <table className="w-full border rounded-lg text-sm">
         <thead className="bg-gray-100">
           <tr>
-            <th className="border p-2">Username</th>
-            <th className="border p-2">Reason</th>
-            <th className="border p-2">Action</th>
+            <th className="p-2 border">Profile</th>
+            <th className="p-2 border">Reported By</th>
+            <th className="p-2 border">Reason</th>
+            <th className="p-2 border">Status</th>
+            <th className="p-2 border">Date</th>
           </tr>
         </thead>
         <tbody>
           {complaints.map((c) => (
-            <tr key={c._id}>
-              <td className="border p-2">
-                {c.profileUsername || "N/A"}
-              </td>
-              <td className="border p-2">
-                {c.reason || "N/A"}
-              </td>
-              <td className="border p-2">
-                {c.action || "Pending"}
+            <tr key={c._id} className="text-center">
+              <td className="p-2 border">{c.profileUsername}</td>
+              <td className="p-2 border">{c.reportedBy}</td>
+              <td className="p-2 border">{c.reason}</td>
+              <td className="p-2 border capitalize">{c.status}</td>
+              <td className="p-2 border">
+                {new Date(c.createdAt).toLocaleDateString()}
               </td>
             </tr>
           ))}
