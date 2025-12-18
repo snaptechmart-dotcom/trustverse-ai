@@ -2,22 +2,35 @@
 
 import { useState } from "react";
 
+const platforms = [
+  "Instagram",
+  "Facebook",
+  "Twitter / X",
+  "LinkedIn",
+  "YouTube",
+  "TikTok",
+  "Snapchat",
+  "Telegram",
+  "Reddit",
+  "GitHub",
+];
+
 export default function SocialAnalyzerTool() {
   const [username, setUsername] = useState("");
-  const [platform, setPlatform] = useState("Instagram");
+  const [platform, setPlatform] = useState(platforms[0]);
   const [accountType, setAccountType] = useState<string | null>(null);
   const [risk, setRisk] = useState<string>("");
 
   const analyzeProfile = () => {
     if (!username) return;
 
-    // Dummy AI logic
-    const isGenuine = Math.random() > 0.4;
-    setAccountType(isGenuine ? "Genuine Account" : "Suspicious Account");
+    // Demo AI logic
+    const genuine = Math.random() > 0.45;
+    setAccountType(genuine ? "Genuine Account" : "Suspicious Account");
 
-    const rand = Math.random();
-    if (rand > 0.7) setRisk("Low Risk");
-    else if (rand > 0.4) setRisk("Medium Risk");
+    const r = Math.random();
+    if (r > 0.7) setRisk("Low Risk");
+    else if (r > 0.4) setRisk("Medium Risk");
     else setRisk("High Risk");
   };
 
@@ -28,7 +41,7 @@ export default function SocialAnalyzerTool() {
       {/* Username */}
       <input
         type="text"
-        placeholder="Enter username"
+        placeholder="Enter username / profile ID"
         value={username}
         onChange={(e) => setUsername(e.target.value)}
         className="w-full border px-4 py-2 rounded"
@@ -40,15 +53,17 @@ export default function SocialAnalyzerTool() {
         onChange={(e) => setPlatform(e.target.value)}
         className="w-full border px-4 py-2 rounded"
       >
-        <option>Instagram</option>
-        <option>Twitter</option>
-        <option>LinkedIn</option>
+        {platforms.map((p) => (
+          <option key={p} value={p}>
+            {p}
+          </option>
+        ))}
       </select>
 
       {/* Button */}
       <button
         onClick={analyzeProfile}
-        className="bg-purple-600 text-white px-6 py-2 rounded"
+        className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded"
       >
         Analyze Profile
       </button>
