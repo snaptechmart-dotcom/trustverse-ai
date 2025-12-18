@@ -1,18 +1,23 @@
+import Link from "next/link";
+
 export default function DashboardToolsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">AI Tools</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
         {/* Trust Score Analyzer */}
         <div className="bg-blue-600 text-white rounded-xl p-6">
           <h2 className="text-lg font-semibold">Trust Score Analyzer</h2>
           <p className="text-sm mt-2">
             AI-powered trust scoring with risk level classification.
           </p>
-          <button className="mt-4 bg-white text-blue-600 px-4 py-2 rounded">
-            Open Tool
-          </button>
+          <Link href="/dashboard/tools/trust-score">
+            <button className="mt-4 bg-white text-blue-600 px-4 py-2 rounded">
+              Open Tool
+            </button>
+          </Link>
         </div>
 
         {/* Phone Number Checker */}
@@ -21,9 +26,11 @@ export default function DashboardToolsPage() {
           <p className="text-sm mt-2">
             Detect validity, activity status, and spam probability.
           </p>
-          <button className="mt-4 bg-white text-green-600 px-4 py-2 rounded">
-            Open Tool
-          </button>
+          <Link href="/dashboard/tools/phone-checker">
+            <button className="mt-4 bg-white text-green-600 px-4 py-2 rounded">
+              Open Tool
+            </button>
+          </Link>
         </div>
 
         {/* Social Analyzer */}
@@ -32,9 +39,11 @@ export default function DashboardToolsPage() {
           <p className="text-sm mt-2">
             Analyze usernames from social platforms.
           </p>
-          <button className="mt-4 bg-white text-purple-600 px-4 py-2 rounded">
-            Open Tool
-          </button>
+          <Link href="/dashboard/tools/social-analyzer">
+            <button className="mt-4 bg-white text-purple-600 px-4 py-2 rounded">
+              Open Tool
+            </button>
+          </Link>
         </div>
 
         {/* Advanced AI Analysis */}
@@ -43,9 +52,11 @@ export default function DashboardToolsPage() {
           <p className="text-sm mt-2">
             Deep AI reasoning, scam & risk signals.
           </p>
-          <button className="mt-4 bg-white text-orange-600 px-4 py-2 rounded">
-            Open Tool
-          </button>
+          <Link href="/dashboard/tools/advanced-analysis">
+            <button className="mt-4 bg-white text-orange-600 px-4 py-2 rounded">
+              Open Tool
+            </button>
+          </Link>
         </div>
 
         {/* Report History */}
@@ -54,10 +65,13 @@ export default function DashboardToolsPage() {
           <p className="text-sm mt-2">
             View previous verification and AI reports.
           </p>
-          <button className="mt-4 bg-white text-gray-800 px-4 py-2 rounded">
-            Open Tool
-          </button>
+          <Link href="/dashboard/history">
+            <button className="mt-4 bg-white text-gray-800 px-4 py-2 rounded">
+              Open Tool
+            </button>
+          </Link>
         </div>
+
       </div>
     </div>
   );
