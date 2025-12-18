@@ -23,21 +23,24 @@ const UserSchema = new Schema(
       default: "user",
     },
 
-    // 💼 SUBSCRIPTION PLAN
+    // 💼 SUBSCRIPTION PLAN (PLAN ↔ CREDIT LOGIC)
     plan: {
       type: String,
-      enum: ["free", "pro", "business"],
+      enum: ["free", "essential", "pro", "enterprise"],
       default: "free",
     },
 
     // 💳 CREDITS SYSTEM (CORE SAAS LOGIC)
     credits: {
       type: Number,
-      default: 5, // 🎁 free user gets 5 credits
+      default: 5, // 🎁 Free users get 5 credits (one-time)
       min: 0,
     },
 
-    // 📅 PLAN ACTIVATION DATE (FUTURE BILLING USE)
+    // 📅 PLAN ACTIVATION DATE
+    // Used for:
+    // - Monthly credit reset (essential)
+    // - Subscription tracking (future Razorpay)
     planActivatedAt: {
       type: Date,
     },

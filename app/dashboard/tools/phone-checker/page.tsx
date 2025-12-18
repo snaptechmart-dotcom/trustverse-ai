@@ -10,15 +10,22 @@ export default function PhoneCheckerTool() {
   const checkPhone = async () => {
     if (!phone) return;
 
-    /* STEP 1: CHECK CREDITS */
-    const creditRes = await fetch("/api/check-credits");
-    const creditData = await creditRes.json();
-    if (creditData.credits <= 0) {
+    /* =========================
+       STEP 1: CHECK + DEDUCT CREDIT
+       (Single source of truth)
+    ========================= */
+    const creditRes = await fetch("/api/use-credit", {
+      method: "POST",
+    });
+
+    if (!creditRes.ok) {
       alert("No credits left. Please upgrade your plan.");
       return;
     }
 
-    /* STEP 2: TOOL LOGIC */
+    /* =========================
+       STEP 2: PHONE CHECK LOGIC
+    ========================= */
     const isValid = Math.random() > 0.3;
     const statusText = isValid ? "Valid Number" : "Invalid Number";
 
@@ -32,19 +39,22 @@ export default function PhoneCheckerTool() {
     setStatus(statusText);
     setRisk(riskText);
 
-    /* STEP 3: SAVE HISTORY */
-    await fetch("/api/save-history", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "Phone Number Checker",
-        input: phone,
-        result: `${statusText} - ${riskText}`,
-      }),
-    });
-
-    /* STEP 4: DEDUCT CREDIT */
-    await fetch("/api/use-credit", { method: "POST" });
+    /* =========================
+       STEP 3: SAVE HISTORY
+    ========================= */
+    try {
+      await fetch("/api/save-history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "Phone Number Checker",
+          input: phone,
+          result: `${statusText} - ${riskText}`,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to save history", error);
+    }
   };
 
   return (
@@ -61,15 +71,30 @@ export default function PhoneCheckerTool() {
 
       <button
         onClick={checkPhone}
-        className="bg-green-600 text-white px-6 py-2 rounded"
+        className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded"
       >
         Check Number
       </button>
 
       {status && (
         <div className="border rounded-lg p-4 bg-gray-50">
-          <p><strong>Status:</strong> {status}</p>
-          <p><strong>Spam Risk:</strong> {risk}</p>
+          <p>
+            <strong>Status:</strong> {status}
+          </p>
+          <p>
+            <strong>Spam Risk:</strong>{" "}
+            <span
+              className={
+                risk.includes("Low")
+                  ? "text-green-600 font-bold"
+                  : risk.includes("Medium")
+                  ? "text-yellow-600 font-bold"
+                  : "text-red-600 font-bold"
+              }
+            >
+              {risk}
+            </span>
+          </p>
         </div>
       )}
     </div>

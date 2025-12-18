@@ -30,11 +30,14 @@ export default function SocialAnalyzerTool() {
     if (!username) return;
 
     /* =========================
-       STEP 1: CHECK CREDITS
+       STEP 1: CHECK + DEDUCT CREDIT
+       (Single source of truth)
     ========================= */
-    const creditRes = await fetch("/api/check-credits");
-    const creditData = await creditRes.json();
-    if (!creditRes.ok || creditData.credits <= 0) {
+    const creditRes = await fetch("/api/use-credit", {
+      method: "POST",
+    });
+
+    if (!creditRes.ok) {
       alert("No credits left. Please upgrade your plan.");
       return;
     }
@@ -58,20 +61,19 @@ export default function SocialAnalyzerTool() {
     /* =========================
        STEP 3: SAVE HISTORY
     ========================= */
-    await fetch("/api/save-history", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "Social Analyzer",
-        input: `${platform} : ${username}`,
-        result: `${accountText} - ${riskText}`,
-      }),
-    });
-
-    /* =========================
-       STEP 4: DEDUCT CREDIT
-    ========================= */
-    await fetch("/api/use-credit", { method: "POST" });
+    try {
+      await fetch("/api/save-history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "Social Analyzer",
+          input: `${platform} : ${username}`,
+          result: `${accountText} - ${riskText}`,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to save history", error);
+    }
   };
 
   return (
@@ -114,6 +116,7 @@ export default function SocialAnalyzerTool() {
           <p>
             <strong>Platform:</strong> {platform}
           </p>
+
           <p className="mt-2">
             <strong>Account Type:</strong>{" "}
             <span
@@ -126,15 +129,16 @@ export default function SocialAnalyzerTool() {
               {accountType}
             </span>
           </p>
+
           <p className="mt-2">
             <strong>Risk Level:</strong>{" "}
             <span
               className={
                 risk === "Low Risk"
-                  ? "text-green-600"
+                  ? "text-green-600 font-bold"
                   : risk === "Medium Risk"
-                  ? "text-yellow-600"
-                  : "text-red-600"
+                  ? "text-yellow-600 font-bold"
+                  : "text-red-600 font-bold"
               }
             >
               {risk}
