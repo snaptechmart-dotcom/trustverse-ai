@@ -27,14 +27,25 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="w-64 bg-gray-900 text-white p-5">
+    /* 
+      IMPORTANT:
+      - h-full → layout se height lega
+      - flex-col → content top to bottom
+      - overflow-y-auto → agar future me items badhe
+    */
+    <div className="h-full w-64 bg-gray-900 text-white flex flex-col p-5 overflow-y-auto">
+
+      {/* Logo / Title */}
       <div className="mb-6 text-xl font-bold">
         Trustverse AI
       </div>
 
+      {/* Menu */}
       <nav className="space-y-2">
         {menuItems.map(({ name, href, icon: Icon }) => {
-          const active = pathname === href;
+          const active =
+            pathname === href ||
+            pathname.startsWith(href + "/");
 
           return (
             <Link
@@ -52,6 +63,11 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Optional bottom spacer (future use) */}
+      <div className="mt-auto pt-6 text-xs text-gray-400">
+        © Trustverse AI
+      </div>
     </div>
   );
 }

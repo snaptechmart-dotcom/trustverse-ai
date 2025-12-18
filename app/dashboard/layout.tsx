@@ -9,19 +9,19 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex bg-gray-100">
+    <div className="min-h-screen flex bg-gray-100 text-black">
 
-      {/* Sidebar – desktop only */}
-      <aside className="hidden md:block">
+      {/* DESKTOP SIDEBAR */}
+      <aside className="hidden md:flex md:flex-col w-64 bg-gray-900 text-white">
         <Sidebar />
       </aside>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col">
+      {/* MAIN CONTENT */}
+      <div className="flex-1 flex flex-col min-h-screen">
 
-        {/* Mobile header */}
+        {/* MOBILE HEADER */}
         <div className="md:hidden">
-          <MobileHeader onMenuClick={() => {}} />
+          <MobileHeader />
         </div>
 
         <main className="flex-1 p-4">
