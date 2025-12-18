@@ -24,6 +24,12 @@ const UserSchema = new Schema(
       default: "free",
     },
 
+    // 💳 CREDITS SYSTEM (VERY IMPORTANT)
+    credits: {
+      type: Number,
+      default: 5, // free plan users get 5 credits
+    },
+
     // Optional future use
     planActivatedAt: Date,
   },

@@ -10,7 +10,26 @@ export default function TrustScoreTool() {
   const analyzeTrust = async () => {
     if (!input) return;
 
-    let calculatedScore = 50; // base score
+    /* =========================
+       STEP 1: CHECK CREDITS
+    ========================= */
+    try {
+      const creditRes = await fetch("/api/check-credits");
+      const creditData = await creditRes.json();
+
+      if (!creditRes.ok || creditData.credits <= 0) {
+        alert("No credits left. Please upgrade your plan.");
+        return;
+      }
+    } catch (err) {
+      alert("Unable to verify credits. Try again.");
+      return;
+    }
+
+    /* =========================
+       STEP 2: TRUST SCORE LOGIC
+    ========================= */
+    let calculatedScore = 50;
     const value = input.toLowerCase();
 
     // 📱 Phone number based logic
@@ -44,7 +63,9 @@ export default function TrustScoreTool() {
     setScore(calculatedScore);
     setRisk(calculatedRisk);
 
-    // 🧠 SAVE HISTORY (IMPORTANT)
+    /* =========================
+       STEP 3: SAVE HISTORY
+    ========================= */
     try {
       await fetch("/api/save-history", {
         method: "POST",
@@ -57,6 +78,17 @@ export default function TrustScoreTool() {
       });
     } catch (error) {
       console.error("Failed to save history", error);
+    }
+
+    /* =========================
+       STEP 4: DEDUCT CREDIT
+    ========================= */
+    try {
+      await fetch("/api/use-credit", {
+        method: "POST",
+      });
+    } catch (error) {
+      console.error("Failed to deduct credit", error);
     }
   };
 
