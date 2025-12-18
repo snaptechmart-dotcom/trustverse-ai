@@ -8,25 +8,38 @@ export default function Navbar() {
   const { data: session, status } = useSession();
   const [credits, setCredits] = useState<number | null>(null);
 
-  // 🔄 Fetch credits when user is logged in
-  useEffect(() => {
-    if (status !== "authenticated") return;
-
-    async function fetchCredits() {
-      try {
-        const res = await fetch("/api/check-credits");
-        const data = await res.json();
-        setCredits(data.credits);
-      } catch (err) {
-        console.error("Failed to load credits");
-      }
+  // 🔄 Fetch credits from DB (single source of truth)
+  const fetchCredits = async () => {
+    try {
+      const res = await fetch("/api/credits");
+      const data = await res.json();
+      setCredits(data.credits ?? 0);
+    } catch (err) {
+      console.error("Failed to load credits");
     }
+  };
 
-    fetchCredits();
+  // 🔄 Load credits on login
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchCredits();
+    }
+  }, [status]);
+
+  // 🔁 Auto refresh credits when tab becomes active
+  useEffect(() => {
+    const onFocus = () => {
+      if (status === "authenticated") {
+        fetchCredits();
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, [status]);
 
   return (
     <nav className="w-full bg-[#061826] border-b border-white/10 px-6 py-4 flex items-center justify-between">
+      
       {/* LOGO */}
       <Link href="/" className="text-white font-bold text-lg">
         Trustverse AI
@@ -45,7 +58,7 @@ export default function Navbar() {
         {/* AUTH STATE */}
         {status === "authenticated" && session?.user ? (
           <>
-            {/* 💳 CREDITS (NEW) */}
+            {/* 💳 CREDITS */}
             <div className="hidden sm:flex items-center gap-1 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white text-sm">
               <span className="opacity-80">Credits:</span>
               <span className="font-bold">

@@ -2,38 +2,50 @@ import mongoose, { Schema, models } from "mongoose";
 
 const UserSchema = new Schema(
   {
-    name: String,
+    // 👤 BASIC INFO
+    name: {
+      type: String,
+      trim: true,
+    },
 
     email: {
       type: String,
       unique: true,
       required: true,
+      lowercase: true,
+      trim: true,
     },
 
-    // 🔐 USER ROLE (IMPORTANT FOR ADMIN)
+    // 🔐 USER ROLE (ADMIN / USER)
     role: {
       type: String,
       enum: ["user", "admin"],
       default: "user",
     },
 
-    // 🔐 SUBSCRIPTION PLAN
+    // 💼 SUBSCRIPTION PLAN
     plan: {
       type: String,
       enum: ["free", "pro", "business"],
       default: "free",
     },
 
-    // 💳 CREDITS SYSTEM (VERY IMPORTANT)
+    // 💳 CREDITS SYSTEM (CORE SAAS LOGIC)
     credits: {
       type: Number,
-      default: 5, // free plan users get 5 credits
+      default: 5, // 🎁 free user gets 5 credits
+      min: 0,
     },
 
-    // Optional future use
-    planActivatedAt: Date,
+    // 📅 PLAN ACTIVATION DATE (FUTURE BILLING USE)
+    planActivatedAt: {
+      type: Date,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true, // createdAt & updatedAt
+  }
 );
 
+// 🚀 SAFE EXPORT (NEXT.JS + HOT RELOAD FIX)
 export default models.User || mongoose.model("User", UserSchema);
