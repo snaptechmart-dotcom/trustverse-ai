@@ -1,14 +1,32 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
+  const [credits, setCredits] = useState<number | null>(null);
+
+  // 🔄 Fetch credits when user is logged in
+  useEffect(() => {
+    if (status !== "authenticated") return;
+
+    async function fetchCredits() {
+      try {
+        const res = await fetch("/api/check-credits");
+        const data = await res.json();
+        setCredits(data.credits);
+      } catch (err) {
+        console.error("Failed to load credits");
+      }
+    }
+
+    fetchCredits();
+  }, [status]);
 
   return (
     <nav className="w-full bg-[#061826] border-b border-white/10 px-6 py-4 flex items-center justify-between">
-      
       {/* LOGO */}
       <Link href="/" className="text-white font-bold text-lg">
         Trustverse AI
@@ -27,6 +45,14 @@ export default function Navbar() {
         {/* AUTH STATE */}
         {status === "authenticated" && session?.user ? (
           <>
+            {/* 💳 CREDITS (NEW) */}
+            <div className="hidden sm:flex items-center gap-1 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white text-sm">
+              <span className="opacity-80">Credits:</span>
+              <span className="font-bold">
+                {credits !== null ? credits : "..."}
+              </span>
+            </div>
+
             {/* USER EMAIL */}
             <span className="text-white/70 text-sm hidden md:block">
               {session.user.email}
