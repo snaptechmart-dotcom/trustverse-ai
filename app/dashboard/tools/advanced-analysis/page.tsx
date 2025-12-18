@@ -9,34 +9,35 @@ export default function AdvancedAIAnalysis() {
   const analyze = async () => {
     if (!input) return;
 
-    const probability = Math.floor(Math.random() * 60) + 40;
+    /* STEP 1: CHECK CREDITS */
+    const creditRes = await fetch("/api/check-credits");
+    const creditData = await creditRes.json();
+    if (creditData.credits <= 0) {
+      alert("No credits left. Please upgrade your plan.");
+      return;
+    }
 
+    /* STEP 2: TOOL LOGIC */
+    const probability = Math.floor(Math.random() * 60) + 40;
     let risk = "Low Risk";
     if (probability > 75) risk = "High Risk";
     else if (probability > 55) risk = "Medium Risk";
 
-    const signals = [
-      "Repeated suspicious activity",
-      "Low trust network",
-      "Automated behavior detected",
-    ];
+    setResult({ probability, risk });
 
-    setResult({ probability, risk, signals });
+    /* STEP 3: SAVE HISTORY */
+    await fetch("/api/save-history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "Advanced AI Analysis",
+        input,
+        result: `${probability}% - ${risk}`,
+      }),
+    });
 
-    // 🧠 SAVE HISTORY
-    try {
-      await fetch("/api/save-history", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "Advanced AI Analysis",
-          input,
-          result: `${probability}% - ${risk}`,
-        }),
-      });
-    } catch (err) {
-      console.error("History save failed", err);
-    }
+    /* STEP 4: DEDUCT CREDIT */
+    await fetch("/api/use-credit", { method: "POST" });
   };
 
   return (
@@ -60,13 +61,8 @@ export default function AdvancedAIAnalysis() {
 
       {result && (
         <div className="border rounded-lg p-4 bg-gray-50">
-          <p>
-            <strong>Scam Probability:</strong>{" "}
-            {result.probability}%
-          </p>
-          <p className="mt-2">
-            <strong>Risk Level:</strong> {result.risk}
-          </p>
+          <p><strong>Scam Probability:</strong> {result.probability}%</p>
+          <p><strong>Risk Level:</strong> {result.risk}</p>
         </div>
       )}
     </div>
