@@ -10,12 +10,38 @@ export default function TrustScoreTool() {
   const analyzeTrust = () => {
     if (!input) return;
 
-    // Dummy AI logic (for demo)
-    const generatedScore = Math.floor(Math.random() * 101);
-    setScore(generatedScore);
+    let calculatedScore = 50; // base score
 
-    if (generatedScore >= 70) setRisk("Low Risk");
-    else if (generatedScore >= 40) setRisk("Medium Risk");
+    const value = input.toLowerCase();
+
+    // 📱 Phone number based logic
+    if (/^\d{10}$/.test(value)) {
+      if (value.startsWith("9")) calculatedScore = 80;
+      else if (value.startsWith("8")) calculatedScore = 65;
+      else if (value.startsWith("7")) calculatedScore = 45;
+      else calculatedScore = 30;
+    }
+
+    // 📧 Email based logic
+    else if (value.includes("@")) {
+      if (value.includes("test") || value.includes("fake"))
+        calculatedScore = 25;
+      else if (value.endsWith(".edu") || value.endsWith(".org"))
+        calculatedScore = 85;
+      else calculatedScore = 60;
+    }
+
+    // 👤 Username based logic
+    else {
+      if (value.length < 5) calculatedScore = 40;
+      else if (value.length < 8) calculatedScore = 60;
+      else calculatedScore = 75;
+    }
+
+    setScore(calculatedScore);
+
+    if (calculatedScore >= 70) setRisk("Low Risk");
+    else if (calculatedScore >= 40) setRisk("Medium Risk");
     else setRisk("High Risk");
   };
 
@@ -35,7 +61,7 @@ export default function TrustScoreTool() {
       {/* Button */}
       <button
         onClick={analyzeTrust}
-        className="bg-blue-600 text-white px-6 py-2 rounded"
+        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
       >
         Analyze Trust
       </button>
@@ -53,14 +79,18 @@ export default function TrustScoreTool() {
             <span
               className={
                 risk === "Low Risk"
-                  ? "text-green-600"
+                  ? "text-green-600 font-bold"
                   : risk === "Medium Risk"
-                  ? "text-yellow-600"
-                  : "text-red-600"
+                  ? "text-yellow-600 font-bold"
+                  : "text-red-600 font-bold"
               }
             >
               {risk}
             </span>
+          </p>
+
+          <p className="mt-3 text-sm text-gray-600">
+            Result generated using multiple trust signals (demo AI logic).
           </p>
         </div>
       )}
