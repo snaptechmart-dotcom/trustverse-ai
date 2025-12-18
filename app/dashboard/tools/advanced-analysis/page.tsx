@@ -4,92 +4,69 @@ import { useState } from "react";
 
 export default function AdvancedAIAnalysis() {
   const [input, setInput] = useState("");
-  const [result, setResult] = useState<null | {
-    probability: number;
-    risk: string;
-    signals: string[];
-  }>(null);
+  const [result, setResult] = useState<any>(null);
 
-  const analyze = () => {
-    // DEMO AI LOGIC
+  const analyze = async () => {
+    if (!input) return;
+
     const probability = Math.floor(Math.random() * 60) + 40;
 
     let risk = "Low Risk";
     if (probability > 75) risk = "High Risk";
     else if (probability > 55) risk = "Medium Risk";
 
-    setResult({
-      probability,
-      risk,
-      signals: [
-        "Repeated suspicious activity",
-        "Low trust network",
-        "Automated behavior detected",
-      ],
-    });
+    const signals = [
+      "Repeated suspicious activity",
+      "Low trust network",
+      "Automated behavior detected",
+    ];
+
+    setResult({ probability, risk, signals });
+
+    // 🧠 SAVE HISTORY
+    try {
+      await fetch("/api/save-history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "Advanced AI Analysis",
+          input,
+          result: `${probability}% - ${risk}`,
+        }),
+      });
+    } catch (err) {
+      console.error("History save failed", err);
+    }
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold mb-4">
-        Advanced AI Analysis
-      </h1>
-
-      <p className="text-gray-500 mb-6">
-        Deep AI-based risk, scam & behavior analysis
-      </p>
+    <div className="max-w-xl space-y-6">
+      <h1 className="text-2xl font-bold">Advanced AI Analysis</h1>
 
       <input
         type="text"
         placeholder="Enter phone / email / username"
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        className="w-full max-w-md border rounded-lg px-4 py-2 mb-4"
+        className="w-full border px-4 py-2 rounded"
       />
-
-      <br />
 
       <button
         onClick={analyze}
-        className="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700"
+        className="bg-red-600 text-white px-6 py-2 rounded"
       >
         Run AI Analysis
       </button>
 
       {result && (
-        <div className="mt-6 max-w-md bg-white rounded-xl p-5 shadow">
-          <p className="font-semibold mb-2">
-            Scam Probability:
-            <span className="ml-2 text-red-600">
-              {result.probability}%
-            </span>
+        <div className="border rounded-lg p-4 bg-gray-50">
+          <p>
+            <strong>Scam Probability:</strong>{" "}
+            {result.probability}%
           </p>
-
-          <p className="mb-3">
-            Risk Level:
-            <span
-              className={`ml-2 font-semibold ${
-                result.risk === "High Risk"
-                  ? "text-red-600"
-                  : result.risk === "Medium Risk"
-                  ? "text-yellow-600"
-                  : "text-green-600"
-              }`}
-            >
-              {result.risk}
-            </span>
+          <p className="mt-2">
+            <strong>Risk Level:</strong> {result.risk}
           </p>
-
-          <div>
-            <p className="font-semibold mb-2">
-              Risk Signals:
-            </p>
-            <ul className="list-disc list-inside text-gray-600">
-              {result.signals.map((s, i) => (
-                <li key={i}>{s}</li>
-              ))}
-            </ul>
-          </div>
         </div>
       )}
     </div>

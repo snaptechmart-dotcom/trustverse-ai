@@ -21,24 +21,42 @@ export default function SocialAnalyzerTool() {
   const [accountType, setAccountType] = useState<string | null>(null);
   const [risk, setRisk] = useState<string>("");
 
-  const analyzeProfile = () => {
+  const analyzeProfile = async () => {
     if (!username) return;
 
-    // Demo AI logic
     const genuine = Math.random() > 0.45;
-    setAccountType(genuine ? "Genuine Account" : "Suspicious Account");
+    const accountText = genuine
+      ? "Genuine Account"
+      : "Suspicious Account";
 
     const r = Math.random();
-    if (r > 0.7) setRisk("Low Risk");
-    else if (r > 0.4) setRisk("Medium Risk");
-    else setRisk("High Risk");
+    let riskText = "High Risk";
+    if (r > 0.7) riskText = "Low Risk";
+    else if (r > 0.4) riskText = "Medium Risk";
+
+    setAccountType(accountText);
+    setRisk(riskText);
+
+    // 🧠 SAVE HISTORY
+    try {
+      await fetch("/api/save-history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "Social Analyzer",
+          input: `${platform} : ${username}`,
+          result: `${accountText} - ${riskText}`,
+        }),
+      });
+    } catch (err) {
+      console.error("History save failed", err);
+    }
   };
 
   return (
     <div className="max-w-xl space-y-6">
       <h1 className="text-2xl font-bold">Social Analyzer</h1>
 
-      {/* Username */}
       <input
         type="text"
         placeholder="Enter username / profile ID"
@@ -47,60 +65,30 @@ export default function SocialAnalyzerTool() {
         className="w-full border px-4 py-2 rounded"
       />
 
-      {/* Platform Select */}
       <select
         value={platform}
         onChange={(e) => setPlatform(e.target.value)}
         className="w-full border px-4 py-2 rounded"
       >
         {platforms.map((p) => (
-          <option key={p} value={p}>
-            {p}
-          </option>
+          <option key={p}>{p}</option>
         ))}
       </select>
 
-      {/* Button */}
       <button
         onClick={analyzeProfile}
-        className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded"
+        className="bg-purple-600 text-white px-6 py-2 rounded"
       >
         Analyze Profile
       </button>
 
-      {/* Result */}
       {accountType && (
         <div className="border rounded-lg p-4 bg-gray-50">
-          <p className="text-lg">
-            <strong>Platform:</strong> {platform}
+          <p>
+            <strong>Account:</strong> {accountType}
           </p>
-
           <p className="mt-2">
-            <strong>Account Type:</strong>{" "}
-            <span
-              className={
-                accountType.includes("Genuine")
-                  ? "text-green-600 font-bold"
-                  : "text-red-600 font-bold"
-              }
-            >
-              {accountType}
-            </span>
-          </p>
-
-          <p className="mt-2">
-            <strong>Risk Level:</strong>{" "}
-            <span
-              className={
-                risk.includes("Low")
-                  ? "text-green-600"
-                  : risk.includes("Medium")
-                  ? "text-yellow-600"
-                  : "text-red-600"
-              }
-            >
-              {risk}
-            </span>
+            <strong>Risk:</strong> {risk}
           </p>
         </div>
       )}
