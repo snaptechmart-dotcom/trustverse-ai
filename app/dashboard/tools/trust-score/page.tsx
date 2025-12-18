@@ -7,11 +7,10 @@ export default function TrustScoreTool() {
   const [score, setScore] = useState<number | null>(null);
   const [risk, setRisk] = useState<string>("");
 
-  const analyzeTrust = () => {
+  const analyzeTrust = async () => {
     if (!input) return;
 
     let calculatedScore = 50; // base score
-
     const value = input.toLowerCase();
 
     // 📱 Phone number based logic
@@ -38,11 +37,27 @@ export default function TrustScoreTool() {
       else calculatedScore = 75;
     }
 
-    setScore(calculatedScore);
+    let calculatedRisk = "High Risk";
+    if (calculatedScore >= 70) calculatedRisk = "Low Risk";
+    else if (calculatedScore >= 40) calculatedRisk = "Medium Risk";
 
-    if (calculatedScore >= 70) setRisk("Low Risk");
-    else if (calculatedScore >= 40) setRisk("Medium Risk");
-    else setRisk("High Risk");
+    setScore(calculatedScore);
+    setRisk(calculatedRisk);
+
+    // 🧠 SAVE HISTORY (IMPORTANT)
+    try {
+      await fetch("/api/save-history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "Trust Score Analyzer",
+          input: input,
+          result: `${calculatedScore}/100 - ${calculatedRisk}`,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to save history", error);
+    }
   };
 
   return (

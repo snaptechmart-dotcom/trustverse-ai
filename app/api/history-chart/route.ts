@@ -1,21 +1,19 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/db";
+import dbConnect from "@/lib/dbConnect";
 import History from "@/models/History";
 
 export async function GET() {
   try {
-    await connectDB();
+    await dbConnect();
 
-    const history = await History.find({})
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean();
+    const history = await History.find()
+      .sort({ date: -1 })
+      .limit(20);
 
-    return NextResponse.json(history);
+    return NextResponse.json({ history });
   } catch (error) {
-    console.error("HISTORY CHART ERROR:", error);
     return NextResponse.json(
-      { error: "Failed to load history data" },
+      { error: "Failed to fetch history" },
       { status: 500 }
     );
   }

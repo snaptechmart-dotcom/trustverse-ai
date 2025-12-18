@@ -1,13 +1,14 @@
-import mongoose, { Schema, models } from "mongoose";
+import mongoose from "mongoose";
 
-const HistorySchema = new Schema(
+const HistorySchema = new mongoose.Schema(
   {
-    action: String,
-    adminEmail: String,
-    profileUsername: String,
-    reason: String,
+    type: { type: String, required: true },   // Tool name
+    input: { type: String, required: true },  // User input
+    result: { type: String },                  // Risk / Score summary
+    date: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
 
-export default models.History || mongoose.model("History", HistorySchema);
+export default mongoose.models.History ||
+  mongoose.model("History", HistorySchema);
