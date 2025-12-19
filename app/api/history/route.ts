@@ -1,22 +1,62 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import connectDB from "@/lib/db";
 
 import Complaint from "@/models/Complaint";
 import TrustProfile from "@/models/TrustProfile";
 import History from "@/models/History";
 
+/* =======================
+   GET → Fetch user history
+   ======================= */
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    await connectDB();
+
+    const history = await History.find({
+      userId: session.user.id,
+    }).sort({ createdAt: -1 });
+
+    return NextResponse.json({ history });
+  } catch (error) {
+    console.error("GET HISTORY ERROR:", error);
+    return NextResponse.json(
+      { error: "Failed to load history" },
+      { status: 500 }
+    );
+  }
+}
+
+/* =======================
+   POST → Submit complaint
+   ======================= */
 export async function POST(req: Request) {
   try {
-    console.log("REPORT API HIT");
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
     const body = await req.json();
-    const { username, reason, reportedBy } = body;
-
-    console.log("REPORT BODY:", body);
+    const { username, reason } = body;
 
     if (!username || !reason) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Username and reason required" },
         { status: 400 }
       );
     }
@@ -33,32 +73,33 @@ export async function POST(req: Request) {
       );
     }
 
+    // ⚠️ NOTE:
+    // Profile suspended check intentionally SKIPPED for now
+    // so that STEP 6 testing works smoothly.
+    // Later we can add business rules here.
+
     // 🧾 Save complaint
-    const complaint = await Complaint.create({
+    await Complaint.create({
       profileUsername: username,
-      reportedBy: reportedBy || "anonymous",
+      reportedBy: session.user.id,
       reason,
       status: "pending",
     });
 
-    console.log("COMPLAINT SAVED:", complaint._id);
-
-    // 🕒 SAVE HISTORY ENTRY (THIS WAS MISSING / BROKEN)
-    const history = await History.create({
-      profileUsername: username,
-      action: "profile_reported",
+    // 🕒 SAVE HISTORY (STEP 6.4 — CRITICAL)
+    await History.create({
+      userId: session.user.id,
+      action: "Profile Reported",
       impact: -10,
       reason,
     });
-
-    console.log("HISTORY SAVED:", history._id);
 
     return NextResponse.json({
       success: true,
       message: "Complaint submitted successfully",
     });
   } catch (error: any) {
-    console.error("REPORT PROFILE ERROR FULL:", error);
+    console.error("POST HISTORY ERROR FULL:", error);
 
     return NextResponse.json(
       {

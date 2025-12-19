@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/dbConnect";
 import ToolHistory from "@/models/ToolHistory";
 
-export async function POST(req: Request) {
+export async function GET() {
   try {
     await dbConnect();
 
@@ -16,20 +16,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-
-    await ToolHistory.create({
+    const history = await ToolHistory.find({
       userEmail: session.user.email,
-      type: body.type,
-      input: body.input,
-      result: body.result,
-    });
+    }).sort({ createdAt: -1 });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json(history);
   } catch (error) {
-    console.error("SAVE HISTORY ERROR:", error);
+    console.error("GET HISTORY ERROR:", error);
     return NextResponse.json(
-      { error: "Failed to save history" },
+      { error: "Failed to load history" },
       { status: 500 }
     );
   }

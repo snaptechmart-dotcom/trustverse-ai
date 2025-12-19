@@ -2,42 +2,71 @@
 
 import { useEffect, useState } from "react";
 
+interface HistoryItem {
+  _id: string;
+  action: string;
+  impact: number;
+  reason: string;
+  createdAt: string;
+}
+
 export default function HistoryPage() {
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchHistory() {
+    async function loadHistory() {
       try {
-        const response = await fetch("/api/history-chart");
-        const data = await response.json();
-
+        const res = await fetch("/api/history", {
+          cache: "no-store",
+        });
+        const data = await res.json();
         setHistory(data.history || []);
       } catch (error) {
-        console.error("Error fetching history:", error);
+        console.error("Failed to load history");
+      } finally {
+        setLoading(false);
       }
     }
 
-    fetchHistory();
+    loadHistory();
   }, []);
 
+  if (loading) {
+    return <div className="p-10">Loading history...</div>;
+  }
+
   return (
-    <div className="p-10">
-      <h1 className="text-3xl font-bold mb-6">Your Activity History</h1>
+    <div className="p-6 md:p-10 space-y-6">
+      <h1 className="text-2xl font-bold">Your Activity History</h1>
 
       {history.length === 0 ? (
         <p className="text-gray-500">No activity found.</p>
       ) : (
         <div className="space-y-4">
-          {history.map((item, index) => (
+          {history.map((item) => (
             <div
-              key={index}
-              className="p-4 bg-white shadow rounded-lg border border-gray-100"
+              key={item._id}
+              className="p-4 border rounded-lg bg-white shadow-sm flex justify-between items-start"
             >
-              <h2 className="text-lg font-semibold">{item.type}</h2>
-              <p className="text-gray-600">{item.input}</p>
-              <p className="text-sm text-gray-400 mt-1">
-                {new Date(item.date).toLocaleString()}
-              </p>
+              <div>
+                <p className="font-semibold">{item.action}</p>
+                <p className="text-gray-600">{item.reason}</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {new Date(item.createdAt).toLocaleString()}
+                </p>
+              </div>
+
+              <span
+                className={`font-bold text-sm px-3 py-1 rounded-full ${
+                  item.impact > 0
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
+                {item.impact > 0 ? "+" : ""}
+                {item.impact}
+              </span>
             </div>
           ))}
         </div>

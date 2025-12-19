@@ -10,10 +10,10 @@ export default function Navbar() {
   const [credits, setCredits] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // 🔄 Fetch credits
+  // 🔄 Fetch credits (FIXED API)
   const fetchCredits = async () => {
     try {
-      const res = await fetch("/api/credits");
+      const res = await fetch("/api/check-credits");
       const data = await res.json();
       setCredits(data.credits ?? 0);
     } catch {
@@ -58,6 +58,14 @@ export default function Navbar() {
                 className="px-4 py-2 rounded-lg bg-cyan-500 text-black font-semibold"
               >
                 Dashboard
+              </Link>
+
+              {/* ✅ SETTINGS LINK */}
+              <Link
+                href="/dashboard/settings"
+                className="px-4 py-2 rounded-lg border border-white/20 text-white hover:bg-white/10"
+              >
+                Settings
               </Link>
 
               <button
@@ -120,6 +128,15 @@ export default function Navbar() {
                 className="text-cyan-400 font-semibold"
               >
                 Dashboard
+              </Link>
+
+              {/* ✅ SETTINGS LINK (MOBILE) */}
+              <Link
+                href="/dashboard/settings"
+                onClick={() => setMenuOpen(false)}
+                className="text-white/80 font-semibold"
+              >
+                Settings
               </Link>
 
               <button
