@@ -1,9 +1,29 @@
 import mongoose from "mongoose";
 
-const connectDB = async () => {
-  if (mongoose.connection.readyState >= 1) return;
+const MONGODB_URI = process.env.MONGODB_URI!;
 
-  await mongoose.connect(process.env.MONGODB_URI as string);
-};
+if (!MONGODB_URI) {
+  throw new Error("MONGODB_URI not defined");
+}
 
-export default connectDB;
+let cached = (global as any).mongoose;
+
+if (!cached) {
+  cached = (global as any).mongoose = {
+    conn: null,
+    promise: null,
+  };
+}
+
+export default async function dbConnect() {
+  if (cached.conn) return cached.conn;
+
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(MONGODB_URI, {
+      dbName: "trustverse",
+    });
+  }
+
+  cached.conn = await cached.promise;
+  return cached.conn;
+}

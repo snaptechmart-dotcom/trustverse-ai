@@ -10,7 +10,7 @@ export default function Navbar() {
   const [credits, setCredits] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // 🔄 Fetch credits (FIXED API)
+  // 🔄 Fetch credits
   const fetchCredits = async () => {
     try {
       const res = await fetch("/api/check-credits");
@@ -60,7 +60,6 @@ export default function Navbar() {
                 Dashboard
               </Link>
 
-              {/* ✅ SETTINGS LINK */}
               <Link
                 href="/dashboard/settings"
                 className="px-4 py-2 rounded-lg border border-white/20 text-white hover:bg-white/10"
@@ -94,13 +93,13 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* MOBILE MENU */}
+      {/* 🔥 MOBILE MENU (STEP 7.1 FIXED) */}
       {menuOpen && (
-        <div className="md:hidden mt-4 flex flex-col gap-4 bg-[#061826] border-t border-white/10 pt-4">
+        <div className="md:hidden mt-4 rounded-xl bg-[#061826] border border-white/10 p-4 space-y-4">
           <Link
             href="/pricing"
             onClick={() => setMenuOpen(false)}
-            className="text-white/80"
+            className="block text-white/90 text-base"
           >
             Pricing
           </Link>
@@ -108,15 +107,16 @@ export default function Navbar() {
           <Link
             href="/tools"
             onClick={() => setMenuOpen(false)}
-            className="text-white/80"
+            className="block text-white/90 text-base"
           >
             AI Tools
           </Link>
 
           {status === "authenticated" && session?.user ? (
             <>
-              <div className="text-white/80 text-sm">
-                Credits:{" "}
+              {/* Credits Card */}
+              <div className="flex justify-between items-center text-white text-sm bg-white/10 px-3 py-2 rounded-lg">
+                <span>Credits</span>
                 <span className="font-bold">
                   {credits !== null ? credits : "..."}
                 </span>
@@ -125,23 +125,22 @@ export default function Navbar() {
               <Link
                 href="/dashboard"
                 onClick={() => setMenuOpen(false)}
-                className="text-cyan-400 font-semibold"
+                className="block w-full text-center py-2 rounded-lg bg-cyan-500 text-black font-semibold"
               >
                 Dashboard
               </Link>
 
-              {/* ✅ SETTINGS LINK (MOBILE) */}
               <Link
                 href="/dashboard/settings"
                 onClick={() => setMenuOpen(false)}
-                className="text-white/80 font-semibold"
+                className="block w-full text-center py-2 rounded-lg border border-white/20 text-white font-semibold"
               >
                 Settings
               </Link>
 
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="text-red-400 text-left"
+                className="w-full py-2 rounded-lg bg-red-500 text-white font-semibold"
               >
                 Logout
               </button>
@@ -150,7 +149,7 @@ export default function Navbar() {
             <Link
               href="/login"
               onClick={() => setMenuOpen(false)}
-              className="text-cyan-400 font-semibold"
+              className="block w-full text-center py-2 rounded-lg bg-cyan-500 text-black font-semibold"
             >
               Login
             </Link>

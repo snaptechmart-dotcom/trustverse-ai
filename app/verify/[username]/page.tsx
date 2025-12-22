@@ -4,6 +4,19 @@ import TrustProfile from "@/models/TrustProfile";
 import dbConnect from "@/lib/db";
 import { calculateTrustScore } from "@/lib/trustScore";
 
+/**
+ * ✅ Minimal type to satisfy calculateTrustScore
+ * (poora model type lane ki zarurat nahi)
+ */
+type TrustProfileInput = {
+  displayName?: string;
+  category?: string;
+  location?: string;
+  verified?: boolean;
+  complaintsCount?: number;
+  completedProfile?: boolean;
+};
+
 type PageProps = {
   params: Promise<{ username: string }>;
 };
@@ -14,12 +27,14 @@ export default async function VerifyProfilePage({ params }: PageProps) {
 
   await dbConnect();
 
-  const profile = await TrustProfile.findOne({
-    username: username.toLowerCase(),
-  }).lean();
+  // ✅ IMPORTANT: explicit cast to single object (NOT array)
+  const profile = (await TrustProfile.findOne({
+    username,
+  }).lean()) as TrustProfileInput | null;
 
   if (!profile) notFound();
 
+  // ✅ TypeScript now 100% satisfied
   const trust = calculateTrustScore(profile);
 
   return (

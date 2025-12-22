@@ -17,12 +17,10 @@ export default function HistoryPage() {
   useEffect(() => {
     async function loadHistory() {
       try {
-        const res = await fetch("/api/history", {
-          cache: "no-store",
-        });
+        const res = await fetch("/api/history", { cache: "no-store" });
         const data = await res.json();
         setHistory(data.history || []);
-      } catch (error) {
+      } catch {
         console.error("Failed to load history");
       } finally {
         setLoading(false);
@@ -33,40 +31,48 @@ export default function HistoryPage() {
   }, []);
 
   if (loading) {
-    return <div className="p-10">Loading history...</div>;
+    return <div className="p-4">Loading history...</div>;
   }
 
   return (
-    <div className="p-6 md:p-10 space-y-6">
+    <div className="p-4 md:p-8 space-y-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold">Your Activity History</h1>
 
       {history.length === 0 ? (
-        <p className="text-gray-500">No activity found.</p>
+        <p className="text-sm text-gray-500">No activity found.</p>
       ) : (
         <div className="space-y-4">
           {history.map((item) => (
             <div
               key={item._id}
-              className="p-4 border rounded-lg bg-white shadow-sm flex justify-between items-start"
+              className="border rounded-lg p-4 bg-white space-y-2"
             >
-              <div>
-                <p className="font-semibold">{item.action}</p>
-                <p className="text-gray-600">{item.reason}</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {new Date(item.createdAt).toLocaleString()}
+              {/* ACTION + IMPACT */}
+              <div className="flex justify-between items-start gap-2">
+                <p className="font-semibold text-sm break-words">
+                  {item.action}
                 </p>
+
+                <span
+                  className={`text-xs font-bold px-2 py-1 rounded-full ${
+                    item.impact < 0
+                      ? "bg-red-100 text-red-600"
+                      : "bg-green-100 text-green-600"
+                  }`}
+                >
+                  {item.impact}
+                </span>
               </div>
 
-              <span
-                className={`font-bold text-sm px-3 py-1 rounded-full ${
-                  item.impact > 0
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                {item.impact > 0 ? "+" : ""}
-                {item.impact}
-              </span>
+              {/* REASON */}
+              <p className="text-sm text-gray-600 break-words">
+                {item.reason}
+              </p>
+
+              {/* DATE */}
+              <p className="text-xs text-gray-400">
+                {new Date(item.createdAt).toLocaleString()}
+              </p>
             </div>
           ))}
         </div>

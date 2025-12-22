@@ -1,31 +1,31 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/adminAuth";
-import dbConnect from "@/lib/db";
+import connectDB from "@/lib/db";
 import History from "@/models/History";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function GET() {
   try {
-    // 🔐 Admin check
-    const session = await requireAdmin();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+
+    if (!session || (session.user as any)?.role !== "admin") {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    await dbConnect();
+    await connectDB();
 
-    // 📜 Fetch history (latest first)
-    const history = await History.find()
+    const history = await History.find({})
       .sort({ createdAt: -1 })
       .limit(100);
 
-    return NextResponse.json(history);
+    return NextResponse.json({ history });
   } catch (error) {
-    console.error("Admin history error:", error);
+    console.error("ADMIN HISTORY ERROR:", error);
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: "Failed to load history" },
       { status: 500 }
     );
   }
