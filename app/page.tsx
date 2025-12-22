@@ -1,56 +1,52 @@
-"use client";
-
-import Image from "next/image";
-import Link from "next/link";
-
-export default function Home() {
+export default function HomePage() {
   return (
-    <section className="w-full bg-[#081b33] text-white pt-20 pb-28 px-4 md:px-10">
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+    <main className="min-h-screen bg-gray-50">
+      <header className="bg-[#061826] text-white py-20 px-6 text-center">
+        <h1 className="text-4xl font-bold mb-4">
+          Trustverse AI
+        </h1>
+        <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+          Verify people, numbers and profiles with AI-powered trust analysis.
+        </p>
 
-        {/* LEFT TEXT SECTION */}
-        <div className="space-y-6 text-center md:text-left">
-          <h1 className="text-3xl md:text-5xl font-extrabold leading-tight">
-            Trustverse AI — Verify Anything with Confidence
-          </h1>
+        <div className="mt-8 flex justify-center gap-4">
+          <a
+            href="/login"
+            className="bg-white text-black px-6 py-3 rounded-lg font-semibold"
+          >
+            Login
+          </a>
+          <a
+            href="/waitlist"
+            className="border border-white px-6 py-3 rounded-lg"
+          >
+            Join Waitlist
+          </a>
+        </div>
+      </header>
 
-          <p className="text-gray-300 text-base md:text-lg">
-            AI-powered trust detection for profiles, phone numbers, social
-            accounts, and digital identities. Make safer decisions with
-            real-time AI scoring.
+      <section className="py-16 px-6 max-w-6xl mx-auto grid md:grid-cols-3 gap-8">
+        <div className="bg-white p-6 rounded-xl shadow">
+          <h3 className="font-semibold text-lg">Trust Score Analyzer</h3>
+          <p className="text-gray-500 mt-2">
+            AI-based trust score using reputation & risk signals.
           </p>
-
-          {/* BUTTONS */}
-          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 justify-center md:justify-start">
-            <Link
-              href="/waitlist"
-              className="bg-white text-black font-semibold px-6 py-3 rounded-lg w-full md:w-auto text-center"
-            >
-              Get Started Free
-            </Link>
-
-            <Link
-              href="/tools"
-              className="border border-white px-6 py-3 rounded-lg font-semibold w-full md:w-auto text-center"
-            >
-              Explore Tools
-            </Link>
-          </div>
         </div>
 
-        {/* RIGHT IMAGE */}
-        <div className="flex justify-center md:justify-end">
-          <Image
-            src="/hero-illustration.png"
-            alt="Trustverse AI Hero Image"
-            width={450}
-            height={450}
-            className="w-[70%] md:w-[90%] lg:w-[100%]"
-            priority
-          />
+        <div className="bg-white p-6 rounded-xl shadow">
+          <h3 className="font-semibold text-lg">Phone Verification</h3>
+          <p className="text-gray-500 mt-2">
+            Detect spam, fraud & activity signals.
+          </p>
         </div>
 
-      </div>
-    </section>
+        <div className="bg-white p-6 rounded-xl shadow">
+          <h3 className="font-semibold text-lg">Profile History</h3>
+          <p className="text-gray-500 mt-2">
+            Track reports & trust history.
+          </p>
+        </div>
+      </section>
+    </main>
   );
 }

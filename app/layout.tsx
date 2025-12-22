@@ -1,6 +1,7 @@
 import "./globals.css";
+import Providers from "./providers";
 import Navbar from "@/components/Navbar";
-import Sidebar from "@/components/Sidebar";
+import Footer from "@/components/Footer";
 
 export const metadata = {
   title: "Trustverse AI",
@@ -14,42 +15,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0 }}>
-        <div
-          style={{
-            display: "flex",
-            minHeight: "100vh",
-            background: "#f0f2f5",
-          }}
-        >
-          {/* ✅ Sidebar wrapper (IMPORTANT FIX) */}
-          <div style={{ flexShrink: 0 }}>
-            <Sidebar />
-          </div>
-
-          {/* Right side (Navbar + Page Content) */}
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            {/* Navbar */}
-            <Navbar />
-
-            {/* Page Content */}
-            <main
-              style={{
-                flex: 1,
-                padding: 24,
-                overflowY: "auto",
-              }}
-            >
-              {children}
-            </main>
-          </div>
-        </div>
+      <body className="flex min-h-screen flex-col">
+        <Providers>
+          <Navbar />
+          <main className="flex-1">
+            {children}
+          </main>
+          <Footer />
+        </Providers>
       </body>
     </html>
   );

@@ -1,76 +1,8 @@
-/* ===== GLOBAL RESET ===== */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-html,
-body {
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
-    "Helvetica Neue", sans-serif;
-  background-color: #f0f2f5;
-  color: #111;
-}
-
-/* ===== LINKS ===== */
-a {
-  color: #1677ff;
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-/* ===== HEADINGS ===== */
-h1 {
-  font-size: 26px;
-  margin-bottom: 16px;
-}
-
-h3 {
-  margin: 0;
-}
-
-/* ===== CARD STYLE (History, Profile, etc.) ===== */
-.card {
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-/* ===== SIDEBAR ===== */
-.sidebar {
-  width: 220px;
-  background: #ffffff;
-  border-right: 1px solid #e5e7eb;
-  padding: 20px;
-}
-
-.sidebar h4 {
-  margin-bottom: 12px;
-}
-
-.sidebar ul {
-  list-style: none;
-  padding: 0;
-}
-
-.sidebar li {
-  margin-bottom: 10px;
-}
-
-/* ===== NAVBAR ===== */
-.navbar {
-  height: 60px;
-  background: #111827;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
+/* Global polish */
+html, body {
+  background-color: #f9fafb;
 }

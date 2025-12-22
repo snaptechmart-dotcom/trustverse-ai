@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 
-export default function DashboardProfilePage() {
+export default function DashboardSettingsPage() {
   // ✅ SAFE PATTERN (BUILD + RUNTIME SAFE)
   const sessionHook = useSession();
   const session = sessionHook?.data;
@@ -18,25 +18,31 @@ export default function DashboardProfilePage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-6">
-      <h1 className="text-2xl font-bold">My Profile</h1>
+    <div className="bg-white rounded-xl shadow p-6 space-y-4 max-w-xl">
+      <h2 className="text-lg font-semibold text-gray-800">
+        My Profile
+      </h2>
 
-      <div className="border rounded-lg p-4 bg-white space-y-2">
-        <p className="text-sm text-gray-700">
+      <div className="text-sm text-gray-700 space-y-1">
+        <p>
           <span className="font-medium">Name:</span>{" "}
           {session.user?.name || "Not set"}
         </p>
 
-        <p className="text-sm text-gray-700 break-words">
+        <p>
           <span className="font-medium">Email:</span>{" "}
           {session.user?.email}
         </p>
 
-        <p className="text-sm text-gray-700">
+        <p>
           <span className="font-medium">Role:</span>{" "}
           {(session.user as any)?.role || "User"}
         </p>
       </div>
+
+      <p className="text-xs text-gray-400">
+        Profile editing coming soon
+      </p>
     </div>
   );
 }
