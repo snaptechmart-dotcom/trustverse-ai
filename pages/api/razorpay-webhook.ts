@@ -5,7 +5,7 @@ import Subscription from "@/models/Subscription";
 
 export const config = {
   api: {
-    bodyParser: false, // 🔴 VERY IMPORTANT
+    bodyParser: false,
   },
 };
 
@@ -39,24 +39,43 @@ export default async function handler(
 
   await dbConnect();
 
-  if (event.event?.startsWith("subscription.")) {
-    const sub = event.payload.subscription.entity;
+  let subscriptionId: string | null = null;
+  let status: string | null = null;
+  let planId: string | null = null;
 
-    await Subscription.findOneAndUpdate(
-      { subscriptionId: sub.id },
-      {
-        subscriptionId: sub.id,
-        planId: sub.plan_id,
-        status: sub.status,
-        paymentMethod: sub.payment_method || "upi",
-        userEmail:
-          sub.customer_email ||
-          sub.notes?.email ||
-          "unknown",
-      },
-      { upsert: true }
-    );
+  // 🔥 CASE 1: subscription.* events
+  if (event.payload?.subscription?.entity) {
+    const sub = event.payload.subscription.entity;
+    subscriptionId = sub.id;
+    status = sub.status;
+    planId = sub.plan_id;
   }
+
+  // 🔥 CASE 2: payment.* events (subscription_id nested here)
+  if (!subscriptionId && event.payload?.payment?.entity?.subscription_id) {
+    subscriptionId = event.payload.payment.entity.subscription_id;
+    status = event.event.includes("cancel")
+      ? "cancelled"
+      : "active";
+  }
+
+  if (!subscriptionId) {
+    console.log("⚠️ No subscriptionId found, skipping DB save");
+    return res.status(200).json({ status: "ignored" });
+  }
+
+  await Subscription.findOneAndUpdate(
+    { subscriptionId },
+    {
+      subscriptionId,
+      planId,
+      status,
+      paymentMethod: "upi",
+    },
+    { upsert: true }
+  );
+
+  console.log("✅ Subscription saved:", subscriptionId);
 
   return res.status(200).json({ status: "ok" });
 }
