@@ -23,26 +23,56 @@ const UserSchema = new Schema(
       default: "user",
     },
 
-    // 💼 SUBSCRIPTION PLAN (PLAN ↔ CREDIT LOGIC)
+    // 💼 SUBSCRIPTION PLAN (MONETIZATION READY)
     plan: {
       type: String,
       enum: ["free", "essential", "pro", "enterprise"],
       default: "free",
     },
 
+    // 📅 PLAN EXPIRY (STEP 1.5 ADD)
+    // Used later in STEP 1.6 (Payments)
+    planExpiresAt: {
+      type: Date,
+    },
+
     // 💳 CREDITS SYSTEM (CORE SAAS LOGIC)
     credits: {
       type: Number,
-      default: 5, // 🎁 Free users get 5 credits (one-time)
+      default: 5, // 🎁 Free users get 5 credits
       min: 0,
     },
 
     // 📅 PLAN ACTIVATION DATE
-    // Used for:
-    // - Monthly credit reset (essential)
-    // - Subscription tracking (future Razorpay)
     planActivatedAt: {
       type: Date,
+    },
+
+    // ==============================
+    // 🔒 TRUST SCORE SYSTEM (STEP 1.x)
+    // ==============================
+
+    trustScore: {
+      type: Number,
+      default: 70, // 🎯 Default Trust Score
+      min: 0,
+      max: 100,
+    },
+
+    verifiedEmail: {
+      type: Boolean,
+      default: false,
+    },
+
+    verifiedPhone: {
+      type: Boolean,
+      default: false,
+    },
+
+    // 🕒 ACTIVITY TRACKING (INACTIVITY PENALTY)
+    lastActiveAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   {

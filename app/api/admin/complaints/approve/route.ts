@@ -12,12 +12,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Complaint not found" }, { status: 404 });
   }
 
-  complaint.status = "resolved";
+  complaint.status = "approved";
   await complaint.save();
 
   await recalculateTrustScore(
     complaint.reportedUser.toString(),
-    "COMPLAINT_RESOLVED"
+    "COMPLAINT_APPROVED",
+    { severity: complaint.severity }
   );
 
   return NextResponse.json({ success: true });

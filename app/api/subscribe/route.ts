@@ -1,24 +1,40 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import Razorpay from "razorpay";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-import User from "@/models/User";
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID!,
+  key_secret: process.env.RAZORPAY_KEY_SECRET!,
+});
 
 export async function POST(req: Request) {
   try {
-    await connectDB();
-
-    const { email } = await req.json();
-
-    const exists = await User.findOne({ email });
-    if (exists) {
-      return NextResponse.json({ message: "Already subscribed" });
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await User.create({ email });
+    const { planId } = await req.json();
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Subscribe Error:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    console.log("PLAN ID:", planId);
+    console.log("KEY USED:", process.env.RAZORPAY_KEY_ID);
+
+    const subscription = await razorpay.subscriptions.create({
+      plan_id: planId,
+      customer_notify: 1,
+      total_count: 12,
+      start_at: Math.floor(Date.now() / 1000) + 300, // 5 min later
+    });
+
+    console.log("SUBSCRIPTION CREATED:", subscription.id);
+
+    return NextResponse.json({ subscriptionId: subscription.id });
+  } catch (err: any) {
+    console.error("RAZORPAY ERROR FULL:", err);
+    return NextResponse.json(
+      { error: "Subscription creation failed", details: err },
+      { status: 500 }
+    );
   }
 }
