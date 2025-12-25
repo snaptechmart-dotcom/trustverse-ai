@@ -5,83 +5,81 @@ import Subscription from "@/models/Subscription";
 
 export async function POST(req: Request) {
   try {
-    console.log("🔥 RAZORPAY WEBHOOK HIT");
-
-    // 1️⃣ Raw body & signature
     const rawBody = await req.text();
     const signature =
       req.headers.get("x-razorpay-signature") || "";
 
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-    if (!secret) {
-      console.error("❌ Missing RAZORPAY_WEBHOOK_SECRET");
-      return NextResponse.json(
-        { error: "Server config error" },
-        { status: 500 }
-      );
-    }
-
-    // 2️⃣ Verify signature
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET!;
     const expectedSignature = crypto
       .createHmac("sha256", secret)
       .update(rawBody)
       .digest("hex");
 
     if (signature !== expectedSignature) {
-      console.error("❌ Invalid Razorpay signature");
       return NextResponse.json(
         { error: "Invalid signature" },
         { status: 401 }
       );
     }
 
-    // 3️⃣ Parse event
     const event = JSON.parse(rawBody);
-    console.log("📩 Event received:", event.event);
-
-    // 4️⃣ Connect DB
     await dbConnect();
 
-    // 5️⃣ Handle subscription events
-    if (event.event?.startsWith("subscription.")) {
-      const subscription =
-        event.payload?.subscription?.entity;
+    let subscriptionId: string | null = null;
+    let status: string | null = null;
+    let planId: string | null = null;
 
-      if (!subscription) {
-        console.warn("⚠️ No subscription entity");
-        return NextResponse.json({ status: "ignored" });
-      }
-
-      const data = {
-        subscriptionId: subscription.id,
-        planId: subscription.plan_id,
-        status: subscription.status, // created | active | cancelled | etc
-        paymentMethod:
-          subscription.payment_method || "upi",
-        currentPeriodEnd: subscription.current_end
-          ? new Date(subscription.current_end * 1000)
-          : undefined,
-      };
-
-      await Subscription.findOneAndUpdate(
-        { subscriptionId: data.subscriptionId },
-        data,
-        { upsert: true, new: true }
-      );
-
-      console.log(
-        "✅ Subscription saved/updated:",
-        data.subscriptionId,
-        data.status
-      );
+    // ✅ CASE 1: subscription events
+    if (event.payload?.subscription?.entity) {
+      const sub = event.payload.subscription.entity;
+      subscriptionId = sub.id;
+      status = sub.status;
+      planId = sub.plan_id;
     }
 
-    // 6️⃣ Always respond 200 to Razorpay
+    // ✅ CASE 2: payment events (UPI Autopay mostly here)
+    if (
+      !subscriptionId &&
+      event.payload?.payment?.entity?.subscription_id
+    ) {
+      subscriptionId =
+        event.payload.payment.entity.subscription_id;
+
+      status = event.event.includes("cancel")
+        ? "cancelled"
+        : "active";
+    }
+
+    if (!subscriptionId) {
+      console.log(
+        "⚠️ Webhook ignored: no subscriptionId",
+        event.event
+      );
+      return NextResponse.json({ status: "ignored" });
+    }
+
+    await Subscription.findOneAndUpdate(
+      { subscriptionId },
+      {
+        subscriptionId,
+        planId,
+        status,
+        paymentMethod: "upi",
+      },
+      { upsert: true }
+    );
+
+    console.log(
+      "✅ Subscription saved via webhook:",
+      subscriptionId,
+      status
+    );
+
     return NextResponse.json({ status: "ok" });
   } catch (error) {
-    console.error("🔥 WEBHOOK ERROR FULL:", error);
+    console.error("🔥 WEBHOOK ERROR:", error);
     return NextResponse.json(
-      { error: "Webhook processing failed" },
+      { error: "Webhook failed" },
       { status: 500 }
     );
   }
