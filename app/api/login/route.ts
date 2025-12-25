@@ -19,6 +19,7 @@ export async function POST(req: Request) {
     // 🔴 IMPORTANT: explicitly select password
     const user = await User.findOne({ email }).select("+password");
 
+
     if (!user) {
       return NextResponse.json(
         { error: "Invalid email or password" },

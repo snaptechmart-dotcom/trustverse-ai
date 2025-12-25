@@ -16,6 +16,13 @@ const UserSchema = new Schema(
       trim: true,
     },
 
+    // 🔐 PASSWORD (REQUIRED FOR LOGIN)
+    password: {
+      type: String,
+      required: true,
+      select: false, // 🔒 security: default queries me password hide rahe
+    },
+
     // 🔐 USER ROLE (ADMIN / USER)
     role: {
       type: String,
@@ -23,38 +30,34 @@ const UserSchema = new Schema(
       default: "user",
     },
 
-    // 💼 SUBSCRIPTION PLAN (MONETIZATION READY)
+    // 💼 SUBSCRIPTION PLAN
     plan: {
       type: String,
       enum: ["free", "essential", "pro", "enterprise"],
       default: "free",
     },
 
-    // 📅 PLAN EXPIRY (STEP 1.5 ADD)
-    // Used later in STEP 1.6 (Payments)
     planExpiresAt: {
       type: Date,
     },
 
-    // 💳 CREDITS SYSTEM (CORE SAAS LOGIC)
+    // 💳 CREDITS SYSTEM
     credits: {
       type: Number,
-      default: 5, // 🎁 Free users get 5 credits
+      default: 5,
       min: 0,
     },
 
-    // 📅 PLAN ACTIVATION DATE
     planActivatedAt: {
       type: Date,
     },
 
     // ==============================
-    // 🔒 TRUST SCORE SYSTEM (STEP 1.x)
+    // 🔒 TRUST SCORE SYSTEM
     // ==============================
-
     trustScore: {
       type: Number,
-      default: 70, // 🎯 Default Trust Score
+      default: 70,
       min: 0,
       max: 100,
     },
@@ -69,16 +72,14 @@ const UserSchema = new Schema(
       default: false,
     },
 
-    // 🕒 ACTIVITY TRACKING (INACTIVITY PENALTY)
     lastActiveAt: {
       type: Date,
       default: Date.now,
     },
   },
   {
-    timestamps: true, // createdAt & updatedAt
+    timestamps: true,
   }
 );
 
-// 🚀 SAFE EXPORT (NEXT.JS + HOT RELOAD FIX)
 export default models.User || mongoose.model("User", UserSchema);
