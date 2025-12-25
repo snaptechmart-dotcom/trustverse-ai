@@ -16,25 +16,29 @@ const UserSchema = new Schema(
       trim: true,
     },
 
-    // 🔐 PASSWORD (REQUIRED FOR LOGIN)
+    // 🔐 PASSWORD
     password: {
       type: String,
       required: true,
-      select: false, // 🔒 security: default queries me password hide rahe
+      select: false,
     },
 
-    // 🔐 USER ROLE (ADMIN / USER)
+    // 🔐 USER ROLE
     role: {
       type: String,
       enum: ["user", "admin"],
       default: "user",
     },
 
-    // 💼 SUBSCRIPTION PLAN
+    // 💼 SUBSCRIPTION PLAN (IMPORTANT)
     plan: {
       type: String,
-      enum: ["free", "essential", "pro", "enterprise"],
-      default: "free",
+      enum: ["FREE", "PRO"],
+      default: "FREE",
+    },
+
+    planActivatedAt: {
+      type: Date,
     },
 
     planExpiresAt: {
@@ -44,16 +48,12 @@ const UserSchema = new Schema(
     // 💳 CREDITS SYSTEM
     credits: {
       type: Number,
-      default: 5,
+      default: 10, // ✅ Free users start with 10 credits
       min: 0,
     },
 
-    planActivatedAt: {
-      type: Date,
-    },
-
     // ==============================
-    // 🔒 TRUST SCORE SYSTEM
+    // 🔒 TRUST SYSTEM (Optional Future)
     // ==============================
     trustScore: {
       type: Number,

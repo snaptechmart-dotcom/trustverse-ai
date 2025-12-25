@@ -1,9 +1,55 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function TrustScorePage() {
   const [value, setValue] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+
+  const router = useRouter();
+
+  const handleAnalyze = async () => {
+    if (!value) {
+      alert("Please enter phone, email or username");
+      return;
+    }
+
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const res = await fetch("/api/trust-score", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: value }),
+      });
+
+      // 🚫 NO CREDITS → UPGRADE
+      if (res.status === 402) {
+        alert("Your credits are finished. Please upgrade to Pro.");
+        router.push("/pricing");
+        return;
+      }
+
+      // ❌ Other error
+      if (!res.ok) {
+        alert("Something went wrong. Try again.");
+        return;
+      }
+
+      const data = await res.json();
+      setResult(data);
+    } catch (err) {
+      console.error(err);
+      alert("Server error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -13,7 +59,7 @@ export default function TrustScorePage() {
           Trust Score Analyzer
         </h1>
         <p className="text-gray-500 mt-1">
-          Analyze the trustworthiness of people, numbers, or profiles using AI
+          Analyze people, numbers or profiles using AI-powered trust signals
         </p>
       </div>
 
@@ -28,42 +74,34 @@ export default function TrustScorePage() {
         />
 
         <button
-          className="bg-indigo-600 text-white px-5 py-2 rounded-md hover:bg-indigo-700 transition"
+          onClick={handleAnalyze}
+          disabled={loading}
+          className="bg-indigo-600 text-white px-5 py-2 rounded-md hover:bg-indigo-700 transition disabled:opacity-60"
         >
-          Analyze Trust
+          {loading ? "Analyzing..." : "Analyze Trust"}
         </button>
       </div>
 
-      {/* DESCRIPTION SECTION ✅ */}
-      <div className="max-w-3xl text-gray-700 space-y-4">
-        <h2 className="text-xl font-semibold text-gray-900">
-          How Trust Score Works
-        </h2>
+      {/* RESULT */}
+      {result && (
+        <div className="bg-white border rounded-xl p-6 max-w-xl space-y-2">
+          <p>
+            <strong>Trust Score:</strong> {result.trustScore}
+          </p>
+          <p>
+            <strong>Risk Level:</strong> {result.risk}
+          </p>
+          <p>
+            <strong>Confidence:</strong> {result.confidence}
+          </p>
 
-        <p>
-          Trust Score Analyzer uses AI-powered signals to evaluate the reliability
-          and risk level associated with a phone number, username, or email
-          address. It helps you make safer decisions before interacting with
-          unknown people or profiles.
-        </p>
-
-        <p>
-          Our system analyzes multiple factors such as historical reports,
-          verification patterns, behavioral signals, and public risk indicators
-          to generate a clear trust score along with a risk classification.
-        </p>
-
-        <ul className="list-disc pl-5 space-y-2">
-          <li>Detect potential fraud, spam, or fake identities</li>
-          <li>Identify high-risk or suspicious profiles early</li>
-          <li>Make informed decisions with AI-backed insights</li>
-        </ul>
-
-        <p className="text-sm text-gray-500">
-          Note: Trust Score is generated using automated analysis and should be
-          used as a guidance tool, not as a definitive judgment.
-        </p>
-      </div>
+          {result.remainingCredits !== "unlimited" && (
+            <p className="text-sm text-gray-500">
+              Remaining Credits: {result.remainingCredits}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
