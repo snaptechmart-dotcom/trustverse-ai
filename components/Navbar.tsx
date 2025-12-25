@@ -11,27 +11,27 @@ export default function Navbar() {
   const isPro = session?.user?.plan === "PRO";
 
   return (
-    <nav className="w-full border-b bg-white relative z-50">
-      <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+    <header className="w-full bg-white border-b shadow-sm sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
         
         {/* Logo */}
-        <Link href="/" className="text-xl font-bold">
+        <Link href="/" className="text-lg font-semibold">
           Trustverse AI
         </Link>
 
         {/* Right Side */}
         {status === "authenticated" ? (
-          <div className="flex items-center gap-3 relative">
+          <div className="flex items-center gap-4 relative">
 
-            {/* PRO / Upgrade */}
+            {/* Upgrade / Pro */}
             {isPro ? (
-              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow">
+              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-indigo-100 text-indigo-700">
                 PRO
               </span>
             ) : (
               <Link
                 href="/pricing"
-                className="px-4 py-1.5 text-sm font-semibold rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition shadow cursor-pointer"
+                className="text-sm font-medium px-4 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
               >
                 Upgrade to Pro
               </Link>
@@ -40,23 +40,23 @@ export default function Navbar() {
             {/* User Avatar */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center font-bold cursor-pointer"
+              className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-semibold"
             >
               {session.user.email?.[0]?.toUpperCase()}
             </button>
 
             {/* Dropdown */}
             {menuOpen && (
-              <div className="absolute right-0 top-12 bg-white border rounded-md shadow-lg w-40 z-50">
+              <div className="absolute right-0 top-11 bg-white border rounded-md shadow-md w-40">
                 <Link
                   href="/dashboard"
-                  className="block px-4 py-2 hover:bg-gray-100"
+                  className="block px-4 py-2 text-sm hover:bg-gray-100"
                 >
                   Dashboard
                 </Link>
                 <button
                   onClick={() => signOut()}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-600"
                 >
                   Logout
                 </button>
@@ -66,12 +66,12 @@ export default function Navbar() {
         ) : (
           <Link
             href="/login"
-            className="px-4 py-1.5 text-sm font-semibold rounded-md bg-indigo-600 text-white"
+            className="text-sm font-medium px-4 py-1.5 rounded-md bg-indigo-600 text-white"
           >
             Login
           </Link>
         )}
       </div>
-    </nav>
+    </header>
   );
 }
