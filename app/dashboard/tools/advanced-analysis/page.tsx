@@ -1,110 +1,28 @@
-"use client";
-
-import { useState } from "react";
-
-export default function AdvancedAIAnalysis() {
-  const [input, setInput] = useState("");
-  const [result, setResult] = useState<{
-    probability: number;
-    risk: string;
-  } | null>(null);
-
-  const analyze = async () => {
-    if (!input) return;
-
-    /* =========================
-       STEP 1: CHECK + DEDUCT 2 CREDITS
-       (Premium tool)
-    ========================= */
-    const creditRes1 = await fetch("/api/use-credit", {
-      method: "POST",
-    });
-
-    if (!creditRes1.ok) {
-      alert("You need at least 2 credits to run Advanced AI Analysis.");
-      return;
-    }
-
-    const creditRes2 = await fetch("/api/use-credit", {
-      method: "POST",
-    });
-
-    if (!creditRes2.ok) {
-      alert("You need at least 2 credits to run Advanced AI Analysis.");
-      return;
-    }
-
-    /* =========================
-       STEP 2: AI ANALYSIS LOGIC
-    ========================= */
-    const probability = Math.floor(Math.random() * 60) + 40;
-
-    let risk = "Low Risk";
-    if (probability > 75) risk = "High Risk";
-    else if (probability > 55) risk = "Medium Risk";
-
-    setResult({ probability, risk });
-
-    /* =========================
-       STEP 3: SAVE HISTORY
-    ========================= */
-    try {
-      await fetch("/api/save-history", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "Advanced AI Analysis",
-          input,
-          result: `${probability}% - ${risk}`,
-        }),
-      });
-    } catch (error) {
-      console.error("Failed to save history", error);
-    }
-  };
-
+export default function AdvancedAnalysisPage() {
   return (
-    <div className="max-w-xl space-y-6">
-      <h1 className="text-2xl font-bold">Advanced AI Analysis</h1>
+    <div className="space-y-8">
+      <h1 className="text-3xl font-bold">Advanced AI Analysis</h1>
+      <p className="text-gray-500">
+        Deep AI-powered risk and behavior analysis using multiple data sources.
+      </p>
 
       <input
-        type="text"
         placeholder="Enter phone / email / username"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        className="w-full border px-4 py-2 rounded"
+        className="w-full max-w-xl bg-slate-50 border border-slate-300 rounded-md px-4 py-2 focus:ring-2 focus:ring-red-500"
       />
 
-      <button
-        onClick={analyze}
-        className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded"
-      >
+      <button className="bg-red-600 text-white px-5 py-2 rounded-md">
         Run AI Analysis (2 Credits)
       </button>
 
-      {result && (
-        <div className="border rounded-lg p-4 bg-gray-50">
-          <p>
-            <strong>Scam Probability:</strong>{" "}
-            <span className="font-bold">{result.probability}%</span>
-          </p>
-
-          <p className="mt-2">
-            <strong>Risk Level:</strong>{" "}
-            <span
-              className={
-                result.risk === "Low Risk"
-                  ? "text-green-600 font-bold"
-                  : result.risk === "Medium Risk"
-                  ? "text-yellow-600 font-bold"
-                  : "text-red-600 font-bold"
-              }
-            >
-              {result.risk}
-            </span>
-          </p>
-        </div>
-      )}
+      <div className="max-w-3xl text-gray-700 space-y-3">
+        <h2 className="text-lg font-semibold">Advanced insights include</h2>
+        <ul className="list-disc pl-5">
+          <li>Cross-platform risk detection</li>
+          <li>Fraud probability estimation</li>
+          <li>High-confidence AI signals</li>
+        </ul>
+      </div>
     </div>
   );
 }
