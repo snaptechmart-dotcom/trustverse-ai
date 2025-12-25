@@ -35,9 +35,9 @@ export const authOptions: AuthOptions = {
 
         return {
           id: user._id.toString(),
-          email: user.email,
+          email: user.email,      // ✅ already here
           role: user.role,
-          plan: user.plan, // ✅ FREE | PRO
+          plan: user.plan,
         };
       },
     }),
@@ -53,7 +53,8 @@ export const authOptions: AuthOptions = {
         const u = user as any;
         token.id = u.id;
         token.role = u.role;
-        token.plan = u.plan; // ✅ stored in token
+        token.plan = u.plan;
+        token.email = u.email;   // 🔴 FIX #1 (MISSING)
       }
       return token;
     },
@@ -63,7 +64,8 @@ export const authOptions: AuthOptions = {
         const u = session.user as any;
         u.id = token.id;
         u.role = token.role;
-        u.plan = token.plan; // ✅ available in UI
+        u.plan = token.plan;
+        u.email = token.email;  // 🔴 FIX #2 (MISSING)
       }
       return session;
     },

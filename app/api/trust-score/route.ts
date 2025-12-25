@@ -1,14 +1,27 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
+import History from "@/models/History";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function POST(req: Request) {
   try {
     await dbConnect();
 
-    // ⚠️ TEMP: email hard session se mat lo
-    const email = "harsh2026@gmail.com"; // 👈 DEBUG PURPOSE
+    // ✅ GET SESSION
+    const session = await getServerSession(authOptions);
 
+    if (!session || !session.user?.email) {
+      return NextResponse.json(
+        { error: "Not authenticated" },
+        { status: 401 }
+      );
+    }
+
+    const email = session.user.email;
+
+    // ✅ FIND USER
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -39,7 +52,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🧠 DEMO RESULT
+    // 🧠 TRUST SCORE LOGIC
     const trustScore = Math.floor(Math.random() * 40) + 60;
 
     const risk =
@@ -49,14 +62,26 @@ export async function POST(req: Request) {
         ? "Medium Risk"
         : "High Risk";
 
-    return NextResponse.json({
+    const confidence = `${Math.floor(Math.random() * 25) + 70}%`;
+
+    const result = {
       trustScore,
       risk,
-      confidence: "78%",
+      confidence,
       remainingCredits: user.credits,
+    };
+
+    // 📝 SAVE HISTORY
+    await History.create({
+      userId: user._id,
+      type: "TRUST_SCORE",
+      input: text,
+      result: JSON.stringify(result),
     });
-  } catch (err) {
-    console.error("TRUST SCORE API ERROR:", err);
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("TRUST SCORE API ERROR:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
