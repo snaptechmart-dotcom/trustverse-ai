@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
-
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 
@@ -8,24 +7,41 @@ export async function POST(req: Request) {
   try {
     await connectDB();
 
-    const { name, email, password } = await req.json();
+    const { email, password, name } = await req.json();
 
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return NextResponse.json({ error: "User already exists" }, { status: 400 });
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: "Email and password required" },
+        { status: 400 }
+      );
     }
 
+    // 🔒 HASH PASSWORD (THIS WAS THE MAIN ISSUE)
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = await User.create({
-      name,
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "User already exists" },
+        { status: 409 }
+      );
+    }
+
+    const user = await User.create({
       email,
-      password: hashedPassword,
+      password: hashedPassword, // ✅ hashed password
+      name,
     });
 
-    return NextResponse.json({ success: true, user: newUser });
+    return NextResponse.json({
+      success: true,
+      userId: user._id,
+    });
   } catch (error) {
-    console.error("Signup Error:", error);
-    return NextResponse.json({ error: "Server Error" }, { status: 500 });
+    console.error("SIGNUP ERROR:", error);
+    return NextResponse.json(
+      { error: "Signup failed" },
+      { status: 500 }
+    );
   }
 }
