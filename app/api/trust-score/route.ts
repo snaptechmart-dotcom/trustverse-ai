@@ -1,27 +1,26 @@
 import { NextResponse } from "next/server";
-import { NextRequest } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
-import { getToken } from "next-auth/jwt";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     await dbConnect();
 
-    // ✅ Correct way for App Router
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    // ✅ OFFICIAL & SAFE WAY
+    const session = await getServerSession(authOptions);
 
-    if (!token || !token.email) {
+    if (!session || !session.user || !session.user.email) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const user = await User.findOne({ email: token.email });
+    const user = await User.findOne({
+      email: session.user.email,
+    });
 
     if (!user) {
       return NextResponse.json(
@@ -46,11 +45,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 🔻 Deduct credit
+    // 🔻 DEDUCT CREDIT
     user.credits -= 1;
     await user.save();
 
-    // 🧠 Trust score logic (demo)
+    // 🧠 TRUST SCORE LOGIC
     const trustScore = Math.floor(Math.random() * 40) + 60;
     const risk =
       trustScore > 80
