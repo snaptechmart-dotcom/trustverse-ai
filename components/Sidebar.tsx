@@ -14,6 +14,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="space-y-1">
+        {/* Dashboard */}
         <Link
           href="/dashboard"
           className={`block px-3 py-2 rounded ${
@@ -25,6 +26,19 @@ export default function Sidebar() {
           Dashboard
         </Link>
 
+        {/* ✅ AI Tools (NEW) */}
+        <Link
+          href="/dashboard/tools"
+          className={`block px-3 py-2 rounded ${
+            pathname.startsWith("/dashboard/tools")
+              ? "bg-white/20"
+              : "hover:bg-white/10"
+          }`}
+        >
+          AI Tools
+        </Link>
+
+        {/* History */}
         <Link
           href="/dashboard/history"
           className={`block px-3 py-2 rounded ${
@@ -36,6 +50,7 @@ export default function Sidebar() {
           History
         </Link>
 
+        {/* Settings */}
         <Link
           href="/dashboard/settings"
           className={`block px-3 py-2 rounded ${
