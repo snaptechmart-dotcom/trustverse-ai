@@ -29,7 +29,7 @@ export default function SocialAnalyzerTool() {
 
   const analyzeProfile = async () => {
     if (!username) {
-      alert("Please enter username or profile ID");
+      alert("Please enter a username or profile link.");
       return;
     }
 
@@ -41,7 +41,7 @@ export default function SocialAnalyzerTool() {
     });
 
     if (!creditRes.ok) {
-      alert("No credits left. Please upgrade your plan.");
+      alert("You have no credits left. Please upgrade your plan.");
       return;
     }
 
@@ -50,8 +50,8 @@ export default function SocialAnalyzerTool() {
     ========================= */
     const genuine = Math.random() > 0.45;
     const accountText = genuine
-      ? "Genuine Account"
-      : "Suspicious Account";
+      ? "Likely Genuine Account"
+      : "Potentially Suspicious Account";
 
     let riskText = "High Risk";
     const r = Math.random();
@@ -80,27 +80,28 @@ export default function SocialAnalyzerTool() {
   };
 
   return (
-    <div className="space-y-8 max-w-3xl">
+    <div className="space-y-10 max-w-4xl">
       {/* CREDIT WARNING */}
       <CreditWarningBanner />
 
       {/* HEADER */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">
-          Social Analyzer
+          Social Profile Analyzer
         </h1>
-        <p className="text-gray-500 mt-1">
-          Analyze social media profiles to identify fake accounts,
-          suspicious behavior, or potential risks using AI-powered signals.
+        <p className="text-gray-500 mt-2 max-w-3xl">
+          Analyze social media profiles, usernames, or public profile links to
+          identify fake accounts, impersonation attempts, or suspicious online
+          behavior before engaging.
         </p>
       </div>
 
       {/* INPUT CARD */}
-      <div className="bg-white border rounded-xl p-6 space-y-4 max-w-xl">
-        {/* Username */}
+      <div className="bg-white border rounded-xl p-6 space-y-4 max-w-xl shadow-sm">
+        {/* Username / Profile */}
         <input
           type="text"
-          placeholder="Enter username or profile ID"
+          placeholder="Enter username or profile URL"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           className="w-full bg-slate-50 border border-slate-300 rounded-md px-4 py-2
@@ -131,41 +132,69 @@ export default function SocialAnalyzerTool() {
       </div>
 
       {/* DESCRIPTION */}
-      <div className="text-gray-700 space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900">
-          How Social Analyzer Works
+      <div className="space-y-6 text-gray-700 max-w-3xl">
+        <h2 className="text-xl font-semibold text-gray-900">
+          How Social Profile Analyzer Works
         </h2>
 
         <p>
-          Social Analyzer evaluates public profile signals such as activity
-          patterns, engagement behavior, and reported indicators to assess
-          whether an account appears genuine or suspicious.
+          Social Profile Analyzer is an AI-powered tool designed to assess the
+          credibility and risk level of social media accounts across widely used
+          global platforms. It helps users detect fake profiles, impersonation
+          attempts, and suspicious activity patterns.
         </p>
 
-        <ul className="list-disc pl-5 space-y-2">
-          <li>Detect fake, bot-driven, or risky profiles</li>
-          <li>Identify suspicious engagement patterns</li>
-          <li>Improve trust before interacting or collaborating</li>
+        <p>
+          The system evaluates publicly available signals such as activity
+          consistency, engagement behavior, and reported risk indicators to
+          determine whether a profile appears trustworthy or potentially risky.
+        </p>
+
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Detect fake, bot-driven, or impersonation accounts</li>
+          <li>Identify abnormal engagement or activity patterns</li>
+          <li>Improve safety before online interactions or collaborations</li>
+          <li>Make informed decisions using AI-powered trust signals</li>
+        </ul>
+
+        <p className="font-medium text-gray-800">
+          Risk Levels Explained:
+        </p>
+
+        <ul className="list-disc pl-6 space-y-2">
+          <li>
+            <strong>Low Risk:</strong> No major suspicious indicators detected.
+          </li>
+          <li>
+            <strong>Medium Risk:</strong> Some warning signals present; proceed
+            with caution.
+          </li>
+          <li>
+            <strong>High Risk:</strong> Strong risk indicators detected. Avoid
+            interaction unless verified through trusted sources.
+          </li>
         </ul>
 
         <p className="text-sm text-gray-500">
-          Note: Analysis is based on automated signals and should be used as
-          guidance, not as a definitive judgment.
+          Disclaimer: Social Profile Analyzer provides automated insights based
+          on public signals for guidance purposes only. Final decisions should
+          always involve personal judgment and additional verification when
+          required.
         </p>
       </div>
 
       {/* RESULT */}
       {accountType && (
-        <div className="border rounded-xl p-6 bg-gray-50 max-w-xl">
+        <div className="border rounded-xl p-6 bg-gray-50 max-w-xl space-y-2">
           <p>
             <strong>Platform:</strong> {platform}
           </p>
 
-          <p className="mt-2">
+          <p>
             <strong>Account Type:</strong>{" "}
             <span
               className={
-                accountType === "Genuine Account"
+                accountType.includes("Genuine")
                   ? "text-green-600 font-bold"
                   : "text-red-600 font-bold"
               }
@@ -174,7 +203,7 @@ export default function SocialAnalyzerTool() {
             </span>
           </p>
 
-          <p className="mt-2">
+          <p>
             <strong>Risk Level:</strong>{" "}
             <span
               className={
