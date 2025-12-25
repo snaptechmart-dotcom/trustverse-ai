@@ -1,10 +1,10 @@
-import NextAuth from "next-auth";
+import NextAuth, { type AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
-export const authOptions = {
+export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -14,18 +14,17 @@ export const authOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Missing credentials");
+          return null;
         }
 
         await dbConnect();
 
-        // 🔑 IMPORTANT: select password explicitly
         const user = await User.findOne({
           email: credentials.email,
         }).select("+password");
 
         if (!user) {
-          throw new Error("Invalid email or password");
+          return null;
         }
 
         const isValid = await bcrypt.compare(
@@ -34,7 +33,7 @@ export const authOptions = {
         );
 
         if (!isValid) {
-          throw new Error("Invalid email or password");
+          return null;
         }
 
         return {
@@ -54,18 +53,20 @@ export const authOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = user.role;
-        token.isPro = user.isPro;
+        const u = user as any; // 🔑 typing fix
+        token.id = u.id;
+        token.role = u.role;
+        token.isPro = u.isPro;
       }
       return token;
     },
 
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
-        session.user.isPro = token.isPro;
+        const u = session.user as any; // 🔑 typing fix
+        u.id = token.id;
+        u.role = token.role;
+        u.isPro = token.isPro;
       }
       return session;
     },
