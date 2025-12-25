@@ -2,131 +2,68 @@
 
 import { useState } from "react";
 
-export default function TrustScoreTool() {
-  const [input, setInput] = useState("");
-  const [score, setScore] = useState<number | null>(null);
-  const [risk, setRisk] = useState<string>("");
-
-  const analyzeTrust = async () => {
-    if (!input) return;
-
-    /* =========================
-       STEP 1: CHECK + DEDUCT CREDIT
-       (Single source of truth)
-    ========================= */
-    const creditRes = await fetch("/api/use-credit", {
-      method: "POST",
-    });
-
-    if (!creditRes.ok) {
-      alert("No credits left. Please upgrade your plan.");
-      return;
-    }
-
-    /* =========================
-       STEP 2: TRUST SCORE LOGIC
-    ========================= */
-    let calculatedScore = 50;
-    const value = input.toLowerCase();
-
-    // 📱 Phone number based logic
-    if (/^\d{10}$/.test(value)) {
-      if (value.startsWith("9")) calculatedScore = 80;
-      else if (value.startsWith("8")) calculatedScore = 65;
-      else if (value.startsWith("7")) calculatedScore = 45;
-      else calculatedScore = 30;
-    }
-
-    // 📧 Email based logic
-    else if (value.includes("@")) {
-      if (value.includes("test") || value.includes("fake"))
-        calculatedScore = 25;
-      else if (value.endsWith(".edu") || value.endsWith(".org"))
-        calculatedScore = 85;
-      else calculatedScore = 60;
-    }
-
-    // 👤 Username based logic
-    else {
-      if (value.length < 5) calculatedScore = 40;
-      else if (value.length < 8) calculatedScore = 60;
-      else calculatedScore = 75;
-    }
-
-    let calculatedRisk = "High Risk";
-    if (calculatedScore >= 70) calculatedRisk = "Low Risk";
-    else if (calculatedScore >= 40) calculatedRisk = "Medium Risk";
-
-    setScore(calculatedScore);
-    setRisk(calculatedRisk);
-
-    /* =========================
-       STEP 3: SAVE HISTORY
-    ========================= */
-    try {
-      await fetch("/api/save-history", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "Trust Score Analyzer",
-          input: input,
-          result: `${calculatedScore}/100 - ${calculatedRisk}`,
-        }),
-      });
-    } catch (error) {
-      console.error("Failed to save history", error);
-    }
-  };
+export default function TrustScorePage() {
+  const [value, setValue] = useState("");
 
   return (
-    <div className="max-w-xl space-y-6">
-      <h1 className="text-2xl font-bold">Trust Score Analyzer</h1>
+    <div className="space-y-8">
+      {/* HEADER */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">
+          Trust Score Analyzer
+        </h1>
+        <p className="text-gray-500 mt-1">
+          Analyze the trustworthiness of people, numbers, or profiles using AI
+        </p>
+      </div>
 
-      {/* Input */}
-      <input
-        type="text"
-        placeholder="Enter phone / username / email"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        className="w-full border px-4 py-2 rounded"
-      />
+      {/* INPUT CARD */}
+      <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4 max-w-xl">
+        <input
+          type="text"
+          placeholder="Enter phone number, username, or email"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          className="w-full border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
 
-      {/* Button */}
-      <button
-        onClick={analyzeTrust}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
-      >
-        Analyze Trust
-      </button>
+        <button
+          className="bg-indigo-600 text-white px-5 py-2 rounded-md hover:bg-indigo-700 transition"
+        >
+          Analyze Trust
+        </button>
+      </div>
 
-      {/* Result */}
-      {score !== null && (
-        <div className="border rounded-lg p-4 bg-gray-50">
-          <p className="text-lg">
-            <strong>Trust Score:</strong>{" "}
-            <span className="text-blue-600 font-bold">{score}/100</span>
-          </p>
+      {/* DESCRIPTION SECTION ✅ */}
+      <div className="max-w-3xl text-gray-700 space-y-4">
+        <h2 className="text-xl font-semibold text-gray-900">
+          How Trust Score Works
+        </h2>
 
-          <p className="mt-2">
-            <strong>Risk Level:</strong>{" "}
-            <span
-              className={
-                risk === "Low Risk"
-                  ? "text-green-600 font-bold"
-                  : risk === "Medium Risk"
-                  ? "text-yellow-600 font-bold"
-                  : "text-red-600 font-bold"
-              }
-            >
-              {risk}
-            </span>
-          </p>
+        <p>
+          Trust Score Analyzer uses AI-powered signals to evaluate the reliability
+          and risk level associated with a phone number, username, or email
+          address. It helps you make safer decisions before interacting with
+          unknown people or profiles.
+        </p>
 
-          <p className="mt-3 text-sm text-gray-600">
-            Result generated using multiple trust signals (demo AI logic).
-          </p>
-        </div>
-      )}
+        <p>
+          Our system analyzes multiple factors such as historical reports,
+          verification patterns, behavioral signals, and public risk indicators
+          to generate a clear trust score along with a risk classification.
+        </p>
+
+        <ul className="list-disc pl-5 space-y-2">
+          <li>Detect potential fraud, spam, or fake identities</li>
+          <li>Identify high-risk or suspicious profiles early</li>
+          <li>Make informed decisions with AI-backed insights</li>
+        </ul>
+
+        <p className="text-sm text-gray-500">
+          Note: Trust Score is generated using automated analysis and should be
+          used as a guidance tool, not as a definitive judgment.
+        </p>
+      </div>
     </div>
   );
 }
