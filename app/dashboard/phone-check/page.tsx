@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function PhoneCheckPage() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const router = useRouter();
 
   const handleVerify = async () => {
     if (!phone) {
@@ -17,20 +19,29 @@ export default function PhoneCheckPage() {
     setResult(null);
 
     try {
-      // ⚠️ Abhi dummy result (STEP 2.6 me API connect hoga)
-      await new Promise((r) => setTimeout(r, 1000));
+      const res = await fetch("/api/phone-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
 
-      const fakeResult = {
-        status: "Verified",
-        risk: "Low",
-        carrier: "Unknown",
-        country: "IN",
-      };
+      // 🚫 No credits
+      if (res.status === 402) {
+        alert("Your credits are finished. Please upgrade to Pro.");
+        router.push("/pricing");
+        return;
+      }
 
-      setResult(fakeResult);
+      if (!res.ok) {
+        alert("Something went wrong");
+        return;
+      }
+
+      const data = await res.json();
+      setResult(data);
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      alert("Server error");
     } finally {
       setLoading(false);
     }
@@ -48,7 +59,7 @@ export default function PhoneCheckPage() {
         </p>
       </div>
 
-      {/* INPUT CARD */}
+      {/* INPUT */}
       <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4 max-w-xl">
         <input
           type="text"
@@ -70,43 +81,18 @@ export default function PhoneCheckPage() {
       {/* RESULT */}
       {result && (
         <div className="bg-white border rounded-xl p-6 max-w-xl space-y-2">
-          <p>
-            <strong>Status:</strong> {result.status}
-          </p>
-          <p>
-            <strong>Risk Level:</strong> {result.risk}
-          </p>
-          <p>
-            <strong>Carrier:</strong> {result.carrier}
-          </p>
-          <p>
-            <strong>Country:</strong> {result.country}
-          </p>
+          <p><strong>Status:</strong> {result.status}</p>
+          <p><strong>Risk:</strong> {result.risk}</p>
+          <p><strong>Country:</strong> {result.country}</p>
+          <p><strong>Carrier:</strong> {result.carrier}</p>
+
+          {result.remainingCredits !== "unlimited" && (
+            <p className="text-sm text-gray-500">
+              Remaining Credits: {result.remainingCredits}
+            </p>
+          )}
         </div>
       )}
-
-      {/* DESCRIPTION */}
-      <div className="max-w-3xl text-gray-700 space-y-4">
-        <h2 className="text-xl font-semibold text-gray-900">
-          How Phone Verification Works
-        </h2>
-
-        <p>
-          Phone Verification helps you identify whether a phone number is
-          genuine, risky, or potentially linked to spam or fraud activities.
-        </p>
-
-        <ul className="list-disc pl-5 space-y-2">
-          <li>Detect fake or temporary numbers</li>
-          <li>Identify high-risk or spam-associated numbers</li>
-          <li>Improve trust before contacting unknown users</li>
-        </ul>
-
-        <p className="text-sm text-gray-500">
-          Note: Verification results are generated using automated checks and
-          external signals and should be used as guidance only.
-        </p>
-      </div>
     </div>
   );
 }
