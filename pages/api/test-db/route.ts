@@ -1,11 +1,8 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Subscription from "@/models/Subscription";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export async function GET() {
   await dbConnect();
 
   const test = await Subscription.create({
@@ -14,5 +11,5 @@ export default async function handler(
     paymentMethod: "upi",
   });
 
-  return res.status(200).json({ ok: true, test });
+  return NextResponse.json({ ok: true, test });
 }
