@@ -12,6 +12,7 @@ export const authOptions: AuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
+
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           return null;
@@ -19,28 +20,24 @@ export const authOptions: AuthOptions = {
 
         await dbConnect();
 
-        const user = await User.findOne({
-          email: credentials.email,
-        }).select("+password");
+        const user = await User.findOne({ email: credentials.email }).select(
+          "+password"
+        );
 
-        if (!user) {
-          return null;
-        }
+        if (!user) return null;
 
         const isValid = await bcrypt.compare(
           credentials.password,
           user.password
         );
 
-        if (!isValid) {
-          return null;
-        }
+        if (!isValid) return null;
 
         return {
           id: user._id.toString(),
           email: user.email,
           role: user.role,
-          isPro: user.plan !== "free",
+          plan: user.plan, // ✅ FREE | PRO
         };
       },
     }),
@@ -53,20 +50,20 @@ export const authOptions: AuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        const u = user as any; // 🔑 typing fix
+        const u = user as any;
         token.id = u.id;
         token.role = u.role;
-        token.isPro = u.isPro;
+        token.plan = u.plan; // ✅ stored in token
       }
       return token;
     },
 
     async session({ session, token }) {
       if (session.user) {
-        const u = session.user as any; // 🔑 typing fix
+        const u = session.user as any;
         u.id = token.id;
         u.role = token.role;
-        u.isPro = token.isPro;
+        u.plan = token.plan; // ✅ available in UI
       }
       return session;
     },
@@ -76,5 +73,4 @@ export const authOptions: AuthOptions = {
 };
 
 const handler = NextAuth(authOptions);
-
 export { handler as GET, handler as POST };
