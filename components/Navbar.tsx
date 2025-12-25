@@ -2,13 +2,31 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [credits, setCredits] = useState<number | null>(null);
 
   const isPro = session?.user?.plan === "PRO";
+
+  // 🔁 Fetch credits for FREE users
+  useEffect(() => {
+    async function fetchCredits() {
+      try {
+        const res = await fetch("/api/credits");
+        const data = await res.json();
+        setCredits(data.credits);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    if (session?.user && !isPro) {
+      fetchCredits();
+    }
+  }, [session, isPro]);
 
   return (
     <header className="w-full sticky top-0 z-50 bg-gradient-to-r from-[#0B1220] to-[#111827] border-b border-white/10">
@@ -25,6 +43,19 @@ export default function Navbar() {
         {/* Right Side */}
         {status === "authenticated" ? (
           <div className="flex items-center gap-4 relative">
+
+            {/* Credits / Pro Status */}
+            {!isPro && credits !== null && (
+              <span className="text-xs text-gray-300">
+                Credits: <strong>{credits}</strong>
+              </span>
+            )}
+
+            {isPro && (
+              <span className="text-xs text-emerald-400">
+                Unlimited
+              </span>
+            )}
 
             {/* Pro / Upgrade */}
             {isPro ? (
