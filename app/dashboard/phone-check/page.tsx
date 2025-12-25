@@ -1,4 +1,5 @@
 "use client";
+import CreditWarningBanner from "@/components/CreditWarningBanner";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
