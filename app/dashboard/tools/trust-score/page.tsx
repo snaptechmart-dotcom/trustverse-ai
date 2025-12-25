@@ -13,7 +13,7 @@ export default function TrustScorePage() {
 
   const handleAnalyze = async () => {
     if (!value) {
-      alert("Please enter a phone number, email address, or username.");
+      alert("Please enter a phone number, email, or username.");
       return;
     }
 
@@ -23,29 +23,31 @@ export default function TrustScorePage() {
     try {
       const res = await fetch("/api/trust-score", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: value }),
       });
 
-      // 🚫 No credits left → upgrade
+      if (res.status === 401) {
+        alert("Session expired. Please login again.");
+        router.push("/login");
+        return;
+      }
+
       if (res.status === 402) {
-        alert("You have no credits left. Please upgrade to Pro to continue.");
+        alert("No credits left. Please upgrade to Pro.");
         router.push("/pricing");
         return;
       }
 
       if (!res.ok) {
-        alert("Something went wrong. Please try again.");
+        alert("Service temporarily unavailable. Please try again.");
         return;
       }
 
       const data = await res.json();
       setResult(data);
-    } catch (error) {
-      console.error(error);
-      alert("Server error. Please try again later.");
+    } catch {
+      alert("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -62,8 +64,8 @@ export default function TrustScorePage() {
           Trust Score Analyzer
         </h1>
         <p className="text-gray-500 mt-2 max-w-3xl">
-          Analyze the trustworthiness of phone numbers, email addresses,
-          usernames, or online profiles using AI-powered risk signals before
+          Evaluate the trustworthiness of phone numbers, email addresses,
+          usernames, or online profiles using AI-powered risk analysis before
           making important decisions.
         </p>
       </div>
@@ -95,24 +97,24 @@ export default function TrustScorePage() {
         </h2>
 
         <p>
-          Trust Score Analyzer is designed to help users detect potential fraud,
-          scams, and risky interactions before they happen. The system evaluates
-          multiple automated trust signals and behavioral indicators to assess
-          whether the provided input appears safe or suspicious.
+          Trust Score Analyzer is designed to help users identify potential
+          fraud, scams, and risky interactions before they occur. The system
+          evaluates multiple automated trust signals and behavioral indicators
+          to assess whether the provided input appears safe or suspicious.
         </p>
 
         <p>
-          By combining historical risk patterns, activity signals, and AI-based
-          evaluation models, the tool generates a <strong>Trust Score (0–100)</strong>{" "}
-          along with a clear risk category to support confident and informed
-          decision-making.
+          By combining historical risk patterns, activity-based signals, and
+          AI-driven evaluation models, the tool generates a
+          <strong> Trust Score (0–100)</strong> along with a clear risk category
+          to support confident, informed decision-making.
         </p>
 
         <ul className="list-disc pl-6 space-y-2">
-          <li>Identify potentially fraudulent phone numbers or email addresses</li>
-          <li>Detect suspicious usernames or online profiles</li>
+          <li>Detect potentially fraudulent phone numbers or email addresses</li>
+          <li>Identify suspicious usernames or online profiles</li>
           <li>Reduce risk before financial or personal interactions</li>
-          <li>Make data-driven trust decisions with confidence</li>
+          <li>Make safer decisions using data-backed trust insights</li>
         </ul>
 
         <p className="font-medium text-gray-800">
@@ -129,7 +131,7 @@ export default function TrustScorePage() {
           </li>
           <li>
             <strong>High Risk:</strong> Strong risk signals detected. Interaction
-            is not recommended without further verification.
+            is not recommended without additional verification.
           </li>
         </ul>
 
@@ -153,7 +155,7 @@ export default function TrustScorePage() {
             <strong>Confidence:</strong> {result.confidence}
           </p>
 
-          {result.remainingCredits !== "unlimited" && (
+          {result.remainingCredits !== undefined && (
             <p className="text-sm text-gray-500">
               Remaining Credits: {result.remainingCredits}
             </p>
