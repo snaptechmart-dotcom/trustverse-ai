@@ -5,19 +5,28 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function POST(req: Request) {
+  console.log("🔵 TRUST SCORE API HIT");
+
   try {
     await dbConnect();
+    console.log("🟢 DB CONNECTED");
 
     const session = await getServerSession(authOptions);
+    console.log("🟡 SESSION:", session);
 
-    if (!session?.user?.email) {
+    if (!session || !session.user || !session.user.email) {
+      console.log("🔴 NO SESSION / EMAIL");
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const user = await User.findOne({ email: session.user.email });
+    const email = session.user.email;
+    console.log("🟢 USER EMAIL:", email);
+
+    const user = await User.findOne({ email });
+    console.log("🟢 USER FOUND:", user?.email, "CREDITS:", user?.credits);
 
     if (!user) {
       return NextResponse.json(
@@ -27,25 +36,29 @@ export async function POST(req: Request) {
     }
 
     if (user.credits <= 0) {
+      console.log("🔴 NO CREDITS");
       return NextResponse.json(
         { error: "No credits left" },
         { status: 402 }
       );
     }
 
-    const { text } = await req.json();
-    if (!text) {
+    const body = await req.json();
+    console.log("🟢 BODY:", body);
+
+    if (!body.text) {
       return NextResponse.json(
         { error: "Input required" },
         { status: 400 }
       );
     }
 
-    // 🔻 Deduct credit
-    user.credits -= 1;
+    // 🔻 DEDUCT CREDIT
+    user.credits = user.credits - 1;
     await user.save();
+    console.log("🟢 CREDIT DEDUCTED, REMAINING:", user.credits);
 
-    // 🧠 Demo Trust Logic
+    // 🧠 TRUST SCORE LOGIC
     const trustScore = Math.floor(Math.random() * 40) + 60;
     const risk =
       trustScore > 80
@@ -54,14 +67,18 @@ export async function POST(req: Request) {
         ? "Medium Risk"
         : "High Risk";
 
-    return NextResponse.json({
+    const response = {
       trustScore,
       risk,
       confidence: "78%",
       remainingCredits: user.credits,
-    });
-  } catch (err) {
-    console.error("Trust Score API Error:", err);
+    };
+
+    console.log("🟢 RETURNING RESULT:", response);
+
+    return NextResponse.json(response);
+  } catch (error) {
+    console.error("❌ TRUST SCORE ERROR:", error);
     return NextResponse.json(
       { error: "Server error" },
       { status: 500 }
