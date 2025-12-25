@@ -2,26 +2,26 @@
 
 import { useEffect, useState } from "react";
 
-interface HistoryItem {
+type HistoryItem = {
   _id: string;
-  action: string;
-  impact: number;
-  reason: string;
+  prompt: string;
+  response: string;
+  tool?: string;
   createdAt: string;
-}
+};
 
 export default function HistoryPage() {
-  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<HistoryItem[]>([]);
 
   useEffect(() => {
     async function loadHistory() {
       try {
-        const res = await fetch("/api/history", { cache: "no-store" });
+        const res = await fetch("/api/history");
         const data = await res.json();
-        setHistory(data.history || []);
-      } catch {
-        console.error("Failed to load history");
+        setItems(data);
+      } catch (err) {
+        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -31,52 +31,55 @@ export default function HistoryPage() {
   }, []);
 
   if (loading) {
-    return <div className="p-4">Loading history...</div>;
+    return <div className="p-6 text-gray-500">Loading history...</div>;
+  }
+
+  if (!items.length) {
+    return (
+      <div className="p-6 text-gray-500">
+        No activity found yet.
+      </div>
+    );
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold">Your Activity History</h1>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold text-gray-900">
+        Activity History
+      </h1>
 
-      {history.length === 0 ? (
-        <p className="text-sm text-gray-500">No activity found.</p>
-      ) : (
-        <div className="space-y-4">
-          {history.map((item) => (
+      <div className="space-y-3">
+        {items.map((item) => {
+          const result = JSON.parse(item.response || "{}");
+
+          return (
             <div
               key={item._id}
-              className="border rounded-lg p-4 bg-white space-y-2"
+              className="bg-white border rounded-lg p-4"
             >
-              {/* ACTION + IMPACT */}
-              <div className="flex justify-between items-start gap-2">
-                <p className="font-semibold text-sm break-words">
-                  {item.action}
-                </p>
-
-                <span
-                  className={`text-xs font-bold px-2 py-1 rounded-full ${
-                    item.impact < 0
-                      ? "bg-red-100 text-red-600"
-                      : "bg-green-100 text-green-600"
-                  }`}
-                >
-                  {item.impact}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-indigo-600">
+                  {item.tool || "ACTIVITY"}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {new Date(item.createdAt).toLocaleString()}
                 </span>
               </div>
 
-              {/* REASON */}
-              <p className="text-sm text-gray-600 break-words">
-                {item.reason}
+              <p className="mt-2 text-sm text-gray-700">
+                <strong>Input:</strong> {item.prompt}
               </p>
 
-              {/* DATE */}
-              <p className="text-xs text-gray-400">
-                {new Date(item.createdAt).toLocaleString()}
-              </p>
+              {result.trustScore && (
+                <p className="mt-1 text-sm">
+                  <strong>Trust Score:</strong> {result.trustScore} •{" "}
+                  <strong>Risk:</strong> {result.risk}
+                </p>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }
