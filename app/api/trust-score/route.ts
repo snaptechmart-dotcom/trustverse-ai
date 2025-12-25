@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 import { getToken } from "next-auth/jwt";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     await dbConnect();
 
-    // ✅ Get token directly (MOST STABLE)
+    // ✅ Correct way for App Router
     const token = await getToken({
       req,
       secret: process.env.NEXTAUTH_SECRET,
@@ -36,8 +37,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const { text } = await req.json();
-    if (!text) {
+    const body = await req.json();
+
+    if (!body.text) {
       return NextResponse.json(
         { error: "Input required" },
         { status: 400 }
