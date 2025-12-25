@@ -1,61 +1,71 @@
-import NextAuth, { type AuthOptions } from "next-auth";
+import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
-import bcrypt from "bcryptjs";
 
-export const authOptions: AuthOptions = {
+export const authOptions = {
   providers: [
     CredentialsProvider({
-      name: "credentials",
+      name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null;
+          throw new Error("Missing credentials");
         }
 
         await dbConnect();
 
-        const user = await User.findOne({ email: credentials.email });
-        if (!user) return null;
+        // 🔑 IMPORTANT: select password explicitly
+        const user = await User.findOne({
+          email: credentials.email,
+        }).select("+password");
+
+        if (!user) {
+          throw new Error("Invalid email or password");
+        }
 
         const isValid = await bcrypt.compare(
           credentials.password,
           user.password
         );
 
-        if (!isValid) return null;
+        if (!isValid) {
+          throw new Error("Invalid email or password");
+        }
 
         return {
           id: user._id.toString(),
           email: user.email,
           role: user.role,
+          isPro: user.plan !== "free",
         };
       },
     }),
   ],
 
   session: {
-    strategy: "jwt", // ✅ THIS IS NOW TYPE-SAFE
+    strategy: "jwt",
   },
 
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = (user as any).id;
-        token.role = (user as any).role;
+        token.id = user.id;
+        token.role = user.role;
+        token.isPro = user.isPro;
       }
       return token;
     },
 
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).role = token.role;
+        session.user.id = token.id;
+        session.user.role = token.role;
+        session.user.isPro = token.isPro;
       }
       return session;
     },
