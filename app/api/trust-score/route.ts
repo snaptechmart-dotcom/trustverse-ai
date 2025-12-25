@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
-import History from "@/models/History";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
@@ -9,20 +8,16 @@ export async function POST(req: Request) {
   try {
     await dbConnect();
 
-    // ✅ GET SESSION
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user?.email) {
+    if (!session?.user?.email) {
       return NextResponse.json(
-        { error: "Not authenticated" },
+        { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const email = session.user.email;
-
-    // ✅ FIND USER
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: session.user.email });
 
     if (!user) {
       return NextResponse.json(
@@ -31,7 +26,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔴 CREDIT CHECK
     if (user.credits <= 0) {
       return NextResponse.json(
         { error: "No credits left" },
@@ -39,12 +33,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔻 DEDUCT CREDIT
-    user.credits -= 1;
-    await user.save();
-
     const { text } = await req.json();
-
     if (!text) {
       return NextResponse.json(
         { error: "Input required" },
@@ -52,9 +41,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🧠 TRUST SCORE LOGIC
-    const trustScore = Math.floor(Math.random() * 40) + 60;
+    // 🔻 Deduct credit
+    user.credits -= 1;
+    await user.save();
 
+    // 🧠 Demo Trust Logic
+    const trustScore = Math.floor(Math.random() * 40) + 60;
     const risk =
       trustScore > 80
         ? "Low Risk"
@@ -62,28 +54,16 @@ export async function POST(req: Request) {
         ? "Medium Risk"
         : "High Risk";
 
-    const confidence = `${Math.floor(Math.random() * 25) + 70}%`;
-
-    const result = {
+    return NextResponse.json({
       trustScore,
       risk,
-      confidence,
+      confidence: "78%",
       remainingCredits: user.credits,
-    };
-
-    // 📝 SAVE HISTORY
-    await History.create({
-      userId: user._id,
-      type: "TRUST_SCORE",
-      input: text,
-      result: JSON.stringify(result),
     });
-
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error("TRUST SCORE API ERROR:", error);
+  } catch (err) {
+    console.error("Trust Score API Error:", err);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Server error" },
       { status: 500 }
     );
   }
