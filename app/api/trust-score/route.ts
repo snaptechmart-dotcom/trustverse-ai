@@ -1,24 +1,15 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
-import History from "@/models/History";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
 
 export async function POST(req: Request) {
   try {
-    await connectDB();
+    await dbConnect();
 
-    const session = await getServerSession(authOptions);
+    // ⚠️ TEMP: email hard session se mat lo
+    const email = "harsh2026@gmail.com"; // 👈 DEBUG PURPOSE
 
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const user = await User.findOne({ email: session.user.email });
+    const user = await User.findOne({ email });
 
     if (!user) {
       return NextResponse.json(
@@ -48,11 +39,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🧠 DEMO TRUST LOGIC
-    const trustScore = Math.min(
-      100,
-      Math.floor(Math.random() * 95) + 5
-    );
+    // 🧠 DEMO RESULT
+    const trustScore = Math.floor(Math.random() * 40) + 60;
 
     const risk =
       trustScore > 80
@@ -61,30 +49,16 @@ export async function POST(req: Request) {
         ? "Medium Risk"
         : "High Risk";
 
-    const confidence = `${Math.floor(
-      Math.random() * 30
-    ) + 65}%`;
-
-    const result = {
+    return NextResponse.json({
       trustScore,
       risk,
-      confidence,
+      confidence: "78%",
       remainingCredits: user.credits,
-    };
-
-    // 📝 SAVE HISTORY
-    await History.create({
-      userId: user._id,
-      type: "TRUST_SCORE",
-      input: text,
-      result: JSON.stringify(result),
     });
-
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error("Trust Score Error:", error);
+  } catch (err) {
+    console.error("TRUST SCORE API ERROR:", err);
     return NextResponse.json(
-      { error: "Server error" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
