@@ -11,27 +11,35 @@ export default function Navbar() {
 
   const isPro = session?.user?.plan === "PRO";
 
-  // 🔁 Fetch credits for FREE users
+  // 🔁 Fetch credits ONLY when logged in & FREE user
   useEffect(() => {
     async function fetchCredits() {
       try {
         const res = await fetch("/api/credits");
+
+        if (!res.ok) {
+          setCredits(null);
+          return;
+        }
+
         const data = await res.json();
         setCredits(data.credits);
-      } catch (err) {
-        console.error(err);
+      } catch {
+        setCredits(null);
       }
     }
 
-    if (session?.user && !isPro) {
+    if (status === "authenticated" && session?.user && !isPro) {
       fetchCredits();
+    } else {
+      setCredits(null);
     }
-  }, [session, isPro]);
+  }, [status, session, isPro]);
 
   return (
     <header className="w-full sticky top-0 z-50 bg-gradient-to-r from-[#0B1220] to-[#111827] border-b border-white/10">
       <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-        
+
         {/* Logo */}
         <Link
           href="/"
@@ -44,7 +52,7 @@ export default function Navbar() {
         {status === "authenticated" ? (
           <div className="flex items-center gap-4 relative">
 
-            {/* Credits / Pro Status */}
+            {/* Credits / Plan */}
             {!isPro && credits !== null && (
               <span className="text-xs text-gray-300">
                 Credits: <strong>{credits}</strong>
@@ -73,7 +81,7 @@ export default function Navbar() {
 
             {/* User Avatar */}
             <button
-              onClick={() => setMenuOpen(!menuOpen)}
+              onClick={() => setMenuOpen((v) => !v)}
               className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold"
             >
               {session.user.email?.[0]?.toUpperCase()}
@@ -85,11 +93,16 @@ export default function Navbar() {
                 <Link
                   href="/dashboard"
                   className="block px-4 py-2 text-sm text-white hover:bg-white/10"
+                  onClick={() => setMenuOpen(false)}
                 >
                   Dashboard
                 </Link>
+
                 <button
-                  onClick={() => signOut()}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    signOut({ callbackUrl: "/login" });
+                  }}
                   className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/10"
                 >
                   Logout
