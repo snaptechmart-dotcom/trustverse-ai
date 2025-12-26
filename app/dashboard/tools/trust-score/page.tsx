@@ -46,6 +46,9 @@ export default function TrustScorePage() {
 
       const data = await res.json();
       setResult(data);
+
+      // ✅ CLEAR INPUT AFTER SUCCESS
+      setValue("");
     } catch {
       alert("Network error. Please try again.");
     } finally {
@@ -105,8 +108,8 @@ export default function TrustScorePage() {
 
         <p>
           By combining historical risk patterns, activity-based signals, and
-          AI-driven evaluation models, the tool generates a
-          <strong> Trust Score (0–100)</strong> along with a clear risk category
+          AI-driven evaluation models, the tool generates a{" "}
+          <strong>Trust Score (0–100)</strong> along with a clear risk category
           to support confident, informed decision-making.
         </p>
 
