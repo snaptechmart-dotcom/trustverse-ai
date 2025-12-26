@@ -1,26 +1,24 @@
-import { NextResponse } from "next/server";
-import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
+import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import dbConnect from "@/lib/dbConnect";
+import User from "@/models/User";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     await dbConnect();
 
-    // ✅ OFFICIAL & SAFE WAY
+    // ✅ Proper request context
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user || !session.user.email) {
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const user = await User.findOne({
-      email: session.user.email,
-    });
+    const user = await User.findOne({ email: session.user.email });
 
     if (!user) {
       return NextResponse.json(
@@ -36,32 +34,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-
-    if (!body.text) {
-      return NextResponse.json(
-        { error: "Input required" },
-        { status: 400 }
-      );
-    }
-
-    // 🔻 DEDUCT CREDIT
+    // 🔻 Deduct credit
     user.credits -= 1;
     await user.save();
 
-    // 🧠 TRUST SCORE LOGIC
-    const trustScore = Math.floor(Math.random() * 40) + 60;
-    const risk =
-      trustScore > 80
-        ? "Low Risk"
-        : trustScore > 50
-        ? "Medium Risk"
-        : "High Risk";
-
+    // ✅ Minimal working response
     return NextResponse.json({
-      trustScore,
-      risk,
-      confidence: "78%",
+      trustScore: 74,
+      risk: "Medium Risk",
+      confidence: "79%",
       remainingCredits: user.credits,
     });
   } catch (error) {
