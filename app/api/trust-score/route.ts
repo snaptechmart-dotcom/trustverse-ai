@@ -1,32 +1,22 @@
-import { NextResponse, NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 import History from "@/models/History";
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     await dbConnect();
 
-    /* ===============================
-       1️⃣ GET TOKEN (OFFICIAL WAY)
-    =============================== */
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    const { text, userId } = await req.json();
 
-    if (!token || !token.email) {
+    if (!text || !userId) {
       return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
+        { error: "Invalid request" },
+        { status: 400 }
       );
     }
 
-    /* ===============================
-       2️⃣ FIND USER
-    =============================== */
-    const user = await User.findOne({ email: token.email });
+    const user = await User.findById(userId);
 
     if (!user) {
       return NextResponse.json(
@@ -35,36 +25,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    /* ===============================
-       3️⃣ CREDIT CHECK
-    =============================== */
-    if (user.plan === "free") {
-      if (user.credits <= 0) {
-        return NextResponse.json(
-          { error: "No credits left" },
-          { status: 402 }
-        );
-      }
+    if (user.plan === "free" && user.credits <= 0) {
+      return NextResponse.json(
+        { error: "No credits left" },
+        { status: 402 }
+      );
+    }
 
+    if (user.plan === "free") {
       user.credits -= 1;
       await user.save();
     }
 
-    /* ===============================
-       4️⃣ INPUT
-    =============================== */
-    const { text } = await req.json();
-
-    if (!text) {
-      return NextResponse.json(
-        { error: "Input required" },
-        { status: 400 }
-      );
-    }
-
-    /* ===============================
-       5️⃣ TRUST SCORE LOGIC
-    =============================== */
     const trustScore = Math.floor(Math.random() * 40) + 60;
     const risk =
       trustScore >= 80
@@ -73,30 +45,22 @@ export async function POST(req: NextRequest) {
         ? "Medium Risk"
         : "High Risk";
 
-    const confidence = `${Math.floor(Math.random() * 15) + 85}%`;
-
-    /* ===============================
-       6️⃣ SAVE HISTORY
-    =============================== */
     await History.create({
       userId: user._id,
       type: "TRUST_SCORE",
       input: text,
-      result: `Score: ${trustScore}, Risk: ${risk}`,
+      result: `Score ${trustScore} - ${risk}`,
     });
 
-    /* ===============================
-       7️⃣ RESPONSE
-    =============================== */
     return NextResponse.json({
       trustScore,
       risk,
-      confidence,
+      confidence: "85%",
       remainingCredits:
         user.plan === "pro" ? "unlimited" : user.credits,
     });
-  } catch (error) {
-    console.error("Trust Score Error:", error);
+  } catch (err) {
+    console.error(err);
     return NextResponse.json(
       { error: "Service temporarily unavailable" },
       { status: 500 }

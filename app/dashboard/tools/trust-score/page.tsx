@@ -34,9 +34,10 @@ export default function TrustScorePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: value,
-          email: session.user.email, // ✅ IMPORTANT FIX
-        }),
+  text: value,
+  userId: session?.user?.id,
+     }),
+
       });
 
       if (res.status === 401) {
