@@ -1,62 +1,78 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import connectDB from "@/lib/mongodb";
+import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
-import History from "@/models/History";
 
 export async function POST(req: Request) {
   try {
-    // 🔐 Auth
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    await dbConnect();
+
+    const { phone, userId } = await req.json();
+
+    // 🛑 VALIDATION
+    if (!phone || typeof phone !== "string") {
+      return NextResponse.json(
+        { error: "Invalid phone number" },
+        { status: 400 }
+      );
     }
 
-    await connectDB();
+    if (!userId || typeof userId !== "string") {
+      return NextResponse.json(
+        { error: "Invalid user" },
+        { status: 401 }
+      );
+    }
 
-    const user = await User.findById(session.user.id);
+    const user = await User.findById(userId);
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
     }
 
-    const { phone } = await req.json();
-    if (!phone) {
-      return NextResponse.json({ error: "Phone required" }, { status: 400 });
-    }
+    // 💳 CREDIT LOGIC (ATOMIC – SAME AS TRUST SCORE)
+    let remainingCredits = user.credits;
 
-    // 💳 Credits (FREE only)
-    if (user.plan !== "PRO") {
-      if (user.credits <= 0) {
-        return NextResponse.json({ error: "NO_CREDITS" }, { status: 402 });
+    if (user.plan === "free") {
+      if (remainingCredits <= 0) {
+        return NextResponse.json(
+          { error: "No credits left" },
+          { status: 402 }
+        );
       }
-      user.credits -= 1;
-      await user.save();
+
+      const updatedUser = await User.findOneAndUpdate(
+        { _id: userId, credits: { $gt: 0 } },
+        { $inc: { credits: -1 } },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        return NextResponse.json(
+          { error: "No credits left" },
+          { status: 402 }
+        );
+      }
+
+      remainingCredits = updatedUser.credits;
     }
 
-    // 🧠 Dummy verification (API later)
-    const result = {
-      status: "Verified",
-      risk: "Low",
-      country: "IN",
-      carrier: "Unknown",
-    };
-
-    // 📝 History
-    await History.create({
-      userId: user._id,
-      tool: "PHONE_CHECK",
-      prompt: phone,
-      response: JSON.stringify(result),
-    });
+    // 📱 PHONE CHECK RESULT (SAFE DEMO)
+    const risk =
+      phone.endsWith("000") ? "High Risk" : "Low Risk";
 
     return NextResponse.json({
-      ...result,
+      status: "Checked",
+      risk,
       remainingCredits:
-        user.plan === "PRO" ? "unlimited" : user.credits,
+        user.plan === "pro" ? "unlimited" : remainingCredits,
     });
-  } catch (err) {
-    console.error("Phone Check Error:", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  } catch (error) {
+    console.error("PHONE CHECK API ERROR:", error);
+    return NextResponse.json(
+      { error: "Service temporarily unavailable" },
+      { status: 500 }
+    );
   }
 }
