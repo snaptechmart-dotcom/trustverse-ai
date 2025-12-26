@@ -1,23 +1,33 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
-import History from "@/models/History";
 
 export async function POST(req: Request) {
   try {
+    // 🔌 DB CONNECT
     await dbConnect();
 
-    const { text, userId } = await req.json();
+    // 📥 READ BODY
+    const body = await req.json();
+    const { text, userId } = body;
 
-    if (!text || !userId) {
+    // 🛑 VALIDATION (CRASH GUARD)
+    if (!text || typeof text !== "string") {
       return NextResponse.json(
-        { error: "Invalid request" },
+        { error: "Invalid input" },
         { status: 400 }
       );
     }
 
-    const user = await User.findById(userId);
+    if (!userId || typeof userId !== "string") {
+      return NextResponse.json(
+        { error: "Invalid user" },
+        { status: 401 }
+      );
+    }
 
+    // 👤 FIND USER
+    const user = await User.findById(userId);
     if (!user) {
       return NextResponse.json(
         { error: "User not found" },
@@ -25,42 +35,50 @@ export async function POST(req: Request) {
       );
     }
 
-    if (user.plan === "free" && user.credits <= 0) {
-      return NextResponse.json(
-        { error: "No credits left" },
-        { status: 402 }
-      );
-    }
+    // 💳 CREDIT LOGIC (ATOMIC & SAFE)
+    let remainingCredits = user.credits;
 
     if (user.plan === "free") {
-      user.credits -= 1;
-      await user.save();
+      if (remainingCredits <= 0) {
+        return NextResponse.json(
+          { error: "No credits left" },
+          { status: 402 }
+        );
+      }
+
+      // 🔐 ATOMIC CREDIT DECREMENT
+      const updatedUser = await User.findOneAndUpdate(
+        { _id: userId, credits: { $gt: 0 } },
+        { $inc: { credits: -1 } },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        return NextResponse.json(
+          { error: "No credits left" },
+          { status: 402 }
+        );
+      }
+
+      remainingCredits = updatedUser.credits;
     }
 
-    const trustScore = Math.floor(Math.random() * 40) + 60;
-    const risk =
-      trustScore >= 80
-        ? "Low Risk"
-        : trustScore >= 65
-        ? "Medium Risk"
-        : "High Risk";
+    // 🤖 TRUST SCORE (SAFE DEMO)
+    const trustScore = 72;
+    const risk = "Medium Risk";
+    const confidence = "85%";
 
-    await History.create({
-      userId: user._id,
-      type: "TRUST_SCORE",
-      input: text,
-      result: `Score ${trustScore} - ${risk}`,
-    });
-
+    // ✅ FINAL RESPONSE
     return NextResponse.json({
       trustScore,
       risk,
-      confidence: "85%",
+      confidence,
       remainingCredits:
-        user.plan === "pro" ? "unlimited" : user.credits,
+        user.plan === "pro" ? "unlimited" : remainingCredits,
     });
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error("TRUST SCORE API ERROR:", error);
+
     return NextResponse.json(
       { error: "Service temporarily unavailable" },
       { status: 500 }
