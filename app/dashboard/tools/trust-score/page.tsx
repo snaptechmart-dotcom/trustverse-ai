@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import CreditWarningBanner from "@/components/CreditWarningBanner";
 
 export default function TrustScorePage() {
+  const { data: session } = useSession();
+
   const [value, setValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -17,6 +20,12 @@ export default function TrustScorePage() {
       return;
     }
 
+    if (!session?.user?.email) {
+      alert("Session expired. Please login again.");
+      router.push("/login");
+      return;
+    }
+
     setLoading(true);
     setResult(null);
 
@@ -24,7 +33,10 @@ export default function TrustScorePage() {
       const res = await fetch("/api/trust-score", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: value }),
+        body: JSON.stringify({
+          text: value,
+          email: session.user.email, // ✅ IMPORTANT FIX
+        }),
       });
 
       if (res.status === 401) {
