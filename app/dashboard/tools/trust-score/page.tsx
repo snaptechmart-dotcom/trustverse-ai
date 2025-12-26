@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import CreditWarningBanner from "@/components/CreditWarningBanner";
 
 export default function TrustScorePage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   const [value, setValue] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,7 +20,9 @@ export default function TrustScorePage() {
       return;
     }
 
-    if (!session?.user?.email) {
+    // 🔒 HARD CHECK: USER ID REQUIRED
+    const userId = session?.user?.id;
+    if (!userId) {
       alert("Session expired. Please login again.");
       router.push("/login");
       return;
@@ -34,10 +36,9 @@ export default function TrustScorePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-  text: value,
-  userId: session?.user?.id,
-     }),
-
+          text: value,
+          userId, // ✅ ONLY THIS (NO EMAIL)
+        }),
       });
 
       if (res.status === 401) {
@@ -62,7 +63,8 @@ export default function TrustScorePage() {
 
       // ✅ CLEAR INPUT AFTER SUCCESS
       setValue("");
-    } catch {
+    } catch (error) {
+      console.error(error);
       alert("Network error. Please try again.");
     } finally {
       setLoading(false);
