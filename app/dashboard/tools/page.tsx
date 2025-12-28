@@ -33,6 +33,45 @@ export default function DashboardToolsPage() {
           </Link>
         </div>
 
+        {/* ✅ Email Address Checker (NEW) */}
+        <div className="bg-emerald-600 text-white rounded-xl p-6">
+          <h2 className="text-lg font-semibold">Email Address Checker</h2>
+          <p className="text-sm mt-2">
+            Identify risky, disposable, or suspicious email addresses.
+          </p>
+          <Link href="/dashboard/tools/email-checker">
+            <button className="mt-4 bg-white text-emerald-600 px-4 py-2 rounded">
+              Open Tool
+            </button>
+          </Link>
+        </div>
+
+        {/* ✅ Profile Trust Checker (NEW) */}
+        <div className="bg-indigo-600 text-white rounded-xl p-6">
+          <h2 className="text-lg font-semibold">Profile Trust Checker</h2>
+          <p className="text-sm mt-2">
+            Analyze profile details to estimate trustworthiness and risk.
+          </p>
+          <Link href="/dashboard/tools/profile-checker">
+            <button className="mt-4 bg-white text-indigo-600 px-4 py-2 rounded">
+              Open Tool
+            </button>
+          </Link>
+        </div>
+
+        {/* ✅ Business / Domain Checker (NEW) */}
+        <div className="bg-teal-600 text-white rounded-xl p-6">
+          <h2 className="text-lg font-semibold">Business / Domain Checker</h2>
+          <p className="text-sm mt-2">
+            Evaluate business and website trust before engagement.
+          </p>
+          <Link href="/dashboard/tools/business-checker">
+            <button className="mt-4 bg-white text-teal-600 px-4 py-2 rounded">
+              Open Tool
+            </button>
+          </Link>
+        </div>
+
         {/* Social Analyzer */}
         <div className="bg-purple-600 text-white rounded-xl p-6">
           <h2 className="text-lg font-semibold">Social Analyzer</h2>

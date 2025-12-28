@@ -5,6 +5,12 @@ import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 import ToolHistory from "@/models/ToolHistory";
 
+/**
+ * Profile Trust Checker
+ * Inputs: name, email, phone (optional)
+ * Output: trustScore, riskLevel
+ */
+
 export async function POST(req: Request) {
   try {
     // 1️⃣ DB CONNECT
@@ -19,24 +25,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3️⃣ INPUT (🔥 FULLY BULLETPROOF 🔥)
-    let body: any = {};
-    try {
-      body = await req.json();
-    } catch {
-      body = {};
-    }
-
-    const text =
-      typeof body.text === "string"
-        ? body.text
-        : typeof body.content === "string"
-        ? body.content
-        : "";
-
-    if (text.trim().length < 10) {
+    // 3️⃣ INPUT
+    const { name, email, phone } = await req.json();
+    if (!name || !email) {
       return NextResponse.json(
-        { error: "Please enter at least 10 characters for analysis" },
+        { error: "Name and Email are required" },
         { status: 400 }
       );
     }
@@ -66,33 +59,35 @@ export async function POST(req: Request) {
       await user.save();
     }
 
-    // 6️⃣ AI ANALYSIS (SAFE DEMO LOGIC)
-    const riskLevels = ["Low Risk", "Medium Risk", "High Risk"] as const;
-    const riskLevel =
-      riskLevels[Math.floor(Math.random() * riskLevels.length)];
+    // 6️⃣ SIMPLE TRUST SCORE LOGIC (DEMO)
+    let trustScore = 70;
 
-    let explanation = "";
-    if (riskLevel === "Low Risk") {
-      explanation =
-        "No strong scam or fraud indicators were detected. The content appears generally safe, though standard caution is still advised.";
-    } else if (riskLevel === "Medium Risk") {
-      explanation =
-        "Some warning signals were identified such as urgency, persuasive language, or vague claims. Proceed with caution and verify before acting.";
-    } else {
-      explanation =
-        "Multiple high-risk indicators were detected including manipulation patterns, financial pressure, or suspicious intent. Avoid engagement unless independently verified.";
+    if (email.endsWith("@gmail.com") || email.endsWith("@company.com")) {
+      trustScore += 10;
     }
 
-    // 7️⃣ SAVE HISTORY
+    if (phone) {
+      trustScore += 5;
+    }
+
+    if (trustScore > 100) trustScore = 100;
+
+    let riskLevel: "Low Risk" | "Medium Risk" | "High Risk" = "Medium Risk";
+    if (trustScore >= 80) riskLevel = "Low Risk";
+    if (trustScore < 50) riskLevel = "High Risk";
+
+    // 🧾 7️⃣ SAVE HISTORY (🔥 MAIN ADDITION 🔥)
     await ToolHistory.create({
       userId: user._id,
-      tool: "advanced-analysis",
+      tool: "profile-checker",
       input: {
-        text: text.trim(),
+        name,
+        email,
+        phone: phone || null,
       },
       result: {
+        trustScore,
         riskLevel,
-        explanation,
         remainingCredits:
           user.plan === "PRO" ? "unlimited" : remainingCredits,
       },
@@ -100,15 +95,18 @@ export async function POST(req: Request) {
 
     // 8️⃣ RESPONSE
     return NextResponse.json({
-      status: "Analyzed",
+      status: "Checked",
+      name,
+      email,
+      phone: phone || "Not provided",
+      trustScore,
       riskLevel,
-      explanation,
       remainingCredits:
         user.plan === "PRO" ? "unlimited" : remainingCredits,
     });
 
   } catch (err) {
-    console.error("ADVANCED ANALYSIS ERROR:", err);
+    console.error("PROFILE CHECK ERROR:", err);
     return NextResponse.json(
       { error: "Server error" },
       { status: 500 }

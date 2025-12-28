@@ -1,12 +1,12 @@
-import ToolHistory from "@/models/ToolHistory";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
+import ToolHistory from "@/models/ToolHistory";
 
 /**
- * ⏱️ SIMPLE RATE LIMIT
+ * ⏱️ RATE LIMIT
  * Rule: 1 user = max 5 requests per 1 minute
  */
 const rateLimitMap = new Map<
@@ -28,44 +28,45 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔐 STEP 3.1.6 — RATE LIMIT CHECK (NEW)
     const userId = session.user.id;
-    const now = Date.now();
 
+    // 3️⃣ RATE LIMIT CHECK
+    const now = Date.now();
     const record = rateLimitMap.get(userId);
 
     if (!record) {
       rateLimitMap.set(userId, { count: 1, time: now });
-    } else {
-      // same 1-minute window
-      if (now - record.time < 60_000) {
-        if (record.count >= 5) {
-          return NextResponse.json(
-            {
-              error:
-                "Too many requests. Please wait 1 minute before trying again.",
-            },
-            { status: 429 }
-          );
-        }
-        record.count += 1;
-      } else {
-        // new 1-minute window
-        rateLimitMap.set(userId, { count: 1, time: now });
+    } else if (now - record.time < 60_000) {
+      if (record.count >= 5) {
+        return NextResponse.json(
+          { error: "Too many requests. Please wait 1 minute." },
+          { status: 429 }
+        );
       }
+      record.count += 1;
+    } else {
+      rateLimitMap.set(userId, { count: 1, time: now });
     }
 
-    // 3️⃣ INPUT VALIDATION
-    const { phone } = await req.json();
-    if (!phone) {
+    // 4️⃣ INPUT VALIDATION
+    const { email } = await req.json();
+    if (!email) {
       return NextResponse.json(
-        { error: "Phone required" },
+        { error: "Email required" },
         { status: 400 }
       );
     }
 
-    // 4️⃣ USER FETCH
-    const user = await User.findById(session.user.id);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: "Invalid email format" },
+        { status: 400 }
+      );
+    }
+
+    // 5️⃣ USER FETCH
+    const user = await User.findById(userId);
     if (!user) {
       return NextResponse.json(
         { error: "User not found" },
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5️⃣ CREDIT DEDUCTION LOGIC
+    // 6️⃣ CREDIT CHECK & DEDUCT
     let remainingCredits = user.credits;
 
     if (user.plan === "FREE") {
@@ -84,38 +85,40 @@ export async function POST(req: Request) {
         );
       }
 
-      // 🔻 Deduct 1 credit
       remainingCredits -= 1;
       user.credits = remainingCredits;
       await user.save();
     }
 
-    // 6️⃣ DEMO AI RESULT
+    // 7️⃣ DEMO AI EMAIL RISK RESULT
     const risks = ["Low Risk", "Medium Risk", "High Risk"] as const;
     const risk = risks[Math.floor(Math.random() * risks.length)];
-   // 🧾 SAVE HISTORY
-    await ToolHistory.create({
-  userId: user._id,
-  tool: "phone-checker",
-  input: {
-    phone,
-  },
-  result: {
-    risk,
-    remainingCredits:
-      user.plan === "PRO" ? "unlimited" : remainingCredits,
-  },
-  });
 
-    // 7️⃣ RESPONSE
+    // 🧾 8️⃣ SAVE HISTORY (🔥 MAIN ADDITION 🔥)
+    await ToolHistory.create({
+      userId: user._id,
+      tool: "email-checker",
+      input: {
+        email,
+      },
+      result: {
+        risk,
+        remainingCredits:
+          user.plan === "PRO" ? "unlimited" : remainingCredits,
+      },
+    });
+
+    // 9️⃣ RESPONSE
     return NextResponse.json({
       status: "Checked",
+      email,
       risk,
       remainingCredits:
         user.plan === "PRO" ? "unlimited" : remainingCredits,
     });
+
   } catch (err) {
-    console.error("PHONE CHECK ERROR:", err);
+    console.error("EMAIL CHECK ERROR:", err);
     return NextResponse.json(
       { error: "Server error" },
       { status: 500 }

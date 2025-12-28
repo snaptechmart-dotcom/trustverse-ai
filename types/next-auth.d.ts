@@ -4,21 +4,9 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      role?: string;
-      plan?: "FREE" | "PRO";
+      email: string;
+      role: string;
+      plan: "free" | "essential" | "pro" | "enterprise";
     };
-  }
-
-  interface User {
-    role?: string;
-    plan?: "FREE" | "PRO";
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    id?: string;
-    role?: string;
-    plan?: "FREE" | "PRO";
   }
 }

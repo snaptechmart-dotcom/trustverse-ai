@@ -2,18 +2,29 @@ import mongoose, { Schema, models, model } from "mongoose";
 
 const ProfileHistorySchema = new Schema(
   {
+    // 🔹 OLD SYSTEM (complaints / profile based)
     profileUsername: {
       type: String,
-      required: true,
+      default: "",
     },
+
+    // 🔹 NEW SYSTEM (scam reports / email based)
+    userEmail: {
+      type: String,
+      default: "",
+    },
+
+    // 🔹 COMMON
     action: {
       type: String,
       required: true,
     },
+
     impact: {
       type: Number,
       default: 0,
     },
+
     reason: {
       type: String,
       default: "",

@@ -4,81 +4,70 @@ import { useEffect, useState } from "react";
 
 type HistoryItem = {
   _id: string;
-  prompt: string;
-  response: string;
-  tool?: string;
+  tool: string;
+  input: any;
+  result: any;
   createdAt: string;
 };
 
 export default function HistoryPage() {
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<HistoryItem[]>([]);
 
   useEffect(() => {
-    async function loadHistory() {
+    const fetchHistory = async () => {
       try {
         const res = await fetch("/api/history");
+        if (!res.ok) return;
         const data = await res.json();
-        setItems(data);
+        setHistory(data);
       } catch (err) {
-        console.error(err);
+        console.error("History fetch failed");
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    loadHistory();
+    fetchHistory();
   }, []);
 
-  if (loading) {
-    return <div className="p-6 text-gray-500">Loading history...</div>;
-  }
-
-  if (!items.length) {
-    return (
-      <div className="p-6 text-gray-500">
-        No activity found yet.
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-900">
-        Activity History
-      </h1>
+    <div className="space-y-8 max-w-5xl">
+      <h1 className="text-2xl font-bold">Your Activity History</h1>
 
-      <div className="space-y-3">
-        {items.map((item) => {
-          const result = JSON.parse(item.response || "{}");
+      {loading && <p className="text-gray-500">Loading history...</p>}
 
-          return (
-            <div
-              key={item._id}
-              className="bg-white border rounded-lg p-4"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-indigo-600">
-                  {item.tool || "ACTIVITY"}
-                </span>
-                <span className="text-xs text-gray-400">
-                  {new Date(item.createdAt).toLocaleString()}
-                </span>
-              </div>
+      {!loading && history.length === 0 && (
+        <p className="text-gray-500">
+          No activity found. Start using tools to see history here.
+        </p>
+      )}
 
-              <p className="mt-2 text-sm text-gray-700">
-                <strong>Input:</strong> {item.prompt}
-              </p>
+      <div className="space-y-4">
+        {history.map((item) => (
+          <div
+            key={item._id}
+            className="bg-white border rounded-xl p-5 space-y-2"
+          >
+            <p className="text-sm text-gray-500">
+              {new Date(item.createdAt).toLocaleString()}
+            </p>
 
-              {result.trustScore && (
-                <p className="mt-1 text-sm">
-                  <strong>Trust Score:</strong> {result.trustScore} •{" "}
-                  <strong>Risk:</strong> {result.risk}
-                </p>
-              )}
-            </div>
-          );
-        })}
+            <p className="font-semibold capitalize">
+              Tool: {item.tool.replace("-", " ")}
+            </p>
+
+            <p className="text-sm text-gray-700">
+              <strong>Input:</strong>{" "}
+              {JSON.stringify(item.input)}
+            </p>
+
+            <p className="text-sm text-gray-700">
+              <strong>Result:</strong>{" "}
+              {JSON.stringify(item.result)}
+            </p>
+          </div>
+        ))}
       </div>
     </div>
   );

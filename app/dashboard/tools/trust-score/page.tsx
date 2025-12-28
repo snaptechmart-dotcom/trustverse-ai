@@ -1,26 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { QRCodeCanvas } from "qrcode.react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import CreditWarningBanner from "@/components/CreditWarningBanner";
 
+type TrustResult = {
+  trustScore: number;
+  riskLevel: "Low Risk" | "Medium Risk" | "High Risk";
+  confidence: string;
+  explanation: string;
+  remainingCredits?: number;
+};
+
 export default function TrustScorePage() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
+  const router = useRouter();
 
   const [value, setValue] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<TrustResult | null>(null);
 
-  const router = useRouter();
+  const reportRef = useRef<HTMLDivElement>(null);
 
+  /* ======================
+     RUN ANALYSIS
+  ====================== */
   const handleAnalyze = async () => {
-    if (!value) {
-      alert("Please enter a phone number, email, or username.");
+    if (!value.trim()) {
+      alert("Please enter phone number, email, or username.");
       return;
     }
 
-    // 🔒 HARD CHECK: USER ID REQUIRED
     const userId = session?.user?.id;
     if (!userId) {
       alert("Session expired. Please login again.");
@@ -36,148 +50,190 @@ export default function TrustScorePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: value,
-          userId, // ✅ ONLY THIS (NO EMAIL)
+          text: value.trim(),
+          userId,
         }),
       });
-
-      if (res.status === 401) {
-        alert("Session expired. Please login again.");
-        router.push("/login");
-        return;
-      }
-
-      if (res.status === 402) {
-        alert("No credits left. Please upgrade to Pro.");
-        router.push("/pricing");
-        return;
-      }
 
       if (!res.ok) {
         alert("Service temporarily unavailable. Please try again.");
         return;
       }
 
-      const data = await res.json();
+      const data: TrustResult = await res.json();
       setResult(data);
-
-      // ✅ CLEAR INPUT AFTER SUCCESS
       setValue("");
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
       alert("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  /* ======================
+     DOWNLOAD PDF
+  ====================== */
+  const downloadPDF = async () => {
+    if (!reportRef.current) return;
+
+    const canvas = await html2canvas(reportRef.current, { scale: 2 });
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pdfWidth = 210;
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save("Trustverse_AI_Trust_Score_Report.pdf");
+  };
+
+  /* ======================
+     REPORT AS SCAM
+  ====================== */
+  const reportAsScam = () => {
+    if (!result) return;
+
+    router.push(
+      `/report-scam?source=trust-score&risk=${result.riskLevel}&score=${result.trustScore}`
+    );
+  };
+
   return (
-    <div className="space-y-10 max-w-4xl">
-      {/* CREDIT WARNING */}
+    <div className="space-y-12 max-w-4xl">
       <CreditWarningBanner />
 
       {/* HEADER */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Trust Score Analyzer
-        </h1>
+        <h1 className="text-3xl font-bold">Trust Score Analyzer</h1>
         <p className="text-gray-500 mt-2 max-w-3xl">
           Evaluate the trustworthiness of phone numbers, email addresses,
-          usernames, or online profiles using AI-powered risk analysis before
-          making important decisions.
+          usernames, or online profiles using AI-powered trust analysis
+          before making important decisions.
         </p>
       </div>
 
-      {/* INPUT CARD */}
-      <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4 max-w-xl">
+      {/* INPUT */}
+      <div className="bg-white border rounded-xl p-6 space-y-4 max-w-xl">
         <input
-          type="text"
-          placeholder="Enter phone number, email, or username"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          className="w-full bg-slate-50 border border-slate-300 rounded-md px-4 py-2
-          focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          placeholder="Enter phone number, email, or username"
+          className="w-full border rounded-md px-4 py-2 focus:ring-2 focus:ring-indigo-500"
         />
 
         <button
           onClick={handleAnalyze}
           disabled={loading}
-          className="bg-indigo-600 text-white px-5 py-2 rounded-md hover:bg-indigo-700 transition disabled:opacity-60"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded disabled:opacity-60"
         >
           {loading ? "Analyzing..." : "Analyze Trust"}
         </button>
       </div>
 
-      {/* DESCRIPTION */}
+      {/* LONG DESCRIPTION */}
       <div className="space-y-6 text-gray-700 max-w-3xl">
         <h2 className="text-xl font-semibold text-gray-900">
           How Trust Score Analyzer Works
         </h2>
 
         <p>
-          Trust Score Analyzer is designed to help users identify potential
-          fraud, scams, and risky interactions before they occur. The system
-          evaluates multiple automated trust signals and behavioral indicators
-          to assess whether the provided input appears safe or suspicious.
+          Trust Score Analyzer helps identify potential scams, fraud, or risky
+          online interactions before action is taken. It analyzes multiple
+          behavioral and risk indicators using AI-powered models.
         </p>
 
         <p>
-          By combining historical risk patterns, activity-based signals, and
-          AI-driven evaluation models, the tool generates a{" "}
-          <strong>Trust Score (0–100)</strong> along with a clear risk category
-          to support confident, informed decision-making.
+          Based on historical scam patterns and automated trust signals,
+          Trustverse AI generates a{" "}
+          <strong>Trust Score (0–100)</strong> along with a clear risk category.
         </p>
 
         <ul className="list-disc pl-6 space-y-2">
-          <li>Detect potentially fraudulent phone numbers or email addresses</li>
-          <li>Identify suspicious usernames or online profiles</li>
-          <li>Reduce risk before financial or personal interactions</li>
-          <li>Make safer decisions using data-backed trust insights</li>
+          <li>Detect fraudulent phone numbers or emails</li>
+          <li>Identify suspicious usernames or profiles</li>
+          <li>Reduce risk before financial interaction</li>
+          <li>Make informed, safer decisions</li>
         </ul>
 
-        <p className="font-medium text-gray-800">
-          Risk Levels Explained:
-        </p>
+        <p className="font-medium text-gray-800">Risk Levels:</p>
 
         <ul className="list-disc pl-6 space-y-2">
-          <li>
-            <strong>Low Risk:</strong> No major suspicious indicators detected.
-          </li>
-          <li>
-            <strong>Medium Risk:</strong> Some warning signals present; proceed
-            with caution.
-          </li>
-          <li>
-            <strong>High Risk:</strong> Strong risk signals detected. Interaction
-            is not recommended without additional verification.
-          </li>
+          <li><strong>Low Risk:</strong> No major warning signs</li>
+          <li><strong>Medium Risk:</strong> Some caution advised</li>
+          <li><strong>High Risk:</strong> Strong scam indicators detected</li>
         </ul>
 
         <p className="text-sm text-gray-500">
-          Disclaimer: Trust Score Analyzer provides automated risk insights for
-          guidance purposes only. Results should be used alongside personal
-          judgment and additional verification when necessary.
+          Disclaimer: Results are automated insights only. Always verify
+          critical information independently.
         </p>
       </div>
 
-      {/* RESULT */}
+      {/* RESULT CARD (BUTTONS INSIDE = CLICKABLE FIX) */}
       {result && (
-        <div className="bg-white border rounded-xl p-6 max-w-xl space-y-2">
+        <div
+          ref={reportRef}
+          className="bg-white border rounded-xl p-6 space-y-4 max-w-xl relative z-10"
+        >
+          <h3 className="text-xl font-semibold">
+            🧠 Trustverse AI Trust Score Report
+          </h3>
+
           <p>
-            <strong>Trust Score:</strong> {result.trustScore}
+            <strong>Status:</strong>{" "}
+            <span className="text-emerald-600 font-semibold">
+              Completed ✅
+            </span>
           </p>
+
           <p>
-            <strong>Risk Level:</strong> {result.risk}
+            <strong>Risk Level:</strong>{" "}
+            <span
+              className={
+                result.riskLevel === "Low Risk"
+                  ? "text-green-600 font-bold"
+                  : result.riskLevel === "Medium Risk"
+                  ? "text-yellow-600 font-bold"
+                  : "text-red-600 font-bold"
+              }
+            >
+              {result.riskLevel}
+            </span>
           </p>
-          <p>
-            <strong>Confidence:</strong> {result.confidence}
-          </p>
+
+          <p><strong>Trust Score:</strong> {result.trustScore}</p>
+          <p><strong>Confidence:</strong> {result.confidence}</p>
+
+          <p className="text-gray-700">{result.explanation}</p>
 
           {result.remainingCredits !== undefined && (
             <p className="text-sm text-gray-500">
               Remaining Credits: {result.remainingCredits}
             </p>
           )}
+
+          {/* QR */}
+          <div className="pt-4">
+            <p className="font-medium mb-2">Share This Report</p>
+            <QRCodeCanvas value={window.location.href} size={120} />
+          </div>
+
+          {/* ACTION BUTTONS */}
+          <div className="flex gap-4 pt-4">
+            <button
+              onClick={downloadPDF}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            >
+              Download PDF
+            </button>
+
+            <button
+              onClick={reportAsScam}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+            >
+              Report as Scam
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -6,103 +6,132 @@ import { useEffect, useState } from "react";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
+  const [plan, setPlan] = useState<string | null>(null);
+  const [loadingCredits, setLoadingCredits] = useState(false);
 
-  const isPro = session?.user?.plan === "PRO";
+  // 🔁 ALWAYS fetch fresh credits (single source of truth)
+  const fetchCredits = async () => {
+    if (!session?.user) return;
 
-  // 🔁 Fetch credits ONLY when logged in & FREE user
-  useEffect(() => {
-    async function fetchCredits() {
-      try {
-        const res = await fetch("/api/credits");
+    try {
+      setLoadingCredits(true);
+      const res = await fetch("/api/credits", {
+        cache: "no-store",
+      });
 
-        if (!res.ok) {
-          setCredits(null);
-          return;
-        }
-
-        const data = await res.json();
-        setCredits(data.credits);
-      } catch {
+      if (!res.ok) {
         setCredits(null);
+        setPlan(null);
+        return;
       }
-    }
 
-    if (status === "authenticated" && session?.user && !isPro) {
+      const data = await res.json();
+
+      setCredits(
+        typeof data.credits === "number" ? data.credits : null
+      );
+      setPlan(data.plan ?? null);
+    } catch {
+      setCredits(null);
+      setPlan(null);
+    } finally {
+      setLoadingCredits(false);
+    }
+  };
+
+  // 🔥 CREDIT SYNC LOGIC (FINAL)
+  useEffect(() => {
+    if (status === "authenticated") {
       fetchCredits();
+
+      // 🔔 Tool usage event
+      const onCreditUpdate = () => fetchCredits();
+      window.addEventListener("credits-updated", onCreditUpdate);
+
+      // 👁️ Tab refocus safety
+      const onFocus = () => fetchCredits();
+      window.addEventListener("focus", onFocus);
+
+      return () => {
+        window.removeEventListener("credits-updated", onCreditUpdate);
+        window.removeEventListener("focus", onFocus);
+      };
     } else {
       setCredits(null);
+      setPlan(null);
     }
-  }, [status, session, isPro]);
+  }, [status]);
+
+  const isPro = plan === "pro" || plan === "PRO";
 
   return (
     <header className="w-full sticky top-0 z-50 bg-gradient-to-r from-[#0B1220] to-[#111827] border-b border-white/10">
       <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
 
-        {/* Logo */}
-        <Link
-          href="/"
-          className="text-white text-lg font-semibold tracking-wide"
-        >
+        {/* LOGO */}
+        <Link href="/" className="text-white text-lg font-semibold">
           Trustverse AI
         </Link>
 
-        {/* Right Side */}
+        {/* RIGHT SIDE */}
         {status === "authenticated" ? (
           <div className="flex items-center gap-4 relative">
 
-            {/* Credits / Plan */}
-            {!isPro && credits !== null && (
-              <span className="text-xs text-gray-300">
+            {/* PLAN / CREDITS DISPLAY */}
+            {loadingCredits ? (
+              <span className="text-xs text-gray-400">Loading...</span>
+            ) : isPro ? (
+              <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                PRO · Unlimited
+              </span>
+            ) : credits !== null ? (
+              <span className="text-xs px-3 py-1 rounded-full border border-white/20 text-gray-200">
                 Credits: <strong>{credits}</strong>
               </span>
-            )}
+            ) : null}
 
-            {isPro && (
-              <span className="text-xs text-emerald-400">
-                Unlimited
-              </span>
-            )}
-
-            {/* Pro / Upgrade */}
-            {isPro ? (
-              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                PRO
-              </span>
-            ) : (
+            {/* UPGRADE */}
+            {!isPro && (
               <Link
                 href="/pricing"
-                className="text-sm font-medium px-4 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition shadow"
+                className="text-xs px-3 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
               >
-                Upgrade to Pro
+                Upgrade
               </Link>
             )}
 
-            {/* User Avatar */}
+            {/* ✅ AVATAR (EMAIL INITIAL) */}
             <button
               onClick={() => setMenuOpen((v) => !v)}
-              className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold"
+              className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold"
             >
-              {session.user.email?.[0]?.toUpperCase()}
+              {session?.user?.email?.[0]?.toUpperCase() ?? "U"}
             </button>
 
-            {/* Dropdown */}
+            {/* DROPDOWN */}
             {menuOpen && (
-              <div className="absolute right-0 top-11 bg-[#0B1220] border border-white/10 rounded-md shadow-lg w-40">
+              <div className="absolute right-0 top-12 w-44 bg-[#0B1220] border border-white/10 rounded-md shadow-lg">
                 <Link
                   href="/dashboard"
-                  className="block px-4 py-2 text-sm text-white hover:bg-white/10"
                   onClick={() => setMenuOpen(false)}
+                  className="block px-4 py-2 text-sm text-white hover:bg-white/10"
                 >
                   Dashboard
                 </Link>
 
+                <Link
+                  href="/dashboard/tools"
+                  onClick={() => setMenuOpen(false)}
+                  className="block px-4 py-2 text-sm text-white hover:bg-white/10"
+                >
+                  AI Tools
+                </Link>
+
                 <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    signOut({ callbackUrl: "/login" });
-                  }}
+                  onClick={() => signOut({ callbackUrl: "/login" })}
                   className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/10"
                 >
                   Logout
@@ -113,7 +142,7 @@ export default function Navbar() {
         ) : (
           <Link
             href="/login"
-            className="text-sm font-medium px-4 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+            className="text-sm px-4 py-1.5 rounded-md bg-indigo-600 text-white"
           >
             Login
           </Link>
