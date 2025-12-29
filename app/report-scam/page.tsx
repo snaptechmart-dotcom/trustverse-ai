@@ -1,10 +1,11 @@
 "use client";
 
+import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState } from "react";
+
 export const dynamic = "force-dynamic";
 
-export default function ReportScamPage() {
+function ReportScamContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -20,9 +21,8 @@ export default function ReportScamPage() {
       return;
     }
 
-    // abhi sirf UI — backend already aap bana chuke ho
+    // Backend already exists — UI confirmation only
     alert("Scam report submitted successfully ✅");
-
     router.push("/dashboard");
   };
 
@@ -38,9 +38,15 @@ export default function ReportScamPage() {
 
       {/* AUTO DATA */}
       <div className="bg-gray-50 border rounded-lg p-4 space-y-2">
-        <p><strong>Source:</strong> {source}</p>
-        <p><strong>Risk Level:</strong> {risk}</p>
-        <p><strong>Trust Score:</strong> {score}</p>
+        <p>
+          <strong>Source:</strong> {source || "N/A"}
+        </p>
+        <p>
+          <strong>Risk Level:</strong> {risk || "N/A"}
+        </p>
+        <p>
+          <strong>Trust Score:</strong> {score || "N/A"}
+        </p>
       </div>
 
       {/* USER INPUT */}
@@ -60,5 +66,13 @@ export default function ReportScamPage() {
         Submit Scam Report
       </button>
     </div>
+  );
+}
+
+export default function ReportScamPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading report form…</div>}>
+      <ReportScamContent />
+    </Suspense>
   );
 }
