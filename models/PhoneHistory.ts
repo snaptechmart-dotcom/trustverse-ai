@@ -1,18 +1,14 @@
 import mongoose, { Schema, models } from "mongoose";
 
-const TrustScoreHistorySchema = new Schema(
+const PhoneHistorySchema = new Schema(
   {
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    input: {
+    phone: {
       type: String,
-      required: true,
-    },
-    trustScore: {
-      type: Number,
       required: true,
     },
     riskLevel: {
@@ -23,5 +19,5 @@ const TrustScoreHistorySchema = new Schema(
   { timestamps: true }
 );
 
-export default models.TrustScoreHistory ||
-  mongoose.model("TrustScoreHistory", TrustScoreHistorySchema);
+export default models.PhoneHistory ||
+  mongoose.model("PhoneHistory", PhoneHistorySchema);

@@ -1,25 +1,18 @@
-import ToolHistory from "@/models/ToolHistory";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
 
-/**
- * ⏱️ SIMPLE RATE LIMIT
- * Rule: 1 user = max 5 requests per 1 minute
- */
-const rateLimitMap = new Map<
-  string,
-  { count: number; time: number }
->();
+import User from "@/models/User";
+import ToolHistory from "@/models/ToolHistory";
+import PhoneHistory from "@/models/PhoneHistory";
 
 export async function POST(req: Request) {
   try {
-    // 1️⃣ DB CONNECT
+    // 1️⃣ DB
     await dbConnect();
 
-    // 2️⃣ SESSION CHECK
+    // 2️⃣ SESSION
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -28,43 +21,16 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔐 STEP 3.1.6 — RATE LIMIT CHECK (NEW)
-    const userId = session.user.id;
-    const now = Date.now();
-
-    const record = rateLimitMap.get(userId);
-
-    if (!record) {
-      rateLimitMap.set(userId, { count: 1, time: now });
-    } else {
-      // same 1-minute window
-      if (now - record.time < 60_000) {
-        if (record.count >= 5) {
-          return NextResponse.json(
-            {
-              error:
-                "Too many requests. Please wait 1 minute before trying again.",
-            },
-            { status: 429 }
-          );
-        }
-        record.count += 1;
-      } else {
-        // new 1-minute window
-        rateLimitMap.set(userId, { count: 1, time: now });
-      }
-    }
-
-    // 3️⃣ INPUT VALIDATION
+    // 3️⃣ INPUT
     const { phone } = await req.json();
     if (!phone) {
       return NextResponse.json(
-        { error: "Phone required" },
+        { error: "Phone number required" },
         { status: 400 }
       );
     }
 
-    // 4️⃣ USER FETCH
+    // 4️⃣ USER
     const user = await User.findById(session.user.id);
     if (!user) {
       return NextResponse.json(
@@ -73,9 +39,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5️⃣ CREDIT DEDUCTION LOGIC
+    // 5️⃣ CREDIT
     let remainingCredits = user.credits;
-
     if (user.plan === "FREE") {
       if (remainingCredits <= 0) {
         return NextResponse.json(
@@ -83,8 +48,6 @@ export async function POST(req: Request) {
           { status: 402 }
         );
       }
-
-      // 🔻 Deduct 1 credit
       remainingCredits -= 1;
       user.credits = remainingCredits;
       await user.save();
@@ -93,31 +56,38 @@ export async function POST(req: Request) {
     // 6️⃣ DEMO AI RESULT
     const risks = ["Low Risk", "Medium Risk", "High Risk"] as const;
     const risk = risks[Math.floor(Math.random() * risks.length)];
-   // 🧾 SAVE HISTORY
-    await ToolHistory.create({
-  userId: user._id,
-  tool: "phone-checker",
-  input: {
-    phone,
-  },
-  result: {
-    risk,
-    remainingCredits:
-      user.plan === "PRO" ? "unlimited" : remainingCredits,
-  },
-  });
 
-    // 7️⃣ RESPONSE
+    // 7️⃣ TOOL HISTORY
+    await ToolHistory.create({
+      userId: user._id,
+      tool: "phone-checker",
+      input: { phone },
+      result: {
+        risk,
+        remainingCredits:
+          user.plan === "PRO" ? "unlimited" : remainingCredits,
+      },
+    });
+
+    // 🔥 8️⃣ PHONE HISTORY (DASHBOARD COUNT)
+    await PhoneHistory.create({
+      userId: user._id,
+      phone,
+      riskLevel: risk,
+    });
+
+    // 9️⃣ RESPONSE
     return NextResponse.json({
       status: "Checked",
       risk,
       remainingCredits:
         user.plan === "PRO" ? "unlimited" : remainingCredits,
     });
+
   } catch (err) {
     console.error("PHONE CHECK ERROR:", err);
     return NextResponse.json(
-      { error: "Server error" },
+      { error: "Service temporarily unavailable" },
       { status: 500 }
     );
   }

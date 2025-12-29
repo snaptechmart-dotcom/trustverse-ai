@@ -2,75 +2,84 @@
 
 import { useEffect, useState } from "react";
 
+type Stats = {
+  totalReports: number;
+  trustChecks: number;
+  phoneChecks: number;
+};
+
 export default function DashboardPage() {
+  const [stats, setStats] = useState<Stats>({
+    totalReports: 0,
+    trustChecks: 0,
+    phoneChecks: 0,
+  });
+
   const [loading, setLoading] = useState(true);
 
-  const [totalReports, setTotalReports] = useState(0);
-  const [trustScoreChecks, setTrustScoreChecks] = useState(0);
-  const [phoneVerifications, setPhoneVerifications] = useState(0);
-
   useEffect(() => {
-    async function loadStats() {
+    const fetchStats = async () => {
       try {
-        const res = await fetch("/api/dashboard-stats");
+        const res = await fetch("/api/dashboard/stats");
+
+        if (!res.ok) {
+          console.error("Dashboard stats API failed");
+          return;
+        }
+
         const data = await res.json();
 
-        setTotalReports(data.totalReports ?? 0);
-        setTrustScoreChecks(data.trustChecks ?? 0);
-        setPhoneVerifications(data.phoneChecks ?? 0);
-      } catch (err) {
-        console.error(err);
+        // 🔥 IMPORTANT: exact keys from API
+        setStats({
+          totalReports: data.totalReports ?? 0,
+          trustChecks: data.trustChecks ?? 0,
+          phoneChecks: data.phoneChecks ?? 0,
+        });
+      } catch (error) {
+        console.error("Failed to load dashboard stats", error);
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    loadStats();
+    fetchStats();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="p-6 text-gray-500">
-        Loading dashboard...
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-8">
-      {/* HEADER */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Dashboard Overview
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Track your activity and trust checks at a glance
-        </p>
-      </div>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-gray-900">
+        Dashboard Overview
+      </h1>
 
-      {/* STATS GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <p className="text-sm text-gray-500">Total Reports</p>
-          <p className="mt-2 text-4xl font-bold text-blue-600">
-            {totalReports}
-          </p>
-        </div>
+      {loading ? (
+        <p className="text-gray-500">Loading stats…</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* TOTAL REPORTS */}
+          <div className="bg-white border rounded-xl p-6">
+            <p className="text-gray-500">Total Reports</p>
+            <p className="text-3xl font-bold text-red-600">
+              {stats.totalReports}
+            </p>
+          </div>
 
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <p className="text-sm text-gray-500">Trust Score Checks</p>
-          <p className="mt-2 text-4xl font-bold text-green-600">
-            {trustScoreChecks}
-          </p>
-        </div>
+          {/* TRUST CHECKS */}
+          <div className="bg-white border rounded-xl p-6">
+            <p className="text-gray-500">Trust Score Checks</p>
+            <p className="text-3xl font-bold text-emerald-600">
+              {stats.trustChecks}
+            </p>
+          </div>
 
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <p className="text-sm text-gray-500">Phone Verifications</p>
-          <p className="mt-2 text-4xl font-bold text-purple-600">
-            {phoneVerifications}
-          </p>
+          {/* PHONE CHECKS */}
+          <div className="bg-white border rounded-xl p-6">
+            <p className="text-gray-500">Phone Verifications</p>
+            <p className="text-3xl font-bold text-blue-600">
+              {stats.phoneChecks}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -1,48 +1,107 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useState } from "react";
+import { signOut } from "next-auth/react";
 
-export default function DashboardSettingsPage() {
-  // ✅ SAFE PATTERN (BUILD + RUNTIME SAFE)
-  const sessionHook = useSession();
-  const session = sessionHook?.data;
-  const status = sessionHook?.status;
+export default function SettingsPage() {
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // ✅ BUILD / PRERENDER SAFE GUARDS
-  if (status === "loading" || !status) {
-    return <p className="p-4">Loading profile...</p>;
-  }
+  const handleChangePassword = async () => {
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      alert("All fields are required");
+      return;
+    }
 
-  if (!session) {
-    return <p className="p-4">Unauthorized</p>;
-  }
+    if (newPassword.length < 6) {
+      alert("Password must be at least 6 characters");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          oldPassword,
+          newPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Failed to change password");
+        return;
+      }
+
+      alert("Password changed successfully. Please login again.");
+      signOut({ callbackUrl: "/login" });
+    } catch {
+      alert("Network error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="bg-white rounded-xl shadow p-6 space-y-4 max-w-xl">
-      <h2 className="text-lg font-semibold text-gray-800">
-        My Profile
-      </h2>
-
-      <div className="text-sm text-gray-700 space-y-1">
-        <p>
-          <span className="font-medium">Name:</span>{" "}
-          {session.user?.name || "Not set"}
-        </p>
-
-        <p>
-          <span className="font-medium">Email:</span>{" "}
-          {session.user?.email}
-        </p>
-
-        <p>
-          <span className="font-medium">Role:</span>{" "}
-          {(session.user as any)?.role || "User"}
+    <div className="max-w-2xl space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Account Settings
+        </h1>
+        <p className="text-gray-500 mt-1">
+          Manage your account security
         </p>
       </div>
 
-      <p className="text-xs text-gray-400">
-        Profile editing coming soon
-      </p>
+      {/* CHANGE PASSWORD */}
+      <div className="bg-white border rounded-xl p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-900">
+          Change Password
+        </h2>
+
+        <input
+          type="password"
+          placeholder="Old password"
+          value={oldPassword}
+          onChange={(e) => setOldPassword(e.target.value)}
+          className="w-full border rounded-md px-4 py-2"
+        />
+
+        <input
+          type="password"
+          placeholder="New password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          className="w-full border rounded-md px-4 py-2"
+        />
+
+        <input
+          type="password"
+          placeholder="Confirm new password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className="w-full border rounded-md px-4 py-2"
+        />
+
+        <button
+          onClick={handleChangePassword}
+          disabled={loading}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-md"
+        >
+          {loading ? "Updating..." : "Update Password"}
+        </button>
+      </div>
     </div>
   );
 }
