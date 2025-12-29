@@ -2,15 +2,19 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
+  const pathname = usePathname();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
   const [loadingCredits, setLoadingCredits] = useState(false);
+
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // 🔁 ALWAYS fetch fresh credits (single source of truth)
   const fetchCredits = async () => {
@@ -47,11 +51,9 @@ export default function Navbar() {
     if (status === "authenticated") {
       fetchCredits();
 
-      // 🔔 Tool usage event
       const onCreditUpdate = () => fetchCredits();
       window.addEventListener("credits-updated", onCreditUpdate);
 
-      // 👁️ Tab refocus safety
       const onFocus = () => fetchCredits();
       window.addEventListener("focus", onFocus);
 
@@ -64,6 +66,24 @@ export default function Navbar() {
       setPlan(null);
     }
   }, [status]);
+
+  // ✅ OUTSIDE CLICK → MENU CLOSE
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () =>
+      document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  // ✅ ROUTE CHANGE → MENU CLOSE
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   const isPro = plan === "pro" || plan === "PRO";
 
@@ -78,7 +98,7 @@ export default function Navbar() {
 
         {/* RIGHT SIDE */}
         {status === "authenticated" ? (
-          <div className="flex items-center gap-4 relative">
+          <div className="flex items-center gap-4 relative" ref={menuRef}>
 
             {/* PLAN / CREDITS DISPLAY */}
             {loadingCredits ? (
@@ -103,7 +123,7 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* ✅ AVATAR (EMAIL INITIAL) */}
+            {/* AVATAR */}
             <button
               onClick={() => setMenuOpen((v) => !v)}
               className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold"
@@ -116,7 +136,6 @@ export default function Navbar() {
               <div className="absolute right-0 top-12 w-44 bg-[#0B1220] border border-white/10 rounded-md shadow-lg">
                 <Link
                   href="/dashboard"
-                  onClick={() => setMenuOpen(false)}
                   className="block px-4 py-2 text-sm text-white hover:bg-white/10"
                 >
                   Dashboard
@@ -124,7 +143,6 @@ export default function Navbar() {
 
                 <Link
                   href="/dashboard/tools"
-                  onClick={() => setMenuOpen(false)}
                   className="block px-4 py-2 text-sm text-white hover:bg-white/10"
                 >
                   AI Tools
