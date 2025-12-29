@@ -1,15 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function WaitlistPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
-    setMessage("");
+  const router = useRouter();
+
+  const handleSubmit = async () => {
+    if (!email.trim()) {
+      alert("Please enter a valid email");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -19,53 +25,58 @@ export default function WaitlistPage() {
         body: JSON.stringify({ email }),
       });
 
-      const data = await res.json();
-      if (data.ok) {
-        setMessage("🎉 You’re added to the waitlist!");
-        setEmail("");
-      } else {
-        setMessage("❌ Invalid or duplicate email.");
+      if (!res.ok) {
+        alert("Something went wrong");
+        return;
       }
-    } catch (err) {
-      setMessage("⚠️ Server error. Try again.");
-    }
 
-    setLoading(false);
+      setSuccess(true);
+      setEmail("");
+
+      // 🚀 AUTO REDIRECT TO DASHBOARD (KEY PART)
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 2000);
+    } catch (err) {
+      alert("Network error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#081b33] flex items-center justify-center p-6">
-      <div className="bg-white shadow-xl rounded-xl max-w-md w-full p-8 text-center">
-
-        <h1 className="text-3xl font-bold text-[#081b33] mb-3">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 px-4">
+      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md text-center space-y-5">
+        <h1 className="text-2xl font-bold text-gray-900">
           Join the Pre-Launch Waitlist
         </h1>
 
-        <p className="text-gray-600 mb-6">
+        <p className="text-gray-600">
           Get early access to Trustverse AI before anyone else.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="email"
-            required
-            placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#081b33] outline-none"
-          />
+        {!success ? (
+          <>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              className="w-full border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-[#081b33] text-white rounded-lg font-semibold hover:bg-[#0a2647]"
-          >
-            {loading ? "Adding..." : "Join Waitlist"}
-          </button>
-        </form>
-
-        {message && (
-          <p className="mt-4 font-semibold text-[#081b33]">{message}</p>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-md"
+            >
+              {loading ? "Joining..." : "Join Waitlist"}
+            </button>
+          </>
+        ) : (
+          <p className="text-emerald-600 font-medium">
+            🎉 You’re added! Redirecting to dashboard...
+          </p>
         )}
       </div>
     </div>
