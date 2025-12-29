@@ -9,23 +9,23 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* MOBILE TOP BAR */}
-      <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-gray-900 text-white">
+      {/* 🔹 MOBILE TOP BAR (☰ ICON YAHI SE AAYEGA) */}
+      <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-gray-900 text-white fixed top-0 left-0 right-0 z-40">
         <span className="font-bold">Trustverse AI</span>
         <button onClick={() => setOpen(true)}>
           <HiMenu size={26} />
         </button>
       </div>
 
-      {/* OVERLAY (mobile only) */}
+      {/* 🔹 OVERLAY */}
       {open && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
           onClick={() => setOpen(false)}
         />
       )}
 
-      {/* SIDEBAR */}
+      {/* 🔹 SIDEBAR */}
       <aside
         className={`
           fixed top-0 left-0 z-50 h-full w-64 bg-gray-900 text-white
@@ -35,21 +35,19 @@ export default function Sidebar() {
           hidden lg:block
         `}
       >
-        {/* MOBILE HEADER INSIDE SIDEBAR */}
-        <div className="flex items-center justify-between p-4 lg:hidden">
+        {/* MOBILE CLOSE BUTTON */}
+        <div className="flex items-center justify-between px-4 py-3 lg:hidden">
           <span className="font-bold">Trustverse AI</span>
           <button onClick={() => setOpen(false)}>
-            <HiX size={24} />
+            <HiX size={22} />
           </button>
         </div>
 
-        {/* BRAND */}
-        <div className="p-4">
-          <h2 className="text-xl font-bold mb-4">Trustverse AI</h2>
-          <hr className="border-gray-700 mb-4" />
+        {/* BRAND (EXTRA GAP FIXED) */}
+        <div className="px-4 pt-4 pb-3">
+          <h2 className="text-lg font-semibold">Trustverse AI</h2>
         </div>
 
-        {/* NAV */}
         <nav className="px-4 space-y-4">
           <Link href="/dashboard" className="block hover:text-blue-400">
             Dashboard
