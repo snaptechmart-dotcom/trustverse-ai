@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
@@ -16,71 +17,43 @@ export default function Navbar() {
 
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // 🔁 ALWAYS fetch fresh credits (single source of truth)
+  // 🔁 Fetch credits
   const fetchCredits = async () => {
     if (!session?.user) return;
 
     try {
       setLoadingCredits(true);
-      const res = await fetch("/api/credits", {
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        setCredits(null);
-        setPlan(null);
-        return;
-      }
+      const res = await fetch("/api/credits", { cache: "no-store" });
+      if (!res.ok) return;
 
       const data = await res.json();
-
-      setCredits(
-        typeof data.credits === "number" ? data.credits : null
-      );
+      setCredits(typeof data.credits === "number" ? data.credits : null);
       setPlan(data.plan ?? null);
-    } catch {
-      setCredits(null);
-      setPlan(null);
     } finally {
       setLoadingCredits(false);
     }
   };
 
-  // 🔥 CREDIT SYNC LOGIC (FINAL)
   useEffect(() => {
     if (status === "authenticated") {
       fetchCredits();
-
-      const onCreditUpdate = () => fetchCredits();
-      window.addEventListener("credits-updated", onCreditUpdate);
-
-      const onFocus = () => fetchCredits();
-      window.addEventListener("focus", onFocus);
-
-      return () => {
-        window.removeEventListener("credits-updated", onCreditUpdate);
-        window.removeEventListener("focus", onFocus);
-      };
-    } else {
-      setCredits(null);
-      setPlan(null);
+      window.addEventListener("focus", fetchCredits);
+      return () => window.removeEventListener("focus", fetchCredits);
     }
   }, [status]);
 
-  // ✅ OUTSIDE CLICK → MENU CLOSE
+  // ✅ Outside click → close dropdown
   useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
+    const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
       }
     };
-
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () =>
-      document.removeEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ✅ ROUTE CHANGE → MENU CLOSE
+  // ✅ Route change → close dropdown
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
@@ -91,16 +64,18 @@ export default function Navbar() {
     <header className="w-full sticky top-0 z-50 bg-gradient-to-r from-[#0B1220] to-[#111827] border-b border-white/10">
       <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
 
-        {/* LOGO */}
-        <Link href="/" className="text-white text-lg font-semibold">
+        {/* ✅ LOGO (NOW CLICKABLE) */}
+        <button
+          onClick={() => router.push("/dashboard")}
+          className="text-white text-lg font-semibold"
+        >
           Trustverse AI
-        </Link>
+        </button>
 
-        {/* RIGHT SIDE */}
         {status === "authenticated" ? (
           <div className="flex items-center gap-4 relative" ref={menuRef}>
 
-            {/* PLAN / CREDITS DISPLAY */}
+            {/* PLAN / CREDITS */}
             {loadingCredits ? (
               <span className="text-xs text-gray-400">Loading...</span>
             ) : isPro ? (
@@ -131,26 +106,26 @@ export default function Navbar() {
               {session?.user?.email?.[0]?.toUpperCase() ?? "U"}
             </button>
 
-            {/* DROPDOWN */}
+            {/* ✅ DROPDOWN (CLEAN & CORRECT) */}
             {menuOpen && (
-              <div className="absolute right-0 top-12 w-44 bg-[#0B1220] border border-white/10 rounded-md shadow-lg">
-                <Link
-                  href="/dashboard"
-                  className="block px-4 py-2 text-sm text-white hover:bg-white/10"
+              <div className="absolute right-0 top-12 w-48 bg-[#0B1220] border border-white/10 rounded-md shadow-lg overflow-hidden">
+                <button
+                  onClick={() => router.push("/dashboard")}
+                  className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10"
                 >
                   Dashboard
-                </Link>
+                </button>
 
-                <Link
-                  href="/dashboard/tools"
-                  className="block px-4 py-2 text-sm text-white hover:bg-white/10"
+                <button
+                  onClick={() => router.push("/dashboard/settings")}
+                  className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10"
                 >
-                  AI Tools
-                </Link>
+                  Profile / Account
+                </button>
 
                 <button
                   onClick={() => signOut({ callbackUrl: "/login" })}
-                  className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/10"
+                  className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/10"
                 >
                   Logout
                 </button>
