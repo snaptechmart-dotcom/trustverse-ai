@@ -1,46 +1,35 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/dbConnect";
 
 import User from "@/models/User";
-import ToolHistory from "@/models/ToolHistory";
-import TrustScoreHistory from "@/models/TrustScoreHistory";
+import { saveActivity } from "@/lib/saveActivity";
 
 export async function POST(req: Request) {
   try {
-    // 1️⃣ DB
     await dbConnect();
 
-    // 2️⃣ SESSION
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    if (!session?.user?.id || !session.user.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 3️⃣ INPUT
-    const { email } = await req.json();
+    const body = await req.json();
+    const email = String(body?.email || "").trim();
+
     if (!email) {
-      return NextResponse.json(
-        { error: "Email required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Email required" }, { status: 400 });
     }
 
-    // 4️⃣ USER
     const user = await User.findById(session.user.id);
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // 5️⃣ CREDIT
+    // 🔐 CREDIT HANDLING (FREE vs PRO)
     let remainingCredits = user.credits;
+
     if (user.plan === "FREE") {
       if (remainingCredits <= 0) {
         return NextResponse.json(
@@ -48,50 +37,36 @@ export async function POST(req: Request) {
           { status: 402 }
         );
       }
-      remainingCredits -= 1;
-      user.credits = remainingCredits;
+
+      user.credits -= 1;
       await user.save();
+      remainingCredits = user.credits;
     }
 
-    // 6️⃣ DEMO AI RESULT
-    const risks = ["Low Risk", "Medium Risk", "High Risk"] as const;
-    const risk = risks[Math.floor(Math.random() * risks.length)];
-    const trustScore =
-      risk === "Low Risk" ? 80 : risk === "Medium Risk" ? 55 : 30;
+    // 🔍 ANALYSIS RESULT (TEMP / MOCK)
+    const riskLevel = "Low Risk";
+    const trustScore = 78;
 
-    // 7️⃣ TOOL HISTORY (History page)
-    await ToolHistory.create({
-      userId: user._id,
-      tool: "email-checker",
-      input: { email },
-      result: {
-        risk,
-        trustScore,
-        remainingCredits:
-          user.plan === "PRO" ? "unlimited" : remainingCredits,
-      },
-    });
-
-    // 🔥 8️⃣ TRUST SCORE HISTORY (Dashboard count)
-    await TrustScoreHistory.create({
-      userId: user._id,
+    // 🔥 SAVE ACTIVITY HISTORY – EMAIL CHECKER (FINAL)
+    await saveActivity({
+      userEmail: session.user.email,
+      tool: "EMAIL_CHECK",
       input: email,
+      riskLevel,
       trustScore,
-      riskLevel: risk,
+      resultSummary: `Email risk: ${riskLevel}`,
     });
 
-    // 9️⃣ RESPONSE
+    // ✅ RESPONSE
     return NextResponse.json({
-      status: "Checked",
       email,
-      risk,
       trustScore,
+      riskLevel,
       remainingCredits:
         user.plan === "PRO" ? "unlimited" : remainingCredits,
     });
-
-  } catch (err) {
-    console.error("EMAIL CHECK ERROR:", err);
+  } catch (error) {
+    console.error("EMAIL CHECK ERROR 👉", error);
     return NextResponse.json(
       { error: "Service temporarily unavailable" },
       { status: 500 }

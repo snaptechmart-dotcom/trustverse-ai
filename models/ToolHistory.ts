@@ -1,43 +1,45 @@
-import mongoose, { Schema, models } from "mongoose";
+import mongoose from "mongoose";
 
-const ToolHistorySchema = new Schema(
+const ToolHistorySchema = new mongoose.Schema(
   {
     userId: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
 
     tool: {
-  type: String,
-  enum: [
-    "phone-checker",
-    "email-checker",
-    "profile-checker",
-    "trust-score",
-    "business-checker",
-    "social-analyzer",
-    "advanced-analysis" // ✅ FINAL FIX
-  ],
-  required: true,
-},
-
-    // 🔥 UNIVERSAL INPUT (OBJECT SAFE FOR ALL TOOLS)
-    input: {
-      type: Object,
+      type: String,
       required: true,
     },
 
-    // 🔥 UNIVERSAL RESULT (OBJECT SAFE FOR ALL TOOLS)
-    result: {
-      type: Object,
+    // 🔥 INPUT (email / phone / text)
+    input: {
+      type: String,
       required: true,
+    },
+
+    // 🔥 RESULT OBJECT (REQUIRED – THIS WAS THE ERROR)
+    result: {
+      trustScore: {
+        type: Number,
+        required: true,
+      },
+      riskLevel: {
+        type: String,
+        required: true,
+      },
+      signals: {
+        type: [String],
+        default: [],
+      },
+      remainingCredits: {
+        type: mongoose.Schema.Types.Mixed,
+      },
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-export default models.ToolHistory ||
+export default mongoose.models.ToolHistory ||
   mongoose.model("ToolHistory", ToolHistorySchema);

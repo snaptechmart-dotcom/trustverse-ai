@@ -1,23 +1,17 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import User from "@/models/User";
 import bcrypt from "bcryptjs";
+import dbConnect from "@/lib/dbConnect";
+import User from "@/models/User";
 
 export async function POST(req: Request) {
   try {
-    await connectDB();
-
-    const { email, password, name } = await req.json();
+    const { email, password } = await req.json();
 
     if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email and password required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    // 🔒 HASH PASSWORD (THIS WAS THE MAIN ISSUE)
-    const hashedPassword = await bcrypt.hash(password, 10);
+    await dbConnect();
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -27,21 +21,18 @@ export async function POST(req: Request) {
       );
     }
 
-    const user = await User.create({
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await User.create({
       email,
-      password: hashedPassword, // ✅ hashed password
-      name,
+      password: hashedPassword,
+      plan: "FREE",
+      credits: 10,
     });
 
-    return NextResponse.json({
-      success: true,
-      userId: user._id,
-    });
-  } catch (error) {
-    console.error("SIGNUP ERROR:", error);
-    return NextResponse.json(
-      { error: "Signup failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json({ error: "Signup failed" }, { status: 500 });
   }
 }

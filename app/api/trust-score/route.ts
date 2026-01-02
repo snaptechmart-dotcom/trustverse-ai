@@ -1,36 +1,37 @@
-import ToolHistory from "@/models/ToolHistory";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
+import { saveActivity } from "@/lib/saveActivity";
 
 export async function POST(req: Request) {
   try {
-    // 🔌 DB CONNECT
+    // 1️⃣ DB CONNECT
     await dbConnect();
 
-    // 🔐 SESSION CHECK (🔥 FIX 🔥)
+    // 2️⃣ SESSION CHECK
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    // 📥 READ BODY
-    const { text } = await req.json();
+    // 3️⃣ INPUT
+    const body = await req.json();
+    const text = body?.text;
 
-    if (!text || typeof text !== "string") {
+    if (!text || typeof text !== "string" || text.trim().length < 5) {
       return NextResponse.json(
         { error: "Invalid input" },
         { status: 400 }
       );
     }
 
-    // 👤 FIND USER
-    const user = await User.findById(session.user.id);
+    // 4️⃣ USER FETCH
+    const user = await User.findOne({ email: session.user.email });
     if (!user) {
       return NextResponse.json(
         { error: "User not found" },
@@ -38,10 +39,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // 💳 CREDIT LOGIC
+    // 5️⃣ CREDIT LOGIC (🔥 FINAL FIX 🔥)
     let remainingCredits = user.credits;
 
-    if (user.plan === "free") {
+    if (user.plan === "FREE") {
       if (remainingCredits <= 0) {
         return NextResponse.json(
           { error: "No credits left" },
@@ -49,37 +50,43 @@ export async function POST(req: Request) {
         );
       }
 
-      user.credits -= 1;
+      user.credits = remainingCredits - 1;
       await user.save();
       remainingCredits = user.credits;
     }
 
-    // 🤖 TRUST SCORE (DEMO)
+    // 6️⃣ TRUST SCORE LOGIC (DEMO)
     const trustScore = 72;
     const riskLevel = "Medium Risk";
-    const confidence = "85%";
 
-    // 🧾 SAVE HISTORY
-    await ToolHistory.create({
-      userId: user._id,
-      tool: "trust-score",
-      input: { text },
-      result: {
-        trustScore,
-        riskLevel,
-        confidence,
-        remainingCredits:
-          user.plan === "pro" ? "unlimited" : remainingCredits,
-      },
+    const summary =
+      "The content shows moderate trust indicators. No strong scam patterns were detected, but caution is advised.";
+
+    const signals = [
+      "Text structure analyzed",
+      "No strong scam keywords detected",
+      "Moderate uncertainty present",
+    ];
+
+    // 7️⃣ SAVE ACTIVITY HISTORY
+    await saveActivity({
+      userEmail: session.user.email,
+      tool: "TRUST_SCORE",
+      input: text,
+      trustScore,
+      riskLevel,
+      resultSummary: `Trust score ${trustScore}/100`,
+      signals,
     });
 
-    // ✅ RESPONSE
+    // 8️⃣ RESPONSE
     return NextResponse.json({
       trustScore,
       riskLevel,
-      confidence,
+      summary,
+      signals,
       remainingCredits:
-        user.plan === "pro" ? "unlimited" : remainingCredits,
+        user.plan === "PRO" ? "unlimited" : remainingCredits,
     });
 
   } catch (error) {

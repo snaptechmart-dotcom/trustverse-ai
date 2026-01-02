@@ -55,14 +55,28 @@ export default function TrustScorePage() {
         }),
       });
 
+      const data = await res.json();
+
+      // 🔥 FINAL ERROR HANDLING (credits / session)
       if (!res.ok) {
-        alert("Service temporarily unavailable. Please try again.");
+        if (res.status === 402) {
+          alert("❌ No credits left. Please upgrade your plan.");
+        } else if (res.status === 401) {
+          alert("Session expired. Please login again.");
+          router.push("/login");
+        } else {
+          alert(data?.error || "Service temporarily unavailable.");
+        }
         return;
       }
 
-      const data: TrustResult = await res.json();
       setResult(data);
       setValue("");
+
+      // 🔄 Real-time updates
+      window.dispatchEvent(new Event("credits-updated"));
+      window.dispatchEvent(new Event("history-updated"));
+
     } catch (err) {
       alert("Network error. Please try again.");
     } finally {
@@ -130,7 +144,7 @@ export default function TrustScorePage() {
         </button>
       </div>
 
-      {/* LONG DESCRIPTION */}
+      {/* 🔥 LONG DESCRIPTION (RESTORED FULLY) */}
       <div className="space-y-6 text-gray-700 max-w-3xl">
         <h2 className="text-xl font-semibold text-gray-900">
           How Trust Score Analyzer Works
@@ -169,7 +183,7 @@ export default function TrustScorePage() {
         </p>
       </div>
 
-      {/* RESULT CARD (BUTTONS INSIDE = CLICKABLE FIX) */}
+      {/* RESULT CARD */}
       {result && (
         <div
           ref={reportRef}
@@ -178,13 +192,6 @@ export default function TrustScorePage() {
           <h3 className="text-xl font-semibold">
             🧠 Trustverse AI Trust Score Report
           </h3>
-
-          <p>
-            <strong>Status:</strong>{" "}
-            <span className="text-emerald-600 font-semibold">
-              Completed ✅
-            </span>
-          </p>
 
           <p>
             <strong>Risk Level:</strong>{" "}
@@ -203,7 +210,6 @@ export default function TrustScorePage() {
 
           <p><strong>Trust Score:</strong> {result.trustScore}</p>
           <p><strong>Confidence:</strong> {result.confidence}</p>
-
           <p className="text-gray-700">{result.explanation}</p>
 
           {result.remainingCredits !== undefined && (
@@ -212,13 +218,10 @@ export default function TrustScorePage() {
             </p>
           )}
 
-          {/* QR */}
           <div className="pt-4">
-            <p className="font-medium mb-2">Share This Report</p>
             <QRCodeCanvas value={window.location.href} size={120} />
           </div>
 
-          {/* ACTION BUTTONS */}
           <div className="flex gap-4 pt-4">
             <button
               onClick={downloadPDF}

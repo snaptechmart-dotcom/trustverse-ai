@@ -1,4 +1,4 @@
-import NextAuth, { type AuthOptions } from "next-auth";
+import NextAuth, { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
@@ -26,17 +26,20 @@ export const authOptions: AuthOptions = {
 
         if (!user) return null;
 
-        const isValid = await bcrypt.compare(
+        const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password
         );
 
-        if (!isValid) return null;
+        if (!isPasswordValid) return null;
 
-        // 🔒 minimal safe payload
+        // ✅ IMPORTANT: credits INCLUDED
         return {
           id: user._id.toString(),
           email: user.email,
+          role: user.role,
+          plan: user.plan,
+          credits: user.credits ?? 0,
         };
       },
     }),
@@ -46,19 +49,29 @@ export const authOptions: AuthOptions = {
     strategy: "jwt",
   },
 
+  pages: {
+    signIn: "/login",
+  },
+
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = (user as any).id;
-        token.email = (user as any).email;
+        token.id = user.id;
+        token.email = user.email;
+        token.role = user.role;
+        token.plan = user.plan;
+        token.credits = user.credits; // ✅ added
       }
       return token;
     },
 
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).email = token.email;
+        session.user.id = token.id as string;
+        session.user.email = token.email as string;
+        session.user.role = token.role as string;
+        session.user.plan = token.plan as string;
+        session.user.credits = token.credits as number; // ✅ added
       }
       return session;
     },

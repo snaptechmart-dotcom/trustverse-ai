@@ -1,27 +1,56 @@
-import mongoose from "mongoose";
+import mongoose, { Schema, models } from "mongoose";
 
-const ActivityHistorySchema = new mongoose.Schema(
+const ActivityHistorySchema = new Schema(
   {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+    userEmail: {
+      type: String,
       required: true,
+      index: true,
     },
-    action: {
+
+    tool: {
+      type: String,
+      required: true,
+      index: true,
+    },
+
+    // 🔹 ORIGINAL INPUT (UI ke liye)
+    input: {
       type: String,
       required: true,
     },
-    impact: {
+
+    // 🔹 NORMALIZED INPUT (logic / upsert ke liye)
+    inputKey: {
+      type: String,
+      required: true,
+      index: true,
+    },
+
+    riskLevel: {
+      type: String,
+      default: null,
+    },
+
+    trustScore: {
       type: Number,
-      required: true,
+      default: null,
     },
-    reason: {
+
+    resultSummary: {
       type: String,
-      required: true,
+      default: null,
+    },
+
+    signals: {
+      type: [String],
+      default: [],
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-export default mongoose.models.ActivityHistory ||
+export default models.ActivityHistory ||
   mongoose.model("ActivityHistory", ActivityHistorySchema);

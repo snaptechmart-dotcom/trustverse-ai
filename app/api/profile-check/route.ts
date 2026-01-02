@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/dbConnect";
+
 import User from "@/models/User";
-import ToolHistory from "@/models/ToolHistory";
+import { saveActivity } from "@/lib/saveActivity";
 
 /**
  * Profile Trust Checker
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
 
     // 2️⃣ AUTH CHECK
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !session.user.email) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -76,22 +77,15 @@ export async function POST(req: Request) {
     if (trustScore >= 80) riskLevel = "Low Risk";
     if (trustScore < 50) riskLevel = "High Risk";
 
-    // 🧾 7️⃣ SAVE HISTORY (🔥 MAIN ADDITION 🔥)
-    await ToolHistory.create({
-      userId: user._id,
-      tool: "profile-checker",
-      input: {
-        name,
-        email,
-        phone: phone || null,
-      },
-      result: {
-        trustScore,
-        riskLevel,
-        remainingCredits:
-          user.plan === "PRO" ? "unlimited" : remainingCredits,
-      },
-    });
+    await saveActivity({
+  userEmail: session.user.email,
+  tool: "PROFILE_TRUST", // ✅ enum match
+  input: `${name} | ${email}${phone ? " | " + phone : ""}`,
+  riskLevel,
+  trustScore,
+  resultSummary: `Profile trust risk: ${riskLevel}`,
+});
+
 
     // 8️⃣ RESPONSE
     return NextResponse.json({

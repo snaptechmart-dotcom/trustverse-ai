@@ -55,7 +55,11 @@ export default function EmailCheckerPage() {
       const data: ResultType = await res.json();
       setResult(data);
       setEmail(""); // sirf text clear
+
+      // 🔥 UPDATE CREDITS + HISTORY (FINAL)
       window.dispatchEvent(new Event("credits-updated"));
+      window.dispatchEvent(new Event("history-updated")); // ✅ ADD THIS
+
     } catch {
       alert("Network error.");
     } finally {

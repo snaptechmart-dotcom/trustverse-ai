@@ -2,30 +2,23 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { HiMenu, HiX } from "react-icons/hi";
-import { usePathname, useRouter } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
 
 export default function Sidebar() {
-  const [open, setOpen] = useState(false);
-  const pathname = usePathname();
   const router = useRouter();
-  const { status } = useSession();
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
-  const NavLink = ({
-    href,
-    label,
-  }: {
-    href: string;
-    label: string;
-  }) => (
+  const navItem = (href: string, label: string) => (
     <Link
       href={href}
       onClick={() => setOpen(false)}
-      className={`block ${
+      className={`block px-4 py-2 rounded-md text-sm transition ${
         pathname === href
-          ? "text-blue-400 font-medium"
-          : "text-gray-200 hover:text-blue-400"
+          ? "bg-white/10 text-blue-400"
+          : "text-gray-200 hover:bg-white/10"
       }`}
     >
       {label}
@@ -34,82 +27,83 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* 🔹 MOBILE TOP BAR */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-gray-900 text-white">
+      {/* ================= MOBILE TOP BAR ================= */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-[#0B1220] flex items-center justify-between px-4">
         <button
-          onClick={() => {
-            setOpen(false);
-            router.push("/dashboard");
-          }}
-          className="font-bold"
+          onClick={() => router.push("/dashboard")}
+          className="text-white font-semibold"
         >
           Trustverse AI
         </button>
 
-        <button onClick={() => setOpen(true)}>
+        <button onClick={() => setOpen(true)} className="text-white">
           <HiMenu size={26} />
         </button>
       </div>
 
-      {/* OVERLAY */}
+      {/* ================= MOBILE OVERLAY ================= */}
       {open && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setOpen(false)}
         />
       )}
 
-      {/* 🔹 SIDEBAR */}
+      {/* ================= SIDEBAR ================= */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full w-64 bg-gray-900 text-white
+          fixed lg:static
+          top-0 left-0 z-50
+          h-full lg:h-screen
+          w-64
+          bg-[#0B1220]
           transform transition-transform duration-300
           ${open ? "translate-x-0" : "-translate-x-full"}
           lg:translate-x-0
+          flex flex-col
         `}
       >
-        {/* MOBILE CLOSE */}
-        <div className="flex items-center justify-between px-4 py-3 lg:hidden">
-          <span className="font-bold">Trustverse AI</span>
-          <button onClick={() => setOpen(false)}>
+        {/* HEADER */}
+        <div className="h-14 flex items-center justify-between px-4">
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="text-white font-semibold text-lg"
+          >
+            Trustverse AI
+          </button>
+
+          <button
+            onClick={() => setOpen(false)}
+            className="lg:hidden text-white"
+          >
             <HiX size={22} />
           </button>
         </div>
 
-        {/* 🔹 DESKTOP BRAND (THIS WAS MISSING ✅ FIXED) */}
-        <div className="hidden lg:block px-4 py-4 border-b border-white/10">
-          <span className="text-lg font-semibold">Trustverse AI</span>
-        </div>
+        {/* NAV */}
+        <nav className="px-2 space-y-1 mt-2">
+          {navItem("/dashboard", "Dashboard")}
+          {navItem("/dashboard/tools", "AI Tools")}
+          {navItem("/dashboard/history", "History")}
+          {navItem("/dashboard/settings", "Settings")}
 
-        {/* MAIN NAV */}
-        <nav className="px-4 mt-6 space-y-4">
-          <NavLink href="/dashboard" label="Dashboard" />
-          <NavLink href="/dashboard/tools" label="AI Tools" />
-          <NavLink href="/dashboard/history" label="History" />
-          <NavLink href="/dashboard/settings" label="Settings" />
-        </nav>
-
-        {/* 🔥 MOBILE USER ACTIONS */}
-        {status === "authenticated" && (
-          <div className="lg:hidden mt-8 border-t border-white/10 pt-4 px-4 space-y-4">
-            <button
-              onClick={() => {
-                setOpen(false);
-                router.push("/dashboard/settings");
-              }}
-              className="block w-full text-left hover:text-blue-400"
+          <div className="mt-1">
+            <Link
+              href="/dashboard/profile"
+              onClick={() => setOpen(false)}
+              className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/10 rounded-md"
             >
               Profile / Account
-            </button>
+            </Link>
 
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="block w-full text-left text-red-400 hover:text-red-300"
+              className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/10 rounded-md"
             >
               Logout
             </button>
           </div>
-        )}
+        </nav>
       </aside>
     </>
   );

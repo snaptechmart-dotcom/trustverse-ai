@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import CreditWarningBanner from "@/components/CreditWarningBanner";
 
 type ResultType = {
-  status: string;
-  risk: "Low Risk" | "Medium Risk" | "High Risk";
+  phone: string;
+  trustScore: number;
+  riskLevel: "Low Risk" | "Medium Risk" | "High Risk";
+  analysis: {
+    summary: string;
+    signals: string[];
+    recommendation: string;
+  };
   remainingCredits: number | "unlimited";
 };
 
@@ -14,12 +20,45 @@ export default function PhoneCheckerPage() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ResultType | null>(null);
+  const [credits, setCredits] = useState<number | "unlimited">(0);
 
   const router = useRouter();
+
+  /* 🔥 FETCH CREDITS */
+  useEffect(() => {
+    const fetchCredits = async () => {
+      try {
+        const res = await fetch("/api/credits", {
+          credentials: "include",
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        setCredits(data.credits ?? 0);
+      } catch {
+        // silent
+      }
+    };
+
+    fetchCredits();
+
+    const listener = () => fetchCredits();
+    window.addEventListener("credits-updated", listener);
+
+    return () => {
+      window.removeEventListener("credits-updated", listener);
+    };
+  }, []);
 
   const handleCheck = async () => {
     if (!phone.trim()) {
       alert("Please enter a phone number with country code.");
+      return;
+    }
+
+    if (credits !== "unlimited" && credits <= 0) {
+      alert("No credits left. Please upgrade to Pro.");
+      router.push("/pricing");
       return;
     }
 
@@ -29,8 +68,11 @@ export default function PhoneCheckerPage() {
     try {
       const res = await fetch("/api/phone-check", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phone.trim() }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ phone }),
       });
 
       if (res.status === 401) {
@@ -52,10 +94,10 @@ export default function PhoneCheckerPage() {
 
       const data: ResultType = await res.json();
       setResult(data);
-
       setPhone("");
+
       window.dispatchEvent(new Event("credits-updated"));
-    } catch (err) {
+    } catch {
       alert("Network error. Please check your connection.");
     } finally {
       setLoading(false);
@@ -64,8 +106,8 @@ export default function PhoneCheckerPage() {
 
   return (
     <div className="space-y-12 max-w-4xl">
-      {/* CREDIT WARNING */}
-      <CreditWarningBanner />
+      {/* CREDIT WARNING (FREE ONLY) */}
+      {credits !== "unlimited" && <CreditWarningBanner />}
 
       {/* HEADER */}
       <div>
@@ -74,7 +116,7 @@ export default function PhoneCheckerPage() {
         </h1>
         <p className="text-gray-500 mt-2 max-w-3xl">
           Verify phone numbers to detect spam, fraud, or risky activity using
-          automated AI risk signals before taking action.
+          advanced AI-powered trust signals.
         </p>
       </div>
 
@@ -99,7 +141,7 @@ export default function PhoneCheckerPage() {
         </button>
       </div>
 
-      {/* RESULT — TRUSTVERSE AI REPORT */}
+      {/* RESULT */}
       {result && (
         <div className="bg-white border rounded-xl p-6 max-w-2xl space-y-5">
           <h3 className="text-xl font-semibold text-gray-900">
@@ -113,86 +155,62 @@ export default function PhoneCheckerPage() {
             </span>
           </p>
 
-          <div className="space-y-2 text-gray-700">
-            <p>
-              <strong>Risk Assessment Summary:</strong>
-            </p>
-            <p className="text-sm leading-relaxed">
-              Our AI-powered system analyzed multiple automated risk signals
-              including spam indicators, usage patterns, and reported behavior.
-              Based on this analysis, the phone number shows a{" "}
-              <strong>{result.risk}</strong> profile.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-medium text-gray-800">What This Means:</p>
-            <ul className="list-disc pl-6 text-sm text-gray-700 space-y-1 mt-2">
-              <li>No major suspicious or fraudulent activity detected</li>
-              <li>The number appears safe for general communication</li>
-              <li>Suitable for business and personal use</li>
-            </ul>
-          </div>
-
           <p>
             <strong>Final Risk Level:</strong>{" "}
             <span
               className={
-                result.risk === "Low Risk"
+                result.riskLevel === "Low Risk"
                   ? "text-green-600 font-bold"
-                  : result.risk === "Medium Risk"
+                  : result.riskLevel === "Medium Risk"
                   ? "text-yellow-600 font-bold"
                   : "text-red-600 font-bold"
               }
             >
-              {result.risk}
+              {result.riskLevel}
             </span>
           </p>
 
-          <div className="border-t pt-4 text-sm text-gray-600 space-y-1">
-            <p>
-              <strong>Credits Used:</strong> 1
-            </p>
-            <p>
-              <strong>Available Credits:</strong>{" "}
-              {result.remainingCredits === "unlimited"
-                ? "Unlimited"
-                : result.remainingCredits}
+          <p>
+            <strong>Trust Score:</strong> {result.trustScore}/100
+          </p>
+
+          <div className="border-t pt-4 space-y-2 text-sm text-gray-700">
+            <p className="font-semibold">🔎 Detailed Risk Analysis</p>
+            <p>{result.analysis.summary}</p>
+
+            <ul className="list-disc list-inside text-gray-600">
+              {result.analysis.signals.map((s, i) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ul>
+
+            <p className="mt-2">
+              <strong>✅ Recommendation:</strong>{" "}
+              {result.analysis.recommendation}
             </p>
           </div>
 
-          <p className="text-xs text-gray-500 italic">
-            This result is generated using automated indicators and should be
-            used as guidance only. Upgrade to Pro for unlimited checks and deeper
-            insights.
-          </p>
+          {/* 🔥 PRO CREDIT DISPLAY FIX */}
+          <div className="border-t pt-4 text-sm text-gray-600 space-y-1">
+            {result.remainingCredits !== "unlimited" && (
+              <p>
+                <strong>Credits Used:</strong> 1
+              </p>
+            )}
+
+            <p>
+              <strong>Available Credits:</strong>{" "}
+              {result.remainingCredits === "unlimited" ? (
+                <span className="text-emerald-600 font-semibold">
+                  Unlimited (PRO)
+                </span>
+              ) : (
+                result.remainingCredits
+              )}
+            </p>
+          </div>
         </div>
       )}
-
-      {/* DESCRIPTION — ALWAYS SHOWN (RESULT KE BAAD BHI) */}
-      <div className="space-y-6 text-gray-700 max-w-3xl">
-        <h2 className="text-xl font-semibold text-gray-900">
-          How Phone Number Checker Works
-        </h2>
-
-        <p>
-          Phone Number Checker helps users assess whether a phone number appears
-          safe or potentially risky. The system evaluates automated risk signals
-          such as usage patterns, known spam indicators, and reported behavior.
-        </p>
-
-        <ul className="list-disc pl-6 space-y-2">
-          <li>Identify potential spam or scam phone numbers</li>
-          <li>Detect risky or suspicious number behavior</li>
-          <li>Reduce exposure to fraud or unwanted calls</li>
-        </ul>
-
-        <p className="text-sm text-gray-500">
-          Disclaimer: Results are generated using automated indicators and are
-          intended for guidance only. Always apply personal judgment before
-          taking action.
-        </p>
-      </div>
     </div>
   );
 }

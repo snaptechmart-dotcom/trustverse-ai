@@ -1,19 +1,33 @@
 import React from "react";
-import Sidebar from "@/components/Sidebar";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { redirect } from "next/navigation";
 
-export default function DashboardLayout({
+import Sidebar from "@/components/Sidebar";
+import SessionWatcher from "@/components/SessionWatcher";
+
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    redirect("/login");
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Sidebar (mobile + desktop dono ke liye) */}
+    <div className="flex min-h-screen bg-gray-50 overflow-x-hidden">
+      {/* SIDEBAR */}
       <Sidebar />
 
-      {/* Main content */}
-      <main className="pt-16 lg:pt-6 lg:ml-64 p-4">
-        {children}
+      {/* MAIN CONTENT */}
+      <main className="flex-1 px-6 py-6">
+        <SessionWatcher />
+        <div className="max-w-6xl">
+          {children}
+        </div>
       </main>
     </div>
   );

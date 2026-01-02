@@ -2,55 +2,53 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/dbConnect";
+
 import User from "@/models/User";
-import ToolHistory from "@/models/ToolHistory";
+import { saveActivity } from "@/lib/saveActivity";
 
 export async function POST(req: Request) {
-  console.log("🚀 API HIT");
+  console.log("🚀 BUSINESS CHECK API HIT");
 
   try {
+    // 1️⃣ DB CONNECT
     await dbConnect();
     console.log("✅ DB CONNECTED");
 
+    // 2️⃣ AUTH
     const session = await getServerSession(authOptions);
-    console.log("SESSION:", session);
-
-    if (!session?.user?.id) {
-      console.log("❌ NO SESSION");
+    if (!session?.user?.email) {
+      console.log("❌ UNAUTHORIZED");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // 3️⃣ INPUT
     const body = await req.json();
-    console.log("BODY:", body);
-
     const businessName =
       body.businessName || body.name || body.business || "";
     const domain =
       body.domain || body.website || body.domainName || "";
 
-    console.log("PARSED:", { businessName, domain });
+    console.log("📥 INPUT:", { businessName, domain });
 
     if (!businessName || !domain) {
-      console.log("❌ VALIDATION FAIL");
       return NextResponse.json(
         { error: "Business name and domain are required" },
         { status: 400 }
       );
     }
 
-    const user = await User.findById(session.user.id);
-    console.log("USER:", user?._id);
-
+    // 4️⃣ USER FETCH (SAFE WAY)
+    const user = await User.findOne({ email: session.user.email });
     if (!user) {
       console.log("❌ USER NOT FOUND");
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // 5️⃣ CREDIT LOGIC
     let remainingCredits = user.credits;
 
     if (user.plan === "FREE") {
       if (remainingCredits <= 0) {
-        console.log("❌ NO CREDITS");
         return NextResponse.json(
           { error: "No credits left" },
           { status: 402 }
@@ -63,20 +61,21 @@ export async function POST(req: Request) {
       console.log("✅ CREDIT DEDUCTED");
     }
 
+    // 6️⃣ ANALYSIS (DEMO)
     const trustScore = 75;
-    const riskLevel = "Medium Risk";
+    const riskLevel: "Low Risk" | "Medium Risk" | "High Risk" = "Medium Risk";
 
-    console.log("👉 SAVING HISTORY NOW");
-
-    await ToolHistory.create({
-      userId: user._id,
-      tool: "business-checker",
-      input: { businessName, domain },
-      result: { trustScore, riskLevel },
+    // 🔥 7️⃣ SAVE ACTIVITY HISTORY (UNIFIED – FINAL)
+    await saveActivity({
+      userEmail: session.user.email,
+      tool: "BUSINESS_DOMAIN", // ✅ enum match
+      input: `${businessName} | ${domain}`,
+      riskLevel,
+      trustScore,
+      resultSummary: `Business / Domain risk: ${riskLevel}`,
     });
 
-    console.log("✅ HISTORY SAVED");
-
+    // 8️⃣ RESPONSE (⚠️ THIS WAS MISSING BEFORE)
     return NextResponse.json({
       status: "Checked",
       businessName,
@@ -88,7 +87,7 @@ export async function POST(req: Request) {
     });
 
   } catch (err) {
-    console.error("🔥 ACTUAL ERROR:", err);
+    console.error("🔥 BUSINESS CHECK ERROR:", err);
     return NextResponse.json(
       { error: "Service temporarily unavailable" },
       { status: 500 }

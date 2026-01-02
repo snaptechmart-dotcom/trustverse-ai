@@ -4,15 +4,15 @@ import { useEffect, useState } from "react";
 
 type Stats = {
   totalReports: number;
-  trustChecks: number;
-  phoneChecks: number;
+  trustScoreChecks: number;
+  phoneVerifications: number;
 };
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({
     totalReports: 0,
-    trustChecks: 0,
-    phoneChecks: 0,
+    trustScoreChecks: 0,
+    phoneVerifications: 0,
   });
 
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,9 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch("/api/dashboard/stats");
+        const res = await fetch("/api/dashboard-stats", {
+          credentials: "include",
+        });
 
         if (!res.ok) {
           console.error("Dashboard stats API failed");
@@ -29,11 +31,11 @@ export default function DashboardPage() {
 
         const data = await res.json();
 
-        // 🔥 IMPORTANT: exact keys from API
+        // ✅ EXACT keys from backend
         setStats({
           totalReports: data.totalReports ?? 0,
-          trustChecks: data.trustChecks ?? 0,
-          phoneChecks: data.phoneChecks ?? 0,
+          trustScoreChecks: data.trustScoreChecks ?? 0,
+          phoneVerifications: data.phoneVerifications ?? 0,
         });
       } catch (error) {
         console.error("Failed to load dashboard stats", error);
@@ -63,19 +65,19 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          {/* TRUST CHECKS */}
+          {/* TRUST SCORE CHECKS */}
           <div className="bg-white border rounded-xl p-6">
             <p className="text-gray-500">Trust Score Checks</p>
             <p className="text-3xl font-bold text-emerald-600">
-              {stats.trustChecks}
+              {stats.trustScoreChecks}
             </p>
           </div>
 
-          {/* PHONE CHECKS */}
+          {/* PHONE VERIFICATIONS */}
           <div className="bg-white border rounded-xl p-6">
             <p className="text-gray-500">Phone Verifications</p>
             <p className="text-3xl font-bold text-blue-600">
-              {stats.phoneChecks}
+              {stats.phoneVerifications}
             </p>
           </div>
         </div>
