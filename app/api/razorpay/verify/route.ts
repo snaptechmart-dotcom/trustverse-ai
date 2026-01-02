@@ -1,16 +1,9 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
+import Subscription from "@/models/Subscription";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-
-const PLAN_CREDITS: any = {
-  prelaunch: 100,
-  essential: 300,
-  pro: 1000,
-  enterprise: 5000,
-};
 
 export async function POST(req: Request) {
   try {
@@ -19,8 +12,9 @@ export async function POST(req: Request) {
       razorpay_payment_id,
       razorpay_order_id,
       razorpay_signature,
-      planKey,
     } = body;
+
+    /* ================= 1️⃣ VERIFY SIGNATURE ================= */
 
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
 
@@ -30,25 +24,45 @@ export async function POST(req: Request) {
       .digest("hex");
 
     if (expectedSign !== razorpay_signature) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid signature" },
+        { status: 400 }
+      );
     }
+
+    /* ================= 2️⃣ AUTH CHECK ================= */
 
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     await dbConnect();
 
-    await User.findByIdAndUpdate(session.user.id, {
-      $inc: { credits: PLAN_CREDITS[planKey] || 0 },
-      isPro: true,
-      plan: planKey.toUpperCase(),
-    });
+    /* ================= 3️⃣ SAVE PAYMENT (NO CREDITS HERE) ================= */
+
+    await Subscription.findOneAndUpdate(
+      { orderId: razorpay_order_id },
+      {
+        orderId: razorpay_order_id,
+        paymentId: razorpay_payment_id,
+        userId: session.user.id,
+        status: "paid",
+      },
+      { upsert: true }
+    );
+
+    /* ================= 4️⃣ DONE ================= */
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: "Verification failed" }, { status: 500 });
+    console.error("VERIFY ERROR:", err);
+    return NextResponse.json(
+      { error: "Verification failed" },
+      { status: 500 }
+    );
   }
 }

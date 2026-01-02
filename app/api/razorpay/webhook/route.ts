@@ -6,7 +6,8 @@ import User from "@/models/User";
 
 export async function POST(req: Request) {
   try {
-    // 1️⃣ Read raw body & verify signature
+    /* ================= 1️⃣ VERIFY SIGNATURE ================= */
+
     const rawBody = await req.text();
     const signature = req.headers.get("x-razorpay-signature") || "";
 
@@ -23,10 +24,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2️⃣ Parse event
+    /* ================= 2️⃣ PARSE EVENT ================= */
+
     const event = JSON.parse(rawBody);
 
-    // ✅ Only allow real payment events
     const allowedEvents = [
       "subscription.activated",
       "subscription.charged",
@@ -39,13 +40,15 @@ export async function POST(req: Request) {
 
     await dbConnect();
 
+    /* ================= 3️⃣ EXTRACT DATA ================= */
+
     let subscriptionId: string | null = null;
     let planId: string | null = null;
     let status: string | null = null;
     let userId: string | null = null;
     let userEmail: string | null = null;
 
-    // 3️⃣ Subscription based events
+    // Subscription events
     if (event.payload?.subscription?.entity) {
       const sub = event.payload.subscription.entity;
 
@@ -57,7 +60,7 @@ export async function POST(req: Request) {
       userEmail = sub.notes?.email || null;
     }
 
-    // 4️⃣ Payment based events (UPI / card)
+    // Payment events (UPI / card)
     if (
       !subscriptionId &&
       event.payload?.payment?.entity?.subscription_id
@@ -75,7 +78,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ status: "ignored" });
     }
 
-    // 5️⃣ Save subscription
+    /* ================= 4️⃣ DUPLICATE CREDIT PROTECTION ================= */
+    // ⛔ VERY IMPORTANT: prevent double credits
+
+    const alreadyProcessed = await Subscription.findOne({
+      subscriptionId,
+      status: "active",
+    });
+
+    if (alreadyProcessed) {
+      console.log("⚠️ Duplicate webhook ignored:", subscriptionId);
+      return NextResponse.json({ status: "already_processed" });
+    }
+
+    /* ================= 5️⃣ SAVE SUBSCRIPTION ================= */
+
     await Subscription.findOneAndUpdate(
       { subscriptionId },
       {
@@ -88,7 +105,8 @@ export async function POST(req: Request) {
       { upsert: true, new: true }
     );
 
-    // 6️⃣ PLAN → CREDITS MAP (VERY IMPORTANT)
+    /* ================= 6️⃣ PLAN → CREDITS MAP ================= */
+
     let creditsToAdd = 0;
     let planName = "FREE";
 
@@ -106,7 +124,8 @@ export async function POST(req: Request) {
       planName = "ENTERPRISE";
     }
 
-    // 7️⃣ Update user ONLY if payment active
+    /* ================= 7️⃣ UPDATE USER (ONLY ON ACTIVE PAYMENT) ================= */
+
     if (status === "active") {
       await User.findByIdAndUpdate(userId, {
         isPro: true,
