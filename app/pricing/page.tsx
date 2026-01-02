@@ -19,7 +19,8 @@ export default function PricingPage() {
   const PRICES: any = {
     INR: {
       free: 0,
-      prelaunch: billing === "monthly" ? 49 : 499,
+      prelaunch: billing === "monthly" ? 5 : 50,
+
       essential: billing === "monthly" ? 149 : 1499,
       pro: billing === "monthly" ? 299 : 2999,
       enterprise: billing === "monthly" ? 599 : 5999,
@@ -47,6 +48,7 @@ export default function PricingPage() {
     setLoadingPlan(planKey);
 
     try {
+      // 1️⃣ Create Razorpay Order
       const res = await fetch("/api/razorpay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -64,16 +66,34 @@ export default function PricingPage() {
         return;
       }
 
+      // 2️⃣ Razorpay Checkout
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         order_id: data.orderId,
         name: "Trustverse AI",
         description: `${planKey.toUpperCase()} Plan`,
         image: "/logo.png",
-        handler: function () {
-          alert("Payment successful!");
-          window.location.href = "/dashboard";
+
+        handler: async function (response: any) {
+          try {
+            // 3️⃣ VERIFY PAYMENT + UPDATE CREDITS
+            await fetch("/api/razorpay/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                planKey,
+              }),
+            });
+
+            window.location.href = "/dashboard";
+          } catch (err) {
+            alert("Payment verified but credit update failed");
+          }
         },
+
         theme: { color: "#0C1633" },
       };
 
