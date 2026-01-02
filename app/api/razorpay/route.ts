@@ -8,7 +8,7 @@ const razorpay = new Razorpay({
 
 export async function POST(req: Request) {
   try {
-    const { amount } = await req.json();
+    const { amount, planKey } = await req.json();
 
     if (!amount) {
       return NextResponse.json(
@@ -18,13 +18,14 @@ export async function POST(req: Request) {
     }
 
     const order = await razorpay.orders.create({
-      amount: amount * 100, // ⭐ ₹49 → 4900, ₹149 → 14900
+      amount: amount * 100, // ⚠️ paise
       currency: "INR",
-      receipt: `receipt_${Date.now()}`,
+      receipt: `trustverse_${planKey}_${Date.now()}`,
     });
 
-    return NextResponse.json(order);
+    return NextResponse.json({ orderId: order.id });
   } catch (error) {
+    console.error("Razorpay error:", error);
     return NextResponse.json(
       { error: "Order creation failed" },
       { status: 500 }
