@@ -28,112 +28,83 @@ export async function POST(req: Request) {
 
     const event = JSON.parse(rawBody);
 
-    const allowedEvents = [
-      "subscription.activated",
-      "subscription.charged",
-      "payment.captured",
-    ];
-
-    if (!allowedEvents.includes(event.event)) {
+    // ✅ CREDIT ADD SIRF payment.captured PAR
+    if (event.event !== "payment.captured") {
       return NextResponse.json({ status: "ignored" });
     }
 
     await dbConnect();
 
-    /* ================= 3️⃣ EXTRACT DATA ================= */
+    /* ================= 3️⃣ EXTRACT PAYMENT DATA ================= */
 
-    let subscriptionId: string | null = null;
-    let planId: string | null = null;
-    let status: string | null = null;
-    let userId: string | null = null;
-    let userEmail: string | null = null;
-
-    // Subscription events
-    if (event.payload?.subscription?.entity) {
-      const sub = event.payload.subscription.entity;
-
-      subscriptionId = sub.id;
-      planId = sub.plan_id;
-      status = sub.status;
-
-      userId = sub.notes?.userId || null;
-      userEmail = sub.notes?.email || null;
-    }
-
-    // Payment events (UPI / card)
-    if (
-      !subscriptionId &&
-      event.payload?.payment?.entity?.subscription_id
-    ) {
-      const payment = event.payload.payment.entity;
-
-      subscriptionId = payment.subscription_id;
-      status = payment.status === "captured" ? "active" : "failed";
-
-      userId = payment.notes?.userId || null;
-      userEmail = payment.notes?.email || null;
-    }
-
-    if (!subscriptionId || !userId) {
+    const payment = event.payload?.payment?.entity;
+    if (!payment) {
       return NextResponse.json({ status: "ignored" });
     }
 
-    /* ================= 4️⃣ DUPLICATE CREDIT PROTECTION ================= */
-    // ⛔ VERY IMPORTANT: prevent double credits
+    const subscriptionId = payment.subscription_id || payment.order_id;
+    const planId = payment.notes?.planId || "";
+    const userId = payment.notes?.userId;
+    const userEmail = payment.notes?.email;
 
-    const alreadyProcessed = await Subscription.findOne({
-      subscriptionId,
-      status: "active",
-    });
-
-    if (alreadyProcessed) {
-      console.log("⚠️ Duplicate webhook ignored:", subscriptionId);
-      return NextResponse.json({ status: "already_processed" });
+    if (!userId || !planId) {
+      return NextResponse.json({ status: "missing_user_or_plan" });
     }
 
-    /* ================= 5️⃣ SAVE SUBSCRIPTION ================= */
+    /* ================= 4️⃣ DUPLICATE PAYMENT PROTECTION ================= */
 
-    await Subscription.findOneAndUpdate(
-      { subscriptionId },
-      {
-        subscriptionId,
-        planId,
-        status,
-        userId,
-        userEmail,
-      },
-      { upsert: true, new: true }
-    );
+    const alreadyCredited = await Subscription.findOne({
+      subscriptionId,
+      creditAdded: true,
+    });
 
-    /* ================= 6️⃣ PLAN → CREDITS MAP ================= */
+    if (alreadyCredited) {
+      console.log("⚠️ Duplicate payment ignored:", subscriptionId);
+      return NextResponse.json({ status: "already_credited" });
+    }
+
+    /* ================= 5️⃣ PLAN → CREDITS (MONTHLY + YEARLY) ================= */
 
     let creditsToAdd = 0;
     let planName = "FREE";
 
-    if (planId?.includes("prelaunch")) {
-      creditsToAdd = 50;
+    const isYearly = planId.includes("yearly");
+
+    if (planId.includes("prelaunch")) {
       planName = "PRELAUNCH";
-    } else if (planId?.includes("essential")) {
-      creditsToAdd = 150;
+      creditsToAdd = isYearly ? 600 : 50;
+    } else if (planId.includes("essential")) {
       planName = "ESSENTIAL";
-    } else if (planId?.includes("pro")) {
-      creditsToAdd = 300;
+      creditsToAdd = isYearly ? 1800 : 150;
+    } else if (planId.includes("pro")) {
       planName = "PRO";
-    } else if (planId?.includes("enterprise")) {
-      creditsToAdd = 1000;
+      creditsToAdd = isYearly ? 3600 : 300;
+    } else if (planId.includes("enterprise")) {
       planName = "ENTERPRISE";
+      creditsToAdd = isYearly ? 12000 : 1000;
     }
 
-    /* ================= 7️⃣ UPDATE USER (ONLY ON ACTIVE PAYMENT) ================= */
+    /* ================= 6️⃣ UPDATE USER ================= */
 
-    if (status === "active") {
-      await User.findByIdAndUpdate(userId, {
-        isPro: true,
-        plan: planName,
-        subscriptionStatus: "active",
-        $inc: { credits: creditsToAdd },
-      });
-    }
+    await User.findByIdAndUpdate(userId, {
+      isPro: true,
+      plan: planName,
+      subscriptionStatus: "active",
+      $inc: { credits: creditsToAdd },
+    });
+
+    /* ================= 7️⃣ SAVE PAYMENT RECORD ================= */
+
+    await Subscription.create({
+      subscriptionId,
+      planId,
+      userId,
+      userEmail,
+      creditsAdded: creditsToAdd,
+      creditAdded: true,
+      paymentId: payment.id,
+      status: "active",
+    });
 
     return NextResponse.json({ status: "success" });
   } catch (error) {
