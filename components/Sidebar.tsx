@@ -85,6 +85,10 @@ export default function Sidebar() {
           {navItem("/dashboard", "Dashboard")}
           {navItem("/dashboard/tools", "AI Tools")}
           {navItem("/dashboard/history", "History")}
+
+          {/* ✅ NEW: PAYMENT HISTORY */}
+          {navItem("/dashboard/payments", "Payment History")}
+
           {navItem("/dashboard/settings", "Settings")}
 
           <div className="mt-1">
