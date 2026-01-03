@@ -2,15 +2,10 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 
-/* ================= CREDIT MAP (MONTHLY + YEARLY) ================= */
+/* ================= CREDIT MAP ================= */
 
-const PLAN_CREDITS: Record<
-  string,
-  { monthly: number; yearly: number }
-> = {
+const PLAN_CREDITS: any = {
   prelaunch: { monthly: 50, yearly: 600 },
   essential: { monthly: 150, yearly: 1800 },
   pro: { monthly: 300, yearly: 3600 },
@@ -19,24 +14,18 @@ const PLAN_CREDITS: Record<
 
 export async function POST(req: Request) {
   try {
-    /* ================= READ BODY ================= */
-
     const body = await req.json();
+
     const {
       razorpay_payment_id,
       razorpay_order_id,
       razorpay_signature,
-      planKey,     // prelaunch | essential | pro | enterprise
-      billing,     // "monthly" | "yearly"
+      planKey,
+      billing,
+      userId,
     } = body;
 
-    if (
-      !razorpay_payment_id ||
-      !razorpay_order_id ||
-      !razorpay_signature ||
-      !planKey ||
-      !billing
-    ) {
+    if (!userId || !planKey || !billing) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -45,31 +34,17 @@ export async function POST(req: Request) {
 
     /* ================= VERIFY SIGNATURE ================= */
 
-    const sign =
-      razorpay_order_id + "|" + razorpay_payment_id;
+    const sign = razorpay_order_id + "|" + razorpay_payment_id;
 
-    const expectedSign = crypto
-      .createHmac(
-        "sha256",
-        process.env.RAZORPAY_KEY_SECRET!
-      )
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
       .update(sign)
       .digest("hex");
 
-    if (expectedSign !== razorpay_signature) {
+    if (expectedSignature !== razorpay_signature) {
       return NextResponse.json(
         { error: "Invalid signature" },
         { status: 400 }
-      );
-    }
-
-    /* ================= AUTH USER ================= */
-
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
       );
     }
 
@@ -78,18 +53,18 @@ export async function POST(req: Request) {
     /* ================= CREDIT CALCULATION ================= */
 
     const creditsToAdd =
-      PLAN_CREDITS[planKey]?.[billing] || 0;
+      PLAN_CREDITS?.[planKey]?.[billing] || 0;
 
     if (creditsToAdd === 0) {
       return NextResponse.json(
-        { error: "Invalid plan or billing" },
+        { error: "Invalid plan credits" },
         { status: 400 }
       );
     }
 
     /* ================= UPDATE USER ================= */
 
-    await User.findByIdAndUpdate(session.user.id, {
+    await User.findByIdAndUpdate(userId, {
       $inc: { credits: creditsToAdd },
       isPro: true,
       plan: planKey.toUpperCase(),
@@ -100,8 +75,8 @@ export async function POST(req: Request) {
       success: true,
       creditsAdded: creditsToAdd,
     });
-  } catch (error) {
-    console.error("🔥 VERIFY ERROR:", error);
+  } catch (err) {
+    console.error("VERIFY ERROR:", err);
     return NextResponse.json(
       { error: "Verification failed" },
       { status: 500 }

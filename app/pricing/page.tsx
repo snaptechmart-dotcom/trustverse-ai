@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Script from "next/script";
+import { useSession } from "next-auth/react";
 
 declare global {
   interface Window {
@@ -10,6 +11,9 @@ declare global {
 }
 
 export default function PricingPage() {
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
+
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
   const [currency, setCurrency] = useState<"INR" | "USD">("INR");
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
@@ -20,7 +24,6 @@ export default function PricingPage() {
     INR: {
       free: 0,
       prelaunch: billing === "monthly" ? 5 : 50,
-
       essential: billing === "monthly" ? 149 : 1499,
       pro: billing === "monthly" ? 299 : 2999,
       enterprise: billing === "monthly" ? 599 : 5999,
@@ -34,13 +37,17 @@ export default function PricingPage() {
     },
   };
 
-  /* ================= PAY NOW (ONE TIME) ================= */
+  /* ================= PAY NOW ================= */
 
   const payNow = async (planKey: string) => {
+    if (!userId) {
+      alert("Please login first");
+      return;
+    }
+
     const amount = PRICES[currency][planKey];
 
     if (amount === 0) {
-      alert("Free plan activated!");
       window.location.href = "/dashboard";
       return;
     }
@@ -76,7 +83,7 @@ export default function PricingPage() {
 
         handler: async function (response: any) {
           try {
-            // 3️⃣ VERIFY PAYMENT + UPDATE CREDITS
+            // 3️⃣ VERIFY PAYMENT + UPDATE CREDITS (VERY IMPORTANT)
             await fetch("/api/razorpay/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -85,12 +92,15 @@ export default function PricingPage() {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
                 planKey,
+                billing,
+                userId,
               }),
             });
 
             window.location.href = "/dashboard";
           } catch (err) {
-            alert("Payment verified but credit update failed");
+            console.error(err);
+            alert("Payment done but credit update failed");
           }
         },
 
