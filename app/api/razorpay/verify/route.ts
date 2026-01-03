@@ -1,25 +1,58 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import dbConnect from "@/lib/dbConnect";
-import Subscription from "@/models/Subscription";
+import User from "@/models/User";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+/* ================= CREDIT MAP (MONTHLY + YEARLY) ================= */
+
+const PLAN_CREDITS: Record<
+  string,
+  { monthly: number; yearly: number }
+> = {
+  prelaunch: { monthly: 50, yearly: 600 },
+  essential: { monthly: 150, yearly: 1800 },
+  pro: { monthly: 300, yearly: 3600 },
+  enterprise: { monthly: 1000, yearly: 12000 },
+};
+
 export async function POST(req: Request) {
   try {
+    /* ================= READ BODY ================= */
+
     const body = await req.json();
     const {
       razorpay_payment_id,
       razorpay_order_id,
       razorpay_signature,
+      planKey,     // prelaunch | essential | pro | enterprise
+      billing,     // "monthly" | "yearly"
     } = body;
 
-    /* ================= 1️⃣ VERIFY SIGNATURE ================= */
+    if (
+      !razorpay_payment_id ||
+      !razorpay_order_id ||
+      !razorpay_signature ||
+      !planKey ||
+      !billing
+    ) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
 
-    const sign = razorpay_order_id + "|" + razorpay_payment_id;
+    /* ================= VERIFY SIGNATURE ================= */
+
+    const sign =
+      razorpay_order_id + "|" + razorpay_payment_id;
 
     const expectedSign = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+      .createHmac(
+        "sha256",
+        process.env.RAZORPAY_KEY_SECRET!
+      )
       .update(sign)
       .digest("hex");
 
@@ -30,7 +63,7 @@ export async function POST(req: Request) {
       );
     }
 
-    /* ================= 2️⃣ AUTH CHECK ================= */
+    /* ================= AUTH USER ================= */
 
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -42,24 +75,33 @@ export async function POST(req: Request) {
 
     await dbConnect();
 
-    /* ================= 3️⃣ SAVE PAYMENT (NO CREDITS HERE) ================= */
+    /* ================= CREDIT CALCULATION ================= */
 
-    await Subscription.findOneAndUpdate(
-      { orderId: razorpay_order_id },
-      {
-        orderId: razorpay_order_id,
-        paymentId: razorpay_payment_id,
-        userId: session.user.id,
-        status: "paid",
-      },
-      { upsert: true }
-    );
+    const creditsToAdd =
+      PLAN_CREDITS[planKey]?.[billing] || 0;
 
-    /* ================= 4️⃣ DONE ================= */
+    if (creditsToAdd === 0) {
+      return NextResponse.json(
+        { error: "Invalid plan or billing" },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("VERIFY ERROR:", err);
+    /* ================= UPDATE USER ================= */
+
+    await User.findByIdAndUpdate(session.user.id, {
+      $inc: { credits: creditsToAdd },
+      isPro: true,
+      plan: planKey.toUpperCase(),
+      subscriptionStatus: "active",
+    });
+
+    return NextResponse.json({
+      success: true,
+      creditsAdded: creditsToAdd,
+    });
+  } catch (error) {
+    console.error("🔥 VERIFY ERROR:", error);
     return NextResponse.json(
       { error: "Verification failed" },
       { status: 500 }
