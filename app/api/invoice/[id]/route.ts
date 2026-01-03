@@ -3,15 +3,19 @@ export const runtime = "nodejs";
 import dbConnect from "@/lib/dbConnect";
 import Payment from "@/models/Payment";
 
+// pdfkit CommonJS
 const PDFDocument = require("pdfkit");
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   await dbConnect();
 
-  const payment = await Payment.findById(params.id);
+  // ✅ FIX: params ko await karo
+  const { id } = await context.params;
+
+  const payment = await Payment.findById(id);
   if (!payment) {
     return new Response("Invoice not found", { status: 404 });
   }
@@ -23,6 +27,7 @@ export async function GET(
   doc.on("data", (chunk: Uint8Array) => chunks.push(chunk));
   doc.on("end", () => {});
 
+  // ---------- INVOICE CONTENT ----------
   doc.fontSize(20).text("Trustverse AI - Invoice", { align: "center" });
   doc.moveDown();
 
@@ -34,11 +39,14 @@ export async function GET(
   doc.text(`Date: ${new Date(payment.createdAt).toDateString()}`);
 
   doc.moveDown();
-  doc.text("Thank you for choosing Trustverse AI ❤️", { align: "center" });
+  doc.text("Thank you for choosing Trustverse AI ❤️", {
+    align: "center",
+  });
+  // -----------------------------------
 
   doc.end();
 
-  // ✅ FINAL FIX (NO Blob, NO Buffer)
+  // ✅ Uint8Array merge (TS safe)
   const pdfBytes = new Uint8Array(
     chunks.reduce((acc, chunk) => [...acc, ...chunk], [] as number[])
   );
@@ -46,7 +54,7 @@ export async function GET(
   return new Response(pdfBytes, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename=invoice-${payment._id}.pdf`,
+      "Content-Disposition": `inline; filename=invoice-${id}.pdf`,
     },
   });
 }
