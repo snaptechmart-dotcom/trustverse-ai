@@ -14,6 +14,8 @@ const PLAN_CREDITS: any = {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    console.log("VERIFY API HIT");
+    console.log("BODY:", body);
 
     const {
       razorpay_payment_id,
