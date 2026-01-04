@@ -23,7 +23,7 @@ export default function PricingPage() {
   const PRICES: any = {
     INR: {
       free: 0,
-      prelaunch: billing === "monthly" ? 49 : 499,
+      prelaunch: billing === "monthly" ? 5 : 499,
       essential: billing === "monthly" ? 149 : 1499,
       pro: billing === "monthly" ? 299 : 2999,
       enterprise: billing === "monthly" ? 599 : 5999,
