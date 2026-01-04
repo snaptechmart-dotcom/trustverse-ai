@@ -5,8 +5,6 @@ import Payment from "@/models/Payment";
 import User from "@/models/User";
 
 export async function POST(req: Request) {
-  await dbConnect();
-
   const body = await req.text();
   const signature = req.headers.get("x-razorpay-signature")!;
 
@@ -21,24 +19,63 @@ export async function POST(req: Request) {
 
   const event = JSON.parse(body);
 
-  // ✅ PAYMENT SUCCESS
-  if (event.event === "payment.captured") {
-    const paymentId = event.payload.payment.entity.id;
+  await dbConnect();
 
-    await Payment.findOneAndUpdate(
-      { razorpayPaymentId: paymentId },
-      { status: "SUCCESS" }
-    );
+  /* ================= PAYMENT SUCCESS ================= */
+  if (event.event === "payment.captured") {
+    const payment = event.payload.payment.entity;
+
+    const paymentId = payment.id;
+
+    // 🔁 duplicate protection
+    const alreadyExists = await Payment.findOne({ paymentId });
+    if (alreadyExists) {
+      return NextResponse.json({ received: true });
+    }
+
+    // 🔹 notes se data lo (VERY IMPORTANT)
+    const {
+      userId,
+      plan,
+      billing,
+      credits,
+    } = payment.notes || {};
+
+    if (!userId || !credits) {
+      return NextResponse.json({ received: true });
+    }
+
+    // ✅ CREATE PAYMENT ENTRY
+    await Payment.create({
+      userId,
+      plan,
+      billing,
+      credits: Number(credits),
+      paymentId,
+      orderId: payment.order_id,
+      status: "SUCCESS",
+      provider: "Razorpay",
+    });
+
+    // ✅ ADD CREDITS TO USER
+    await User.findByIdAndUpdate(userId, {
+      $inc: { credits: Number(credits) },
+      isPro: true,
+      plan,
+      subscriptionStatus: "active",
+    });
   }
 
-  // ❌ PAYMENT FAILED
+  /* ================= PAYMENT FAILED ================= */
   if (event.event === "payment.failed") {
-    const paymentId = event.payload.payment.entity.id;
+    const payment = event.payload.payment.entity;
 
-    await Payment.findOneAndUpdate(
-      { razorpayPaymentId: paymentId },
-      { status: "FAILED" }
-    );
+    await Payment.create({
+      paymentId: payment.id,
+      orderId: payment.order_id,
+      status: "FAILED",
+      provider: "Razorpay",
+    });
   }
 
   return NextResponse.json({ received: true });
