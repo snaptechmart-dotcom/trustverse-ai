@@ -2,16 +2,51 @@ import mongoose from "mongoose";
 
 const PaymentSchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    plan: String,
-    billing: String,
-    credits: Number,
-    razorpay_payment_id: String,
-    razorpay_order_id: String,
-    status: String,
-    createdAt: Date,
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    plan: {
+      type: String,
+      required: true,
+    },
+
+    billing: {
+      type: String,
+      required: true,
+    },
+
+    credits: {
+      type: Number,
+      required: true,
+    },
+
+    // 🔹 Razorpay identifiers
+    paymentId: {
+      type: String,
+      required: true,
+    },
+
+    orderId: {
+      type: String,
+      required: true,
+    },
+
+    status: {
+      type: String,
+      default: "SUCCESS",
+    },
+
+    provider: {
+      type: String,
+      default: "Razorpay",
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true, // ✅ createdAt / updatedAt auto handled
+  }
 );
 
 export default mongoose.models.Payment ||

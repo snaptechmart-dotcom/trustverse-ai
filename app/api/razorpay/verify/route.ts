@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
+import Payment from "@/models/Payment"; // ✅ NEW (ONLY ADDITION)
 
 /* ================= CREDIT MAP ================= */
 
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
       planKey,
       billing,
       userId,
+      amount, // optional, frontend se aaye to
     } = body;
 
     if (!userId || !planKey || !billing) {
@@ -61,6 +63,20 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
+    /* ================= SAVE PAYMENT HISTORY (ONLY ADDITION) ================= */
+
+    await Payment.create({
+      userId,
+      paymentId: razorpay_payment_id,
+      orderId: razorpay_order_id,
+      amount: amount || 0,
+      currency: "INR",
+      plan: planKey.toUpperCase(),
+      billing,
+      provider: "Razorpay",
+      status: "SUCCESS",
+    });
 
     /* ================= UPDATE USER ================= */
 
