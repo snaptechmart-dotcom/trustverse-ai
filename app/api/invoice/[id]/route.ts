@@ -5,27 +5,25 @@ import PDFDocument from "pdfkit";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // ✅ VERY IMPORTANT (fixes build error)
+    const { id } = await context.params;
+
     await dbConnect();
 
-    const payment: any = await Payment.findById(params.id).lean();
+    const payment: any = await Payment.findById(id).lean();
     if (!payment) {
       return new Response("Invoice not found", { status: 404 });
     }
 
-    // 🔹 Create PDF
+    // ===== CREATE PDF =====
     const doc = new PDFDocument({ size: "A4", margin: 50 });
-
-    // 🔹 Collect chunks as Uint8Array (NO Buffer.concat)
     const chunks: Uint8Array[] = [];
 
-    doc.on("data", (chunk: Uint8Array) => {
-      chunks.push(chunk);
-    });
+    doc.on("data", (chunk: Uint8Array) => chunks.push(chunk));
 
-    // ===== PDF CONTENT =====
     doc.fontSize(20).text("Trustverse AI - Invoice", { align: "center" });
     doc.moveDown(2);
 
@@ -41,19 +39,16 @@ export async function GET(
 
     doc.moveDown(2);
     doc.text("Thank you for choosing Trustverse AI.");
-    // =======================
-
     doc.end();
 
-    // 🔹 Merge Uint8Array chunks safely
+    // ===== MERGE PDF CHUNKS =====
     const pdfBytes = new Uint8Array(
-      chunks.reduce((acc, chunk) => acc + chunk.length, 0)
+      chunks.reduce((sum, c) => sum + c.length, 0)
     );
-
     let offset = 0;
-    for (const chunk of chunks) {
-      pdfBytes.set(chunk, offset);
-      offset += chunk.length;
+    for (const c of chunks) {
+      pdfBytes.set(c, offset);
+      offset += c.length;
     }
 
     return new Response(pdfBytes, {
