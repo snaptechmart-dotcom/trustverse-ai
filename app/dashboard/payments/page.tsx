@@ -5,8 +5,9 @@ import { useEffect, useState } from "react";
 type Payment = {
   _id: string;
   plan: string;
-  amount: number;
-  creditsAdded: number;
+  billing?: string;
+  credits: number;
+  amount?: number;
   status: string;
   createdAt: string;
 };
@@ -16,12 +17,25 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/payments")
-      .then((res) => res.json())
-      .then((data) => {
-        setPayments(data.payments || []);
+    const fetchPayments = async () => {
+      try {
+        const res = await fetch("/api/payments", {
+          cache: "no-store",
+        });
+
+        const data = await res.json();
+
+        // 🔴 API returns array directly
+        setPayments(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Payment fetch error:", err);
+        setPayments([]);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    fetchPayments();
   }, []);
 
   if (loading) {
@@ -41,7 +55,6 @@ export default function PaymentsPage() {
               <tr>
                 <th className="border p-2">Date</th>
                 <th className="border p-2">Plan</th>
-                <th className="border p-2">Amount</th>
                 <th className="border p-2">Credits</th>
                 <th className="border p-2">Status</th>
                 <th className="border p-2">Invoice</th>
@@ -53,9 +66,10 @@ export default function PaymentsPage() {
                   <td className="border p-2">
                     {new Date(p.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="border p-2">{p.plan}</td>
-                  <td className="border p-2">₹{p.amount / 100}</td>
-                  <td className="border p-2">{p.creditsAdded}</td>
+                  <td className="border p-2">
+                    {p.plan} {p.billing ? `(${p.billing})` : ""}
+                  </td>
+                  <td className="border p-2">{p.credits}</td>
                   <td className="border p-2">{p.status}</td>
                   <td className="border p-2">
                     <a

@@ -1,21 +1,28 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/dbConnect";
-import Payment from "@/models/Payment";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import mongoose from "mongoose";
+import dbConnect from "@/lib/dbConnect";
+import Payment from "@/models/Payment";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json([], { status: 401 });
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json([], { status: 200 });
+    }
+
+    await dbConnect();
+
+    const payments = await Payment.find({
+      userId: session.user.id,
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return NextResponse.json(payments);
+  } catch (error) {
+    console.error("PAYMENTS FETCH ERROR:", error);
+    return NextResponse.json([], { status: 500 });
   }
-
-  await dbConnect();
-
-  const payments = await Payment.find({
-    userId: new mongoose.Types.ObjectId(session.user.id),
-  }).sort({ createdAt: -1 });
-
-  return NextResponse.json(payments);
 }
