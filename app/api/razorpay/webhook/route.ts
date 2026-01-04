@@ -1,3 +1,5 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import dbConnect from "@/lib/dbConnect";
@@ -21,31 +23,20 @@ export async function POST(req: Request) {
 
   await dbConnect();
 
-  /* ================= PAYMENT SUCCESS ================= */
   if (event.event === "payment.captured") {
     const payment = event.payload.payment.entity;
-
     const paymentId = payment.id;
 
-    // 🔁 duplicate protection
     const alreadyExists = await Payment.findOne({ paymentId });
     if (alreadyExists) {
       return NextResponse.json({ received: true });
     }
 
-    // 🔹 notes se data lo (VERY IMPORTANT)
-    const {
-      userId,
-      plan,
-      billing,
-      credits,
-    } = payment.notes || {};
-
+    const { userId, plan, billing, credits } = payment.notes || {};
     if (!userId || !credits) {
       return NextResponse.json({ received: true });
     }
 
-    // ✅ CREATE PAYMENT ENTRY
     await Payment.create({
       userId,
       plan,
@@ -57,7 +48,6 @@ export async function POST(req: Request) {
       provider: "Razorpay",
     });
 
-    // ✅ ADD CREDITS TO USER
     await User.findByIdAndUpdate(userId, {
       $inc: { credits: Number(credits) },
       isPro: true,
@@ -66,10 +56,8 @@ export async function POST(req: Request) {
     });
   }
 
-  /* ================= PAYMENT FAILED ================= */
   if (event.event === "payment.failed") {
     const payment = event.payload.payment.entity;
-
     await Payment.create({
       paymentId: payment.id,
       orderId: payment.order_id,
