@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
-import Payment from "@/models/Payment"; // ✅ NEW (ONLY ADDITION)
-
-/* ================= CREDIT MAP ================= */
+import Payment from "@/models/Payment";
 
 const PLAN_CREDITS: any = {
   prelaunch: { monthly: 50, yearly: 600 },
@@ -24,17 +22,7 @@ export async function POST(req: Request) {
       planKey,
       billing,
       userId,
-      amount, // optional, frontend se aaye to
     } = body;
-
-    if (!userId || !planKey || !billing) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    /* ================= VERIFY SIGNATURE ================= */
 
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
 
@@ -44,58 +32,35 @@ export async function POST(req: Request) {
       .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
-      return NextResponse.json(
-        { error: "Invalid signature" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
     await dbConnect();
 
-    /* ================= CREDIT CALCULATION ================= */
+    const credits = PLAN_CREDITS[planKey][billing];
 
-    const creditsToAdd =
-      PLAN_CREDITS?.[planKey]?.[billing] || 0;
-
-    if (creditsToAdd === 0) {
-      return NextResponse.json(
-        { error: "Invalid plan credits" },
-        { status: 400 }
-      );
-    }
-
-    /* ================= SAVE PAYMENT HISTORY (ONLY ADDITION) ================= */
-
+    // ✅ SAVE PAYMENT (IMPORTANT)
     await Payment.create({
       userId,
-      paymentId: razorpay_payment_id,
-      orderId: razorpay_order_id,
-      amount: amount || 0,
-      currency: "INR",
-      plan: planKey.toUpperCase(),
+      plan: planKey,
       billing,
-      provider: "Razorpay",
+      credits,
+      razorpay_payment_id,
+      razorpay_order_id,
       status: "SUCCESS",
     });
 
-    /* ================= UPDATE USER ================= */
-
+    // ✅ ADD CREDITS
     await User.findByIdAndUpdate(userId, {
-      $inc: { credits: creditsToAdd },
+      $inc: { credits },
       isPro: true,
       plan: planKey.toUpperCase(),
       subscriptionStatus: "active",
     });
 
-    return NextResponse.json({
-      success: true,
-      creditsAdded: creditsToAdd,
-    });
+    return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("VERIFY ERROR:", err);
-    return NextResponse.json(
-      { error: "Verification failed" },
-      { status: 500 }
-    );
+    console.error(err);
+    return NextResponse.json({ error: "Payment failed" }, { status: 500 });
   }
 }
