@@ -1,23 +1,23 @@
 import dbConnect from "@/lib/dbConnect";
 import Payment from "@/models/Payment";
-import { NextRequest } from "next/server";
 import PDFDocument from "pdfkit";
+import { NextRequest } from "next/server";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params; // ✅ VERY IMPORTANT
+
     await dbConnect();
 
-    const payment = await Payment.findById(params.id);
+    const payment = await Payment.findById(id);
     if (!payment) {
       return new Response("Invoice not found", { status: 404 });
     }
 
-    // ✅ Create PDF
     const doc = new PDFDocument({ size: "A4", margin: 50 });
-
     const chunks: Uint8Array[] = [];
 
     doc.on("data", (chunk) => chunks.push(chunk));
@@ -36,7 +36,6 @@ export async function GET(
 
     doc.end();
 
-    // ✅ VERY IMPORTANT PART
     const pdfBuffer = new Uint8Array(
       chunks.reduce(
         (acc, chunk) => [...acc, ...chunk],
