@@ -24,27 +24,31 @@ export async function POST(req: Request) {
       userId,
     } = body;
 
-    await dbConnect();
-
-    const credits = PLAN_CREDITS?.[planKey]?.[billing] ?? 0;
-    if (!credits) {
-      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+    if (!razorpay_payment_id || !planKey || !billing || !userId) {
+      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    /* 🔐 SIGNATURE CHECK (SOFT) */
+    await dbConnect();
+
+    /* 🔐 SIGNATURE VERIFY (OPTIONAL BUT SAFE) */
     if (razorpay_signature && razorpay_order_id) {
       const sign = razorpay_order_id + "|" + razorpay_payment_id;
-      const expected = crypto
+      const expectedSignature = crypto
         .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
         .update(sign)
         .digest("hex");
 
-      if (expected !== razorpay_signature) {
+      if (expectedSignature !== razorpay_signature) {
         return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
       }
     }
 
-    /* ✅ ALWAYS SAVE PAYMENT */
+    const credits = PLAN_CREDITS?.[planKey]?.[billing] || 0;
+    if (!credits) {
+      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+    }
+
+    /* ✅ 1️⃣ SAVE PAYMENT FIRST (MOST IMPORTANT) */
     await Payment.create({
       userId,
       plan: planKey,
@@ -55,7 +59,7 @@ export async function POST(req: Request) {
       status: "SUCCESS",
     });
 
-    /* ✅ ADD CREDITS */
+    /* ✅ 2️⃣ ADD CREDITS */
     await User.findByIdAndUpdate(userId, {
       $inc: { credits },
       isPro: true,
@@ -64,8 +68,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("VERIFY ERROR:", err);
+  } catch (error) {
+    console.error("VERIFY ERROR:", error);
     return NextResponse.json({ error: "Payment failed" }, { status: 500 });
   }
 }
