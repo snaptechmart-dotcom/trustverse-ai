@@ -7,14 +7,30 @@ const PaymentSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+
     plan: String,
     billing: String,
     credits: Number,
-    razorpay_payment_id: String,
-    razorpay_order_id: String,
+
+    razorpay_payment_id: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+
+    razorpay_order_id: {
+      type: String,
+    },
+
     status: {
       type: String,
-      default: "SUCCESS",
+      enum: ["SUCCESS", "FAILED"],
+      required: true,
+    },
+
+    provider: {
+      type: String,
+      default: "Razorpay",
     },
   },
   { timestamps: true }
