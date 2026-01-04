@@ -1,61 +1,51 @@
-import { NextRequest } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Payment from "@/models/Payment";
-import PDFDocument from "pdfkit";
 
 export async function GET(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  req: Request,
+  { params }: { params: { id: string } }
 ) {
   try {
-    // ✅ VERY IMPORTANT (fixes build error)
-    const { id } = await context.params;
-
     await dbConnect();
 
-    const payment: any = await Payment.findById(id).lean();
+    const payment: any = await Payment.findById(params.id).lean();
     if (!payment) {
       return new Response("Invoice not found", { status: 404 });
     }
 
-    // ===== CREATE PDF =====
-    const doc = new PDFDocument({ size: "A4", margin: 50 });
-    const chunks: Uint8Array[] = [];
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Invoice</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; }
+          h1 { text-align: center; }
+          .box { max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; }
+          .row { margin-bottom: 10px; }
+          .label { font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="box">
+          <h1>Trustverse AI – Invoice</h1>
+          <div class="row"><span class="label">Invoice ID:</span> ${payment._id}</div>
+          <div class="row"><span class="label">Payment ID:</span> ${payment.razorpay_payment_id || "-"}</div>
+          <div class="row"><span class="label">Plan:</span> ${payment.plan || "-"}</div>
+          <div class="row"><span class="label">Credits:</span> ${payment.credits || 0}</div>
+          <div class="row"><span class="label">Status:</span> ${payment.status}</div>
+          <div class="row"><span class="label">Date:</span> ${new Date(payment.createdAt).toLocaleDateString()}</div>
+          <hr />
+          <p>Thank you for using <strong>Trustverse AI</strong>.</p>
+          <p>You can print this page or save it as PDF.</p>
+        </div>
+      </body>
+      </html>
+    `;
 
-    doc.on("data", (chunk: Uint8Array) => chunks.push(chunk));
-
-    doc.fontSize(20).text("Trustverse AI - Invoice", { align: "center" });
-    doc.moveDown(2);
-
-    doc.fontSize(12);
-    doc.text(`Invoice ID: ${payment._id}`);
-    doc.text(`Payment ID: ${payment.razorpay_payment_id || "N/A"}`);
-    doc.text(`Plan: ${payment.plan || "-"}`);
-    doc.text(`Credits Added: ${payment.credits || 0}`);
-    doc.text(`Status: ${payment.status || "SUCCESS"}`);
-    doc.text(
-      `Date: ${new Date(payment.createdAt).toLocaleDateString()}`
-    );
-
-    doc.moveDown(2);
-    doc.text("Thank you for choosing Trustverse AI.");
-    doc.end();
-
-    // ===== MERGE PDF CHUNKS =====
-    const pdfBytes = new Uint8Array(
-      chunks.reduce((sum, c) => sum + c.length, 0)
-    );
-    let offset = 0;
-    for (const c of chunks) {
-      pdfBytes.set(c, offset);
-      offset += c.length;
-    }
-
-    return new Response(pdfBytes, {
-      status: 200,
+    return new Response(html, {
       headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": "inline; filename=invoice.pdf",
+        "Content-Type": "text/html",
       },
     });
   } catch (err) {
