@@ -89,7 +89,8 @@ export default function Navbar() {
 
             {/* DROPDOWN */}
             {menuOpen && (
-              <div className="absolute right-0 top-12 w-44 bg-[#0B1220] border border-white/10 rounded-md shadow-lg">
+              <div className="hidden md:block absolute right-0 top-12 w-44 bg-[#0B1220] border border-white/10 rounded-md shadow-lg">
+
                 <button
                   onClick={() => router.push("/dashboard")}
                   className="block w-full px-4 py-2 text-left text-sm text-white hover:bg-white/10"

@@ -85,7 +85,8 @@ export default function DashboardToolsPage() {
       <div className="relative max-w-7xl mx-auto px-6 lg:px-10 py-6">
 
         {/* ✅ Credits / PRO — NO extra navbar, just floating on white */}
-        <div className="absolute top-6 right-6 flex items-center gap-3">
+        <div className="hidden md:flex absolute top-6 right-6 items-center gap-3">
+
           <span className="text-sm text-gray-600">
             Credits Available: <b>9999</b>
           </span>
