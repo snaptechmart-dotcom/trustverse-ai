@@ -2,144 +2,125 @@
 
 import Link from "next/link";
 
-type Tool = {
-  title: string;
-  description: string;
-  href: string;
-  color: string;
-  credits: number | "Free";
-  pro?: boolean;
-};
-
-const tools: Tool[] = [
+const tools = [
   {
     title: "Trust Score Analyzer",
-    description: "AI-powered trust scoring with risk level classification.",
-    href: "/dashboard/tools/trust-score",
-    color: "bg-blue-600",
+    desc: "AI-powered trust scoring with risk level classification.",
     credits: 1,
+    color: "bg-blue-600",
+    link: "/dashboard/tools/trust-score",
   },
   {
     title: "Phone Number Checker",
-    description: "Detect validity, activity status, and spam probability.",
-    href: "/dashboard/tools/phone-checker",
-    color: "bg-green-600",
+    desc: "Detect validity, activity status, and spam probability.",
     credits: 1,
+    color: "bg-green-600",
+    link: "/dashboard/tools/phone-checker",
   },
   {
     title: "Email Address Checker",
-    description:
-      "Identify risky, disposable, or suspicious email addresses.",
-    href: "/dashboard/tools/email-checker",
-    color: "bg-emerald-600",
+    desc: "Identify risky, disposable, or suspicious email addresses.",
     credits: 1,
+    color: "bg-emerald-600",
+    link: "/dashboard/tools/email-checker",
   },
   {
     title: "Profile Trust Checker",
-    description:
-      "Analyze profile details to estimate trustworthiness and risk.",
-    href: "/dashboard/tools/profile-checker",
-    color: "bg-blue-700",
+    desc: "Analyze profile details to estimate trustworthiness and risk.",
     credits: 2,
+    color: "bg-indigo-600",
+    link: "/pricing",
     pro: true,
   },
   {
     title: "Business / Domain Checker",
-    description:
-      "Evaluate business and website trust before engagement.",
-    href: "/dashboard/tools/business-checker",
-    color: "bg-teal-600",
+    desc: "Evaluate business and website trust before engagement.",
     credits: 2,
+    color: "bg-teal-600",
+    link: "/pricing",
     pro: true,
   },
   {
     title: "Social Analyzer",
-    description: "Analyze usernames from social platforms.",
-    href: "/dashboard/tools/social-analyzer",
-    color: "bg-purple-600",
+    desc: "Analyze usernames from social platforms.",
     credits: 1,
+    color: "bg-purple-600",
+    link: "/dashboard/tools/social-analyzer",
   },
   {
     title: "Advanced AI Analysis",
-    description: "Deep AI reasoning, scam & risk signals.",
-    href: "/dashboard/tools/advanced-analysis",
-    color: "bg-orange-600",
+    desc: "Deep AI reasoning, scam & risk signals.",
     credits: 3,
+    color: "bg-orange-600",
+    link: "/pricing",
     pro: true,
   },
   {
     title: "Report History",
-    description: "View previous verification and AI reports.",
-    href: "/dashboard/history",
+    desc: "View previous verification and AI reports.",
+    credits: 0,
     color: "bg-gray-800",
-    credits: "Free",
+    link: "/dashboard/history",
   },
 ];
 
 export default function DashboardToolsPage() {
   return (
-    /* ✅ Page-level scroll → scrollbar goes FULL RIGHT (arrow wali jagah) */
-    <div className="h-screen overflow-y-auto">
+    <div className="relative w-full">
 
-      {/* CONTENT WRAPPER */}
-      <div className="relative max-w-7xl mx-auto px-6 lg:px-10 py-6">
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold">AI Tools</h1>
+          <p className="text-gray-600 text-sm mt-1">
+            Use AI-powered tools to verify, analyze, and protect yourself.
+          </p>
+        </div>
 
-        {/* ✅ Credits / PRO — NO extra navbar, just floating on white */}
-        <div className="hidden md:flex absolute top-6 right-6 items-center gap-3">
-
-          <span className="text-sm text-gray-600">
+        {/* Credits / PRO → Desktop only */}
+        <div className="hidden md:flex items-center gap-3">
+          <span className="text-sm text-gray-700">
             Credits Available: <b>9999</b>
           </span>
           <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full">
             PRO – Unlimited
           </span>
         </div>
+      </div>
 
-        {/* PAGE TITLE */}
-        <div className="mb-6 pr-40">
-          <h1 className="text-2xl font-bold">AI Tools</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Use AI-powered tools to verify, analyze, and protect yourself.
-          </p>
-        </div>
+      {/* TOOLS GRID */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {tools.map((tool, idx) => (
+          <div
+            key={idx}
+            className={`${tool.color} text-white rounded-2xl p-6 flex flex-col justify-between min-h-[220px]`}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-lg font-semibold">{tool.title}</h2>
+                {tool.pro && (
+                  <span className="bg-black/30 text-xs px-2 py-0.5 rounded">
+                    PRO
+                  </span>
+                )}
+              </div>
 
-        {/* TOOLS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-24">
-          {tools.map((tool) => (
-            <div
-              key={tool.title}
-              className={`${tool.color} text-white rounded-xl p-6 flex flex-col justify-between min-h-[220px]`}
-            >
-              <div>
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">
-                    {tool.title}
-                  </h2>
-                  {tool.pro && (
-                    <span className="text-xs bg-black/30 px-2 py-1 rounded">
-                      PRO
-                    </span>
-                  )}
-                </div>
+              <p className="text-sm opacity-90">{tool.desc}</p>
 
-                <p className="text-sm mt-2 opacity-90">
-                  {tool.description}
-                </p>
-
+              {tool.credits > 0 && (
                 <p className="text-xs mt-3 opacity-80">
                   Credits per use: {tool.credits}
                 </p>
-              </div>
-
-              <Link href={tool.href}>
-                <button className="mt-5 bg-white text-black px-4 py-2 rounded font-medium hover:bg-gray-100 transition">
-                  {tool.pro ? "Upgrade to Pro" : "Open Tool"}
-                </button>
-              </Link>
+              )}
             </div>
-          ))}
-        </div>
 
+            <Link href={tool.link}>
+              <button className="mt-5 bg-white text-black px-4 py-2 rounded-lg text-sm font-medium w-full">
+                {tool.pro ? "Upgrade to Pro" : "Open Tool"}
+              </button>
+            </Link>
+          </div>
+        ))}
       </div>
     </div>
   );
