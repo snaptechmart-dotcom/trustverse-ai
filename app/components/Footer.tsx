@@ -6,32 +6,38 @@ export default function Footer() {
   return (
     <footer className="w-full bg-black text-gray-300 py-8 mt-10">
       <div className="max-w-6xl mx-auto px-4">
-        
-        {/* Top Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-          {/* Brand Info */}
+        {/* Top Section */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+
+          {/* Brand */}
           <div>
-            <h2 className="text-white text-xl font-semibold">Trustverse AI</h2>
+            <h2 className="text-white text-xl font-semibold">
+              Trustverse AI
+            </h2>
             <p className="mt-2 text-sm text-gray-400">
-              Your trusted AI-powered productivity and automation platform.
+              AI-powered trust & reputation platform to verify people, phone numbers,
+              profiles and digital identities with confidence.
             </p>
           </div>
 
-          {/* Important Links */}
+          {/* Product */}
           <div>
-            <h2 className="text-white text-lg font-medium mb-3">Quick Links</h2>
+            <h2 className="text-white text-lg font-medium mb-3">
+              Product
+            </h2>
             <ul className="space-y-2 text-sm">
 
               <li>
-                <Link href="/about" className="hover:text-white">
-                  About Us
+                <Link href="/" className="hover:text-white">
+                  Home
                 </Link>
               </li>
 
+              {/* ✅ AI TOOLS → LOGIN ONLY */}
               <li>
-                <Link href="/contact" className="hover:text-white">
-                  Contact Us
+                <Link href="/login" className="hover:text-white">
+                  AI Tools
                 </Link>
               </li>
 
@@ -41,12 +47,20 @@ export default function Footer() {
                 </Link>
               </li>
 
+              <li>
+                <Link href="/about" className="hover:text-white">
+                  About Us
+                </Link>
+              </li>
+
             </ul>
           </div>
 
-          {/* Policies Section */}
+          {/* Trust & Safety */}
           <div>
-            <h2 className="text-white text-lg font-medium mb-3">Legal</h2>
+            <h2 className="text-white text-lg font-medium mb-3">
+              Trust & Safety
+            </h2>
             <ul className="space-y-2 text-sm">
 
               <li>
@@ -76,11 +90,33 @@ export default function Footer() {
             </ul>
           </div>
 
+          {/* Support */}
+          <div>
+            <h2 className="text-white text-lg font-medium mb-3">
+              Support
+            </h2>
+            <ul className="space-y-2 text-sm">
+
+              <li>
+                <Link href="/contact" className="hover:text-white">
+                  Contact Us
+                </Link>
+              </li>
+
+              <li>
+                <Link href="/waitlist" className="hover:text-white">
+                  Join Waitlist
+                </Link>
+              </li>
+
+            </ul>
+          </div>
+
         </div>
 
-        {/* Bottom Section */}
+        {/* Bottom */}
         <div className="border-t border-gray-700 mt-6 pt-4 text-center text-sm text-gray-400">
-          © {new Date().getFullYear()} Trustverse AI — All Rights Reserved.
+          © {new Date().getFullYear()} Trustverse AI. All rights reserved.
         </div>
 
       </div>

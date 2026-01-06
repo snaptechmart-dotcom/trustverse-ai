@@ -19,13 +19,16 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50 overflow-x-hidden">
-      {/* SIDEBAR */}
-      <Sidebar />
+      {/* SIDEBAR — FULL HEIGHT */}
+      <aside className="min-h-screen">
+        <Sidebar />
+      </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 px-6 py-6">
+      <main className="flex-1 min-h-screen px-6 py-6">
         <SessionWatcher />
-        <div className="max-w-6xl">
+
+        <div className="max-w-6xl min-h-full">
           {children}
         </div>
       </main>

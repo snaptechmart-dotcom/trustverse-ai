@@ -59,25 +59,24 @@ export default function Navbar() {
           <div className="flex items-center gap-4 relative" ref={menuRef}>
 
             {/* PLAN / CREDITS */}
-          {plan === "PRO" ? (
-          <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-           PRO · Unlimited
-           </span>
-          ) : (
-          <span className="text-xs px-3 py-1 rounded-full border border-white/20 text-gray-200">
-          Credits: <strong>{credits ?? 0}</strong>
-         </span>
-         )}
+            {plan === "PRO" ? (
+              <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                PRO · Unlimited
+              </span>
+            ) : (
+              <span className="text-xs px-3 py-1 rounded-full border border-white/20 text-gray-200">
+                Credits: <strong>{credits ?? 0}</strong>
+              </span>
+            )}
 
-          {plan !== "PRO" && (
-          <Link
-         href="/pricing"
-         className="text-xs px-3 py-1 rounded-md bg-indigo-600 text-white"
-    >
-         Upgrade
-         </Link>
-         )}
-
+            {plan !== "PRO" && (
+              <Link
+                href="/pricing"
+                className="text-xs px-3 py-1 rounded-md bg-indigo-600 text-white"
+              >
+                Upgrade
+              </Link>
+            )}
 
             {/* AVATAR */}
             <button
@@ -87,16 +86,23 @@ export default function Navbar() {
               {session.user?.email?.[0]?.toUpperCase() ?? "U"}
             </button>
 
-            {/* DROPDOWN */}
+            {/* DROPDOWN (DESKTOP ONLY) */}
             {menuOpen && (
               <div className="hidden md:block absolute right-0 top-12 w-44 bg-[#0B1220] border border-white/10 rounded-md shadow-lg">
 
                 <button
-                  onClick={() => router.push("/dashboard")}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    router.push("/dashboard");
+                  }}
                   className="block w-full px-4 py-2 text-left text-sm text-white hover:bg-white/10"
                 >
                   Dashboard
                 </button>
+
+                {/* ✅ DIVIDER — DESKTOP ONLY */}
+                <div className="border-t border-white/10 my-1"></div>
+
                 <button
                   onClick={() => signOut({ callbackUrl: "/login" })}
                   className="block w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-white/10"
