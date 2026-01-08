@@ -79,13 +79,17 @@ export default function DashboardToolsPage() {
   const { data: session, status } = useSession();
 
   if (status === "loading") {
-    return <p className="text-gray-500">Loading tools…</p>;
+    return (
+      <div className="text-gray-500 text-sm p-6">
+        Loading tools…
+      </div>
+    );
   }
 
   const isPro = session?.user?.plan === "PRO";
 
   return (
-    <div className="relative w-full">
+    <div className="w-full">
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
@@ -97,7 +101,8 @@ export default function DashboardToolsPage() {
 
         <div className="hidden md:flex items-center gap-3">
           <span className="text-sm text-gray-700">
-            Credits Available: <b>{isPro ? "Unlimited" : "Limited"}</b>
+            Credits Available:{" "}
+            <b>{isPro ? "Unlimited" : session?.user?.credits ?? 0}</b>
           </span>
 
           {isPro && (
@@ -121,7 +126,9 @@ export default function DashboardToolsPage() {
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-lg font-semibold">{tool.title}</h2>
+                  <h2 className="text-lg font-semibold">
+                    {tool.title}
+                  </h2>
 
                   {tool.pro && (
                     <span className="bg-black/30 text-xs px-2 py-0.5 rounded">
@@ -141,7 +148,8 @@ export default function DashboardToolsPage() {
 
               <Link href={targetLink}>
                 <button
-                  className={`mt-5 px-4 py-2 rounded-lg text-sm font-medium w-full transition ${
+                  className={`mt-5 px-4 py-2 rounded-lg text-sm font-medium w-full transition
+                  ${
                     locked
                       ? "bg-black/30 text-white"
                       : "bg-white text-black hover:bg-gray-100"
