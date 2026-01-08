@@ -1,16 +1,29 @@
 import dbConnect from "@/lib/dbConnect";
 import ActivityHistory from "@/models/ActivityHistory";
 
+/* =========================
+   TYPES
+========================= */
 type SaveActivityParams = {
   userEmail: string;
   tool: string;
+
+  // user input
   input: string;
+
+  // analysis output
   riskLevel?: string;
   trustScore?: number;
   resultSummary?: string;
   signals?: string[];
+
+  // billing
+  creditsUsed?: number;
 };
 
+/* =========================
+   MASTER SAVE FUNCTION
+========================= */
 export async function saveActivity({
   userEmail,
   tool,
@@ -19,20 +32,14 @@ export async function saveActivity({
   trustScore = 0,
   resultSummary = "",
   signals = [],
+  creditsUsed = 0,
 }: SaveActivityParams) {
   try {
-    console.log("🔥 saveActivity CALLED", {
-      userEmail,
-      tool,
-      input,
-    });
-
-    // 1️⃣ DB CONNECT
-    await dbConnect();
-
-    // 2️⃣ SAFETY CHECKS (HARD GUARD)
+    /* -------------------------
+       HARD GUARDS
+    -------------------------- */
     if (!userEmail || !tool || !input) {
-      console.error("❌ saveActivity missing required fields", {
+      console.error("❌ saveActivity: missing required fields", {
         userEmail,
         tool,
         input,
@@ -40,14 +47,25 @@ export async function saveActivity({
       return;
     }
 
-    // 3️⃣ NORMALIZED INPUT KEY (🔥 GOLDEN RULE 🔥)
+    /* -------------------------
+       DB CONNECT
+    -------------------------- */
+    await dbConnect();
+
+    /* -------------------------
+       NORMALIZE INPUT (DEDUPE)
+       🔥 GOLDEN RULE 🔥
+    -------------------------- */
     const inputKey = String(input)
       .toLowerCase()
       .trim()
       .replace(/\s+/g, " ");
 
-    // 4️⃣ UPSERT LOGIC (NO DUPLICATE SAME TOOL + SAME INPUT)
-    const history = await ActivityHistory.findOneAndUpdate(
+    /* -------------------------
+       UPSERT ACTIVITY
+       (same user + same tool + same input = update)
+    -------------------------- */
+    const activity = await ActivityHistory.findOneAndUpdate(
       {
         userEmail,
         tool,
@@ -56,13 +74,18 @@ export async function saveActivity({
       {
         userEmail,
         tool,
-        input,       // 🔹 original input (UI display)
-        inputKey,    // 🔹 normalized (dedupe logic)
+
+        input,        // original user input (UI)
+        inputKey,     // normalized (DB logic)
+
         riskLevel,
         trustScore,
         resultSummary,
         signals,
-        updatedAt: new Date(),
+
+        creditsUsed,
+
+        lastSeenAt: new Date(),
       },
       {
         upsert: true,
@@ -71,7 +94,17 @@ export async function saveActivity({
       }
     );
 
-    console.log("✅ HISTORY SAVED / UPDATED:", history._id.toString());
+    /* -------------------------
+       DEBUG LOG (SAFE)
+    -------------------------- */
+    if (process.env.NODE_ENV !== "production") {
+      console.log("✅ Activity saved:", {
+        id: activity._id.toString(),
+        tool,
+        input,
+        creditsUsed,
+      });
+    }
   } catch (error) {
     console.error("🔥 saveActivity ERROR:", error);
   }

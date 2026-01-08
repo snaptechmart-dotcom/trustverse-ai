@@ -8,12 +8,19 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import CreditWarningBanner from "@/components/CreditWarningBanner";
 
+/* ======================
+   TYPES (FIXED)
+====================== */
 type TrustResult = {
   trustScore: number;
   riskLevel: "Low Risk" | "Medium Risk" | "High Risk";
   confidence: string;
   explanation: string;
-  remainingCredits?: number;
+  remainingCredits?: number | "unlimited";
+  share?: {
+    title: string;
+    text: string;
+  };
 };
 
 export default function TrustScorePage() {
@@ -35,8 +42,7 @@ export default function TrustScorePage() {
       return;
     }
 
-    const userId = session?.user?.id;
-    if (!userId) {
+    if (!session?.user?.id) {
       alert("Session expired. Please login again.");
       router.push("/login");
       return;
@@ -49,18 +55,14 @@ export default function TrustScorePage() {
       const res = await fetch("/api/trust-score", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: value.trim(),
-          userId,
-        }),
+        body: JSON.stringify({ text: value.trim() }),
       });
 
       const data = await res.json();
 
-      // 🔥 FINAL ERROR HANDLING (credits / session)
       if (!res.ok) {
         if (res.status === 402) {
-          alert("❌ No credits left. Please upgrade your plan.");
+          alert("No credits left. Please upgrade your plan.");
         } else if (res.status === 401) {
           alert("Session expired. Please login again.");
           router.push("/login");
@@ -70,14 +72,18 @@ export default function TrustScorePage() {
         return;
       }
 
-      setResult(data);
-      setValue("");
+      setResult({
+        ...data,
+        share: {
+          title: "Trustverse AI Trust Report",
+          text: `Trust Score: ${data.trustScore}/100\nRisk Level: ${data.riskLevel}`,
+        },
+      });
 
-      // 🔄 Real-time updates
+      setValue("");
       window.dispatchEvent(new Event("credits-updated"));
       window.dispatchEvent(new Event("history-updated"));
-
-    } catch (err) {
+    } catch {
       alert("Network error. Please try again.");
     } finally {
       setLoading(false);
@@ -120,9 +126,8 @@ export default function TrustScorePage() {
       <div>
         <h1 className="text-3xl font-bold">Trust Score Analyzer</h1>
         <p className="text-gray-500 mt-2 max-w-3xl">
-          Evaluate the trustworthiness of phone numbers, email addresses,
-          usernames, or online profiles using AI-powered trust analysis
-          before making important decisions.
+          Evaluate trustworthiness of phone numbers, emails, usernames, or
+          profiles using AI-powered risk analysis.
         </p>
       </div>
 
@@ -144,50 +149,25 @@ export default function TrustScorePage() {
         </button>
       </div>
 
-      {/* 🔥 LONG DESCRIPTION (RESTORED FULLY) */}
+      {/* LONG DESCRIPTION */}
       <div className="space-y-6 text-gray-700 max-w-3xl">
-        <h2 className="text-xl font-semibold text-gray-900">
-          How Trust Score Analyzer Works
-        </h2>
-
+        <h2 className="text-xl font-semibold">How Trust Score Analyzer Works</h2>
         <p>
-          Trust Score Analyzer helps identify potential scams, fraud, or risky
-          online interactions before action is taken. It analyzes multiple
-          behavioral and risk indicators using AI-powered models.
+          Trustverse AI evaluates risk indicators, scam patterns, and behavioral
+          signals to generate a trust score between 0–100.
         </p>
-
-        <p>
-          Based on historical scam patterns and automated trust signals,
-          Trustverse AI generates a{" "}
-          <strong>Trust Score (0–100)</strong> along with a clear risk category.
-        </p>
-
         <ul className="list-disc pl-6 space-y-2">
-          <li>Detect fraudulent phone numbers or emails</li>
-          <li>Identify suspicious usernames or profiles</li>
-          <li>Reduce risk before financial interaction</li>
-          <li>Make informed, safer decisions</li>
+          <li>Detect fraud & scam signals</li>
+          <li>Assess digital trust before action</li>
+          <li>Reduce financial & identity risk</li>
         </ul>
-
-        <p className="font-medium text-gray-800">Risk Levels:</p>
-
-        <ul className="list-disc pl-6 space-y-2">
-          <li><strong>Low Risk:</strong> No major warning signs</li>
-          <li><strong>Medium Risk:</strong> Some caution advised</li>
-          <li><strong>High Risk:</strong> Strong scam indicators detected</li>
-        </ul>
-
-        <p className="text-sm text-gray-500">
-          Disclaimer: Results are automated insights only. Always verify
-          critical information independently.
-        </p>
       </div>
 
-      {/* RESULT CARD */}
+      {/* RESULT */}
       {result && (
         <div
           ref={reportRef}
-          className="bg-white border rounded-xl p-6 space-y-4 max-w-xl relative z-10"
+          className="bg-white border rounded-xl p-6 space-y-4 max-w-xl"
         >
           <h3 className="text-xl font-semibold">
             🧠 Trustverse AI Trust Score Report
@@ -208,13 +188,22 @@ export default function TrustScorePage() {
             </span>
           </p>
 
-          <p><strong>Trust Score:</strong> {result.trustScore}</p>
-          <p><strong>Confidence:</strong> {result.confidence}</p>
+          <p>
+            <strong>Trust Score:</strong> {result.trustScore} / 100
+          </p>
+
+          <p>
+            <strong>Confidence:</strong> {result.confidence}
+          </p>
+
           <p className="text-gray-700">{result.explanation}</p>
 
           {result.remainingCredits !== undefined && (
             <p className="text-sm text-gray-500">
-              Remaining Credits: {result.remainingCredits}
+              Remaining Credits:{" "}
+              {result.remainingCredits === "unlimited"
+                ? "Unlimited (PRO)"
+                : result.remainingCredits}
             </p>
           )}
 
@@ -222,7 +211,7 @@ export default function TrustScorePage() {
             <QRCodeCanvas value={window.location.href} size={120} />
           </div>
 
-          <div className="flex gap-4 pt-4">
+          <div className="flex flex-wrap gap-4 pt-4">
             <button
               onClick={downloadPDF}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
@@ -236,6 +225,27 @@ export default function TrustScorePage() {
             >
               Report as Scam
             </button>
+
+            {result.share && (
+              <button
+                onClick={async () => {
+                  if (navigator.share) {
+                    await navigator.share({
+                      title: result.share!.title,
+                      text: result.share!.text,
+                    });
+                  } else {
+                    await navigator.clipboard.writeText(
+                      result.share!.text
+                    );
+                    alert("Report copied to clipboard");
+                  }
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded"
+              >
+                Share
+              </button>
+            )}
           </div>
         </div>
       )}

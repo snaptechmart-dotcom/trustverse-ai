@@ -7,30 +7,32 @@ import { saveActivity } from "@/lib/saveActivity";
 
 export async function POST(req: Request) {
   try {
-    // 1️⃣ DB CONNECT
+    /* =========================
+       DB + SESSION
+    ========================= */
     await dbConnect();
 
-    // 2️⃣ SESSION CHECK
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 3️⃣ INPUT
+    /* =========================
+       INPUT VALIDATION
+    ========================= */
     const body = await req.json();
-    const text = body?.text;
+    const text = body?.text?.trim();
 
-    if (!text || typeof text !== "string" || text.trim().length < 5) {
+    if (!text || text.length < 5) {
       return NextResponse.json(
         { error: "Invalid input" },
         { status: 400 }
       );
     }
 
-    // 4️⃣ USER FETCH
+    /* =========================
+       USER FETCH
+    ========================= */
     const user = await User.findOne({ email: session.user.email });
     if (!user) {
       return NextResponse.json(
@@ -39,7 +41,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5️⃣ CREDIT LOGIC (🔥 FINAL FIX 🔥)
+    /* =========================
+       CREDIT LOGIC (FINAL)
+    ========================= */
+    let creditsUsed = 0;
     let remainingCredits = user.credits;
 
     if (user.plan === "FREE") {
@@ -50,14 +55,22 @@ export async function POST(req: Request) {
         );
       }
 
-      user.credits = remainingCredits - 1;
+      creditsUsed = 1;
+      user.credits = remainingCredits - creditsUsed;
       await user.save();
       remainingCredits = user.credits;
     }
 
-    // 6️⃣ TRUST SCORE LOGIC (DEMO)
+    /* =========================
+       TRUST SCORE ENGINE (v1)
+    ========================= */
     const trustScore = 72;
-    const riskLevel = "Medium Risk";
+    const riskLevel: "Low Risk" | "Medium Risk" | "High Risk" =
+      trustScore >= 80
+        ? "Low Risk"
+        : trustScore >= 50
+        ? "Medium Risk"
+        : "High Risk";
 
     const summary =
       "The content shows moderate trust indicators. No strong scam patterns were detected, but caution is advised.";
@@ -68,27 +81,41 @@ export async function POST(req: Request) {
       "Moderate uncertainty present",
     ];
 
-    // 7️⃣ SAVE ACTIVITY HISTORY
+    /* =========================
+       SAVE HISTORY (MASTER)
+    ========================= */
     await saveActivity({
       userEmail: session.user.email,
       tool: "TRUST_SCORE",
       input: text,
       trustScore,
       riskLevel,
-      resultSummary: `Trust score ${trustScore}/100`,
+      resultSummary: summary,
       signals,
+      creditsUsed,
     });
 
-    // 8️⃣ RESPONSE
+    /* =========================
+       SHARE-SAFE RESPONSE
+       (🔥 SHARE BUTTON FIX 🔥)
+    ========================= */
     return NextResponse.json({
       trustScore,
       riskLevel,
       summary,
       signals,
+
+      // billing
+      creditsUsed,
       remainingCredits:
         user.plan === "PRO" ? "unlimited" : remainingCredits,
-    });
 
+      // 🔗 share payload (frontend will use this)
+      share: {
+        title: "Trustverse AI – Trust Score Report",
+        text: `Trust Score: ${trustScore}/100\nRisk Level: ${riskLevel}\n\n${summary}`,
+      },
+    });
   } catch (error) {
     console.error("TRUST SCORE API ERROR:", error);
     return NextResponse.json(

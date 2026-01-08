@@ -1,30 +1,26 @@
-import mongoose from "mongoose";
+import mongoose, { Schema, models } from "mongoose";
 
-const HistorySchema = new mongoose.Schema(
+const HistorySchema = new Schema(
   {
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-
-    action: {
+    query: {
       type: String,
       required: true,
     },
-
-    impact: {
-      type: Number,
+    tool: {
+      type: String,
       required: true,
     },
-
-    reason: {
-      type: String,
+    result: {
+      type: Schema.Types.Mixed,
       required: true,
     },
   },
   { timestamps: true }
 );
 
-export default mongoose.models.History ||
-  mongoose.model("History", HistorySchema);
+export default models.History || mongoose.model("History", HistorySchema);

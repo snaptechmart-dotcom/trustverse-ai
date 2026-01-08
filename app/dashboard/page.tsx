@@ -24,21 +24,15 @@ export default function DashboardPage() {
           credentials: "include",
         });
 
-        if (!res.ok) {
-          console.error("Dashboard stats API failed");
-          return;
-        }
+        if (!res.ok) return;
 
         const data = await res.json();
 
-        // ✅ EXACT keys from backend
         setStats({
           totalReports: data.totalReports ?? 0,
           trustScoreChecks: data.trustScoreChecks ?? 0,
           phoneVerifications: data.phoneVerifications ?? 0,
         });
-      } catch (error) {
-        console.error("Failed to load dashboard stats", error);
       } finally {
         setLoading(false);
       }
@@ -57,7 +51,6 @@ export default function DashboardPage() {
         <p className="text-gray-500">Loading stats…</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* TOTAL REPORTS */}
           <div className="bg-white border rounded-xl p-6">
             <p className="text-gray-500">Total Reports</p>
             <p className="text-3xl font-bold text-red-600">
@@ -65,7 +58,6 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          {/* TRUST SCORE CHECKS */}
           <div className="bg-white border rounded-xl p-6">
             <p className="text-gray-500">Trust Score Checks</p>
             <p className="text-3xl font-bold text-emerald-600">
@@ -73,7 +65,6 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          {/* PHONE VERIFICATIONS */}
           <div className="bg-white border rounded-xl p-6">
             <p className="text-gray-500">Phone Verifications</p>
             <p className="text-3xl font-bold text-blue-600">

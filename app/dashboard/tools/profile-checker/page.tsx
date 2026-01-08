@@ -1,31 +1,97 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { QRCodeCanvas } from "qrcode.react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import CreditWarningBanner from "@/components/CreditWarningBanner";
 
-type ResultType = {
-  status: string;
-  name: string;
-  email: string;
-  phone: string;
+/* =========================
+   TYPES
+========================= */
+type ProfileResult = {
   trustScore: number;
-  riskLevel: "Low Risk" | "Medium Risk" | "High Risk";
-  remainingCredits: number | "unlimited";
+  risk: "Low Risk" | "Medium Risk" | "High Risk";
+  reason: string;
+  advice: string;
+  remainingCredits?: number | "unlimited";
+  share?: {
+    title: string;
+    text: string;
+  };
 };
 
 export default function ProfileCheckerPage() {
+  const router = useRouter();
+  const reportRef = useRef<HTMLDivElement>(null);
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<ResultType | null>(null);
+  const [result, setResult] = useState<ProfileResult | null>(null);
+  const [credits, setCredits] = useState<number | "unlimited">(0);
 
-  const router = useRouter();
+  /* =========================
+     FETCH CREDITS
+  ========================= */
+  useEffect(() => {
+    const fetchCredits = async () => {
+      try {
+        const res = await fetch("/api/credits", { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        setCredits(data.credits ?? 0);
+      } catch {}
+    };
 
+    fetchCredits();
+    window.addEventListener("credits-updated", fetchCredits);
+    return () => window.removeEventListener("credits-updated", fetchCredits);
+  }, []);
+
+  /* =========================
+     COPY TO CLIPBOARD (SAFE)
+  ========================= */
+  const copyToClipboard = async (text: string) => {
+    if (typeof window === "undefined") return;
+
+    try {
+      if (
+        "clipboard" in navigator &&
+        typeof navigator.clipboard.writeText === "function"
+      ) {
+        await navigator.clipboard.writeText(text);
+        alert("Report copied to clipboard");
+        return;
+      }
+    } catch {}
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+    alert("Report copied to clipboard");
+  };
+
+  /* =========================
+     HANDLE CHECK
+  ========================= */
   const handleCheck = async () => {
     if (!name.trim() || !email.trim()) {
       alert("Name and Email are required.");
+      return;
+    }
+
+    if (credits !== "unlimited" && credits <= 0) {
+      alert("No credits left. Please upgrade to Pro.");
+      router.push("/pricing");
       return;
     }
 
@@ -33,9 +99,10 @@ export default function ProfileCheckerPage() {
     setResult(null);
 
     try {
-      const res = await fetch("/api/profile-check", {
+      const res = await fetch("/api/tools/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim(),
@@ -43,200 +110,180 @@ export default function ProfileCheckerPage() {
         }),
       });
 
-      if (res.status === 401) {
-        alert("Session expired. Please login again.");
-        router.push("/login");
-        return;
-      }
-
-      if (res.status === 402) {
-        alert("No credits left. Please upgrade to Pro.");
-        router.push("/pricing");
-        return;
-      }
+      const data = await res.json();
 
       if (!res.ok) {
-        alert("Service temporarily unavailable.");
+        if (res.status === 401) router.push("/login");
+        if (res.status === 403) router.push("/pricing");
+        alert(data?.error || "Service temporarily unavailable");
         return;
       }
 
-      const data: ResultType = await res.json();
-      setResult(data);
+      setResult({
+        ...data,
+        share: {
+          title: "Trustverse AI – Profile Trust Report",
+          text: `Profile Trust Report\nTrust Score: ${data.trustScore}/100\nRisk Level: ${data.risk}\nAdvice: ${data.advice}`,
+        },
+      });
 
       setName("");
       setEmail("");
       setPhone("");
+
       window.dispatchEvent(new Event("credits-updated"));
-    } catch (err) {
-      alert("Network error. Please try again.");
+      window.dispatchEvent(new Event("history-updated"));
+    } catch {
+      alert("Network error");
     } finally {
       setLoading(false);
     }
   };
 
+  /* =========================
+     DOWNLOAD PDF
+  ========================= */
+  const downloadPDF = async () => {
+    if (!reportRef.current) return;
+    const canvas = await html2canvas(reportRef.current, { scale: 2 });
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    const width = 210;
+    const height = (canvas.height * width) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, width, height);
+    pdf.save("Trustverse_Profile_Report.pdf");
+  };
+
+  /* =========================
+     REPORT AS SCAM
+  ========================= */
+  const reportAsScam = () => {
+    if (!result) return;
+    router.push(
+      `/report-scam?source=profile-checker&risk=${result.risk}&score=${result.trustScore}`
+    );
+  };
+
   return (
     <div className="space-y-12 max-w-4xl">
-      <CreditWarningBanner />
+      {credits !== "unlimited" && <CreditWarningBanner />}
 
       {/* HEADER */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Profile Trust Checker
+        <h1 className="text-3xl font-bold">
+          Profile Trust Checker <span className="text-purple-600">(PRO)</span>
         </h1>
         <p className="text-gray-500 mt-2 max-w-3xl">
-          Analyze basic profile details to estimate trustworthiness and risk
-          level before engaging in communication, business, or transactions.
+          Analyze profile identity signals such as name, email, and phone to
+          assess trustworthiness before engaging in communication or business.
         </p>
       </div>
 
-      {/* INPUT CARD */}
-      <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4 max-w-xl">
+      {/* INPUT */}
+      <div className="bg-white border rounded-xl p-6 space-y-4 max-w-xl">
         <input
-          type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Enter full name"
-          className="w-full bg-slate-50 border border-slate-300 rounded-md px-4 py-2
-          focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          placeholder="Full name"
+          className="w-full border rounded-md px-4 py-2"
         />
-
         <input
-          type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter email address"
-          className="w-full bg-slate-50 border border-slate-300 rounded-md px-4 py-2
-          focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          placeholder="Email address"
+          className="w-full border rounded-md px-4 py-2"
         />
-
         <input
-          type="text"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder="Phone number (optional)"
-          className="w-full bg-slate-50 border border-slate-300 rounded-md px-4 py-2
-          focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          placeholder="Phone (optional)"
+          className="w-full border rounded-md px-4 py-2"
         />
-
         <button
           onClick={handleCheck}
           disabled={loading}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-md
-          transition disabled:opacity-60"
+          className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded"
         >
           {loading ? "Checking..." : "Check Profile"}
         </button>
       </div>
 
+      {/* LONG DESCRIPTION */}
+      <div className="max-w-3xl space-y-4 text-gray-700">
+        <h2 className="text-xl font-semibold">How Profile Trust Checker Works</h2>
+        <p>
+          This tool evaluates identity signals using automated trust indicators
+          to identify potential risks before communication, hiring, or financial
+          engagement.
+        </p>
+        <ul className="list-disc pl-6 space-y-1">
+          <li>Detect suspicious profile patterns</li>
+          <li>Reduce impersonation & scam risk</li>
+          <li>Generate trust score with risk level</li>
+        </ul>
+      </div>
+
       {/* RESULT */}
       {result && (
-        <div className="bg-white border rounded-xl p-6 max-w-2xl space-y-5">
-          <h3 className="text-xl font-semibold text-gray-900">
+        <div
+          ref={reportRef}
+          className="bg-white border rounded-xl p-6 max-w-xl space-y-4"
+        >
+          <h3 className="text-xl font-semibold">
             👤 Trustverse AI Profile Trust Report
           </h3>
 
           <p>
-            <strong>Verification Status:</strong>{" "}
-            <span className="text-emerald-600 font-semibold">
-              Successfully Completed ✅
-            </span>
-          </p>
-
-          <p className="text-sm text-gray-700">
-            <strong>Name:</strong> {result.name}
-          </p>
-          <p className="text-sm text-gray-700">
-            <strong>Email:</strong> {result.email}
-          </p>
-          <p className="text-sm text-gray-700">
-            <strong>Phone:</strong> {result.phone}
-          </p>
-
-          <div className="space-y-2 text-gray-700">
-            <p>
-              <strong>Trust Assessment Summary:</strong>
-            </p>
-            <p className="text-sm leading-relaxed">
-              Our system analyzed the provided profile information using
-              automated trust indicators. Based on available data signals, this
-              profile demonstrates a{" "}
-              <strong>{result.riskLevel}</strong> confidence level.
-            </p>
-          </div>
-
-          <p>
             <strong>Trust Score:</strong>{" "}
-            <span className="font-bold text-blue-600">
-              {result.trustScore} / 100
+            <span className="text-blue-600 font-bold">
+              {result.trustScore}/100
             </span>
           </p>
 
           <p>
-            <strong>Final Risk Level:</strong>{" "}
-            <span
-              className={
-                result.riskLevel === "Low Risk"
-                  ? "text-green-600 font-bold"
-                  : result.riskLevel === "Medium Risk"
-                  ? "text-yellow-600 font-bold"
-                  : "text-red-600 font-bold"
-              }
+            <strong>Risk Level:</strong>{" "}
+            <span className="font-bold">{result.risk}</span>
+          </p>
+
+          <p>
+            <strong>Reason:</strong> {result.reason}
+          </p>
+          <p>
+            <strong>Advice:</strong> {result.advice}
+          </p>
+
+          <QRCodeCanvas value={window.location.href} size={120} />
+
+          <div className="flex flex-wrap gap-3 pt-4">
+            <button
+              onClick={downloadPDF}
+              className="bg-blue-600 text-white px-4 py-2 rounded"
             >
-              {result.riskLevel}
-            </span>
-          </p>
-
-          <div className="border-t pt-4 text-sm text-gray-600 space-y-1">
-            <p>
-              <strong>Credits Used:</strong> 1
-            </p>
-            <p>
-              <strong>Available Credits:</strong>{" "}
-              {result.remainingCredits === "unlimited"
-                ? "Unlimited"
-                : result.remainingCredits}
-            </p>
+              Download PDF
+            </button>
+            <button
+              onClick={reportAsScam}
+              className="bg-red-600 text-white px-4 py-2 rounded"
+            >
+              Report as Scam
+            </button>
+            <button
+              onClick={() => {
+                if (navigator.share && result.share) {
+                  navigator.share(result.share);
+                } else if (result.share) {
+                  copyToClipboard(result.share.text);
+                }
+              }}
+              className="bg-emerald-600 text-white px-4 py-2 rounded"
+            >
+              Share
+            </button>
           </div>
-
-          <p className="text-xs text-gray-500 italic">
-            This result is generated using automated indicators and is intended
-            for guidance only. Upgrade to Pro for deeper trust insights.
-          </p>
         </div>
       )}
-
-      {/* DESCRIPTION */}
-      <div className="space-y-6 text-gray-700 max-w-3xl">
-        <h2 className="text-xl font-semibold text-gray-900">
-          How Profile Trust Checker Works
-        </h2>
-
-        <p>
-          Profile Trust Checker helps assess the overall trustworthiness of an
-          individual or online profile using basic identity signals. It is
-          designed to provide early risk awareness before engaging in
-          communication, hiring, collaboration, or transactions.
-        </p>
-
-        <p>
-          The system evaluates factors such as name consistency, email patterns,
-          optional phone presence, and common trust indicators to generate a
-          confidence score and risk level.
-        </p>
-
-        <ul className="list-disc pl-6 space-y-2">
-          <li>Identify potentially risky or incomplete profiles</li>
-          <li>Assess trust level before business or freelance engagement</li>
-          <li>Reduce exposure to fake identities or impersonation</li>
-          <li>Support safer onboarding and decision-making</li>
-        </ul>
-
-        <p className="text-sm text-gray-500">
-          Disclaimer: This analysis is generated using automated indicators and
-          does not guarantee identity authenticity. Results should be used as
-          guidance alongside human judgment.
-        </p>
-      </div>
     </div>
   );
 }

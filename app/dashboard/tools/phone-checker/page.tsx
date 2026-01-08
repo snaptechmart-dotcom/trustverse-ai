@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { QRCodeCanvas } from "qrcode.react";
+import jsPDF from "jspdf";
 import CreditWarningBanner from "@/components/CreditWarningBanner";
 
 type ResultType = {
   phone: string;
   trustScore: number;
   riskLevel: "Low Risk" | "Medium Risk" | "High Risk";
-  analysis: {
-    summary: string;
-    signals: string[];
-    recommendation: string;
-  };
+  summary: string;
+  signals: string[];
+  recommendation: string;
   remainingCredits: number | "unlimited";
 };
 
@@ -21,196 +21,173 @@ export default function PhoneCheckerPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ResultType | null>(null);
   const [credits, setCredits] = useState<number | "unlimited">(0);
+  const [expanded, setExpanded] = useState(true);
 
   const router = useRouter();
 
-  /* 🔥 FETCH CREDITS */
   useEffect(() => {
     const fetchCredits = async () => {
       try {
-        const res = await fetch("/api/credits", {
-          credentials: "include",
-        });
+        const res = await fetch("/api/credits", { credentials: "include" });
         if (!res.ok) return;
-
         const data = await res.json();
         setCredits(data.credits ?? 0);
-      } catch {
-        // silent
-      }
+      } catch {}
     };
 
     fetchCredits();
-
-    const listener = () => fetchCredits();
-    window.addEventListener("credits-updated", listener);
-
+    window.addEventListener("credits-updated", fetchCredits);
     return () => {
-      window.removeEventListener("credits-updated", listener);
+      window.removeEventListener("credits-updated", fetchCredits);
     };
   }, []);
 
   const handleCheck = async () => {
-    if (!phone.trim()) {
-      alert("Please enter a phone number with country code.");
-      return;
-    }
-
+    if (!phone.trim()) return;
     if (credits !== "unlimited" && credits <= 0) {
-      alert("No credits left. Please upgrade to Pro.");
       router.push("/pricing");
       return;
     }
 
     setLoading(true);
     setResult(null);
-
     try {
       const res = await fetch("/api/phone-check", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ phone }),
       });
-
-      if (res.status === 401) {
-        alert("Session expired. Please login again.");
-        router.push("/login");
-        return;
-      }
-
-      if (res.status === 402) {
-        alert("No credits left. Please upgrade to Pro.");
-        router.push("/pricing");
-        return;
-      }
-
-      if (!res.ok) {
-        alert("Service temporarily unavailable. Please try again.");
-        return;
-      }
-
-      const data: ResultType = await res.json();
+      if (!res.ok) return;
+      const data = await res.json();
       setResult(data);
+      setExpanded(true);
       setPhone("");
-
       window.dispatchEvent(new Event("credits-updated"));
-    } catch {
-      alert("Network error. Please check your connection.");
     } finally {
       setLoading(false);
     }
   };
 
+  const downloadPDF = () => {
+    if (!result) return;
+    const pdf = new jsPDF();
+    pdf.text("Trustverse AI – Phone Trust Report", 10, 15);
+    pdf.text(`Phone: ${result.phone}`, 10, 30);
+    pdf.text(`Trust Score: ${result.trustScore}`, 10, 40);
+    pdf.text(`Risk Level: ${result.riskLevel}`, 10, 50);
+    pdf.text(result.summary, 10, 65);
+    pdf.save("phone-trust-report.pdf");
+  };
+
   return (
-    <div className="space-y-12 max-w-4xl">
-      {/* CREDIT WARNING (FREE ONLY) */}
-      {credits !== "unlimited" && <CreditWarningBanner />}
+    <div className="relative max-w-5xl">
 
-      {/* HEADER */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Phone Number Checker
-        </h1>
-        <p className="text-gray-500 mt-2 max-w-3xl">
-          Verify phone numbers to detect spam, fraud, or risky activity using
-          advanced AI-powered trust signals.
-        </p>
-      </div>
+      {/* Desktop guide rail */}
+      <div className="hidden lg:block absolute right-0 top-0 h-full w-[2px] bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
 
-      {/* INPUT */}
-      <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4 max-w-xl">
-        <input
-          type="text"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="Enter phone number with country code (e.g. +91...)"
-          className="w-full bg-slate-50 border border-slate-300 rounded-md px-4 py-2
-          focus:outline-none focus:ring-2 focus:ring-emerald-500"
-        />
+      <div className="space-y-12 max-w-4xl">
+        {credits !== "unlimited" && <CreditWarningBanner />}
 
-        <button
-          onClick={handleCheck}
-          disabled={loading}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-md
-          transition disabled:opacity-60"
-        >
-          {loading ? "Checking..." : "Check Number"}
-        </button>
-      </div>
-
-      {/* RESULT */}
-      {result && (
-        <div className="bg-white border rounded-xl p-6 max-w-2xl space-y-5">
-          <h3 className="text-xl font-semibold text-gray-900">
-            🔍 Trustverse AI Verification Report
-          </h3>
-
-          <p>
-            <strong>Verification Status:</strong>{" "}
-            <span className="text-emerald-600 font-semibold">
-              Successfully Completed ✅
-            </span>
+        <div className="space-y-3">
+          <h1 className="text-3xl font-bold">Phone Number Checker</h1>
+          <p className="text-gray-600 max-w-3xl">
+            Identify spam, fraud, and risky phone numbers before responding.
           </p>
-
-          <p>
-            <strong>Final Risk Level:</strong>{" "}
-            <span
-              className={
-                result.riskLevel === "Low Risk"
-                  ? "text-green-600 font-bold"
-                  : result.riskLevel === "Medium Risk"
-                  ? "text-yellow-600 font-bold"
-                  : "text-red-600 font-bold"
-              }
-            >
-              {result.riskLevel}
-            </span>
-          </p>
-
-          <p>
-            <strong>Trust Score:</strong> {result.trustScore}/100
-          </p>
-
-          <div className="border-t pt-4 space-y-2 text-sm text-gray-700">
-            <p className="font-semibold">🔎 Detailed Risk Analysis</p>
-            <p>{result.analysis.summary}</p>
-
-            <ul className="list-disc list-inside text-gray-600">
-              {result.analysis.signals.map((s, i) => (
-                <li key={i}>{s}</li>
-              ))}
-            </ul>
-
-            <p className="mt-2">
-              <strong>✅ Recommendation:</strong>{" "}
-              {result.analysis.recommendation}
-            </p>
-          </div>
-
-          {/* 🔥 PRO CREDIT DISPLAY FIX */}
-          <div className="border-t pt-4 text-sm text-gray-600 space-y-1">
-            {result.remainingCredits !== "unlimited" && (
-              <p>
-                <strong>Credits Used:</strong> 1
-              </p>
-            )}
-
-            <p>
-              <strong>Available Credits:</strong>{" "}
-              {result.remainingCredits === "unlimited" ? (
-                <span className="text-emerald-600 font-semibold">
-                  Unlimited (PRO)
-                </span>
-              ) : (
-                result.remainingCredits
-              )}
-            </p>
-          </div>
         </div>
-      )}
+
+        <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4 max-w-xl">
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Enter phone number with country code"
+            className="w-full border rounded-md px-4 py-2"
+          />
+          <button
+            onClick={handleCheck}
+            disabled={loading}
+            className="bg-emerald-600 text-white rounded-md py-2 w-full"
+          >
+            {loading ? "Checking..." : "Check Number"}
+          </button>
+        </div>
+
+        {result && (
+          <div className="bg-white border rounded-xl shadow-sm max-w-2xl">
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="w-full flex justify-between px-6 py-4 border-b"
+            >
+              <span className="font-semibold">📞 Phone Trust Report</span>
+              <span>{expanded ? "▾" : "▸"}</span>
+            </button>
+
+            {expanded && (
+              <div className="p-6 space-y-4">
+                <p><b>Phone:</b> {result.phone}</p>
+                <p><b>Trust Score:</b> {result.trustScore}/100</p>
+                <p><b>Risk Level:</b> {result.riskLevel}</p>
+
+                <div className="border-t pt-4 text-sm space-y-2">
+                  <p>{result.summary}</p>
+                </div>
+
+                <div className="border-t pt-4 space-y-4">
+                  <QRCodeCanvas value={result.phone} size={96} />
+                  <div className="flex gap-3">
+                    <button onClick={downloadPDF} className="bg-black text-white px-4 py-2 rounded">
+                      Download PDF
+                    </button>
+                    <button className="bg-red-600 text-white px-4 py-2 rounded">
+                      Report Scam
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 🔒 DESCRIPTION CONTAINER (DESKTOP LIMITED HEIGHT) */}
+        <div
+          className="
+            pt-10 border-t text-gray-700 max-w-3xl
+            lg:max-h-[420px] lg:overflow-y-auto
+            lg:pr-4
+          "
+        >
+          <h2 className="text-xl font-semibold mb-4">
+            How Phone Number Checker Works
+          </h2>
+
+          <p>
+            Phone Number Checker helps identify potentially unsafe phone numbers
+            using automated trust indicators such as number patterns, scam
+            signals, and behavioral risk markers.
+          </p>
+
+          <p className="mt-3">
+            This tool is useful for verifying unknown callers, online sellers,
+            service providers, and business leads before engaging in
+            communication or transactions.
+          </p>
+
+          <p className="mt-3">
+            By providing a trust score and risk level, the tool enables safer
+            decision-making and reduces exposure to fraud.
+          </p>
+
+          <ul className="list-disc pl-6 mt-4 space-y-2">
+            <li>Detect scam and spam numbers</li>
+            <li>Prevent financial fraud</li>
+            <li>Improve personal safety</li>
+          </ul>
+
+          <p className="text-sm text-gray-500 mt-4">
+            Automated indicators only. Always verify independently.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
