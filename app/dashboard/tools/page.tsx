@@ -79,11 +79,7 @@ export default function DashboardToolsPage() {
   const { data: session, status } = useSession();
 
   if (status === "loading") {
-    return (
-      <div className="text-gray-500 text-sm p-6">
-        Loading tools…
-      </div>
-    );
+    return <p className="text-gray-500">Loading tools…</p>;
   }
 
   const isPro = session?.user?.plan === "PRO";
@@ -117,7 +113,7 @@ export default function DashboardToolsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {tools.map((tool, idx) => {
           const locked = tool.pro && !isPro;
-          const targetLink = locked ? "/pricing" : tool.link;
+          const href = locked ? "/pricing" : tool.link;
 
           return (
             <div
@@ -126,9 +122,7 @@ export default function DashboardToolsPage() {
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-lg font-semibold">
-                    {tool.title}
-                  </h2>
+                  <h2 className="text-lg font-semibold">{tool.title}</h2>
 
                   {tool.pro && (
                     <span className="bg-black/30 text-xs px-2 py-0.5 rounded">
@@ -146,7 +140,7 @@ export default function DashboardToolsPage() {
                 )}
               </div>
 
-              <Link href={targetLink}>
+              <Link href={href}>
                 <button
                   className={`mt-5 px-4 py-2 rounded-lg text-sm font-medium w-full transition
                   ${
