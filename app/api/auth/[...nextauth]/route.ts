@@ -1,11 +1,12 @@
+// 🔥 VERY IMPORTANT: Force Node.js runtime
 export const runtime = "nodejs";
+
 import NextAuth, { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
-/* ✅ MUST BE EXPORTED */
 export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
@@ -34,6 +35,7 @@ export const authOptions: AuthOptions = {
 
         if (!isValid) return null;
 
+        // ✅ IMPORTANT: return full user data
         return {
           id: user._id.toString(),
           email: user.email,
@@ -47,21 +49,52 @@ export const authOptions: AuthOptions = {
 
   session: {
     strategy: "jwt",
+    maxAge: 60 * 60 * 24, // 1 day (recommended)
   },
 
   pages: {
     signIn: "/login",
   },
 
+  // 🔥 COOKIE DOMAIN FIX (MOST IMPORTANT)
+  cookies: {
+    sessionToken: {
+      name: "__Secure-next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: true,
+        domain: ".trustverseai.com",
+      },
+    },
+  },
+
   callbacks: {
+    // 🔥 JWT CALLBACK WITH DB RESYNC
     async jwt({ token, user }) {
+      // First login
       if (user) {
         token.id = user.id;
         token.email = user.email;
         token.role = user.role;
         token.plan = user.plan;
         token.credits = user.credits;
+        return token;
       }
+
+      // 🔥 Every request → sync from DB
+      if (token?.email) {
+        await dbConnect();
+        const dbUser = await User.findOne({ email: token.email });
+
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.plan = dbUser.plan;
+          token.credits = dbUser.credits ?? 0;
+        }
+      }
+
       return token;
     },
 
@@ -80,6 +113,5 @@ export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-/* ✅ HANDLER */
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
