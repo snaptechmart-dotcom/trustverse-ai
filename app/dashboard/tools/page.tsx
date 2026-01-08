@@ -75,7 +75,7 @@ const tools: Tool[] = [
   },
 ];
 
-export default function DashboardToolsClient() {
+export default function DashboardToolsPage() {
   const { data: session, status } = useSession();
 
   if (status === "loading") {
@@ -86,6 +86,7 @@ export default function DashboardToolsClient() {
 
   return (
     <div className="relative w-full">
+      {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold">AI Tools</h1>
@@ -107,6 +108,7 @@ export default function DashboardToolsClient() {
         </div>
       </div>
 
+      {/* TOOLS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {tools.map((tool, idx) => {
           const locked = tool.pro && !isPro;
