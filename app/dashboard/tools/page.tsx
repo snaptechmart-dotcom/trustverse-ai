@@ -1,5 +1,8 @@
 "use client";
+
+/* 🔥 FORCE FULLY DYNAMIC (VERY IMPORTANT FOR VERCEL) */
 export const dynamic = "force-dynamic";
+
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
