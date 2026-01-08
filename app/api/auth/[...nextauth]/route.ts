@@ -1,12 +1,12 @@
-import NextAuth, { AuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
-export const authOptions: AuthOptions = {
+const handler = NextAuth({
   providers: [
-    CredentialsProvider({
+    Credentials({
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -33,7 +33,6 @@ export const authOptions: AuthOptions = {
 
         if (!isPasswordValid) return null;
 
-        // ✅ IMPORTANT: credits INCLUDED
         return {
           id: user._id.toString(),
           email: user.email,
@@ -60,7 +59,7 @@ export const authOptions: AuthOptions = {
         token.email = user.email;
         token.role = user.role;
         token.plan = user.plan;
-        token.credits = user.credits; // ✅ added
+        token.credits = user.credits;
       }
       return token;
     },
@@ -71,14 +70,13 @@ export const authOptions: AuthOptions = {
         session.user.email = token.email as string;
         session.user.role = token.role as string;
         session.user.plan = token.plan as string;
-        session.user.credits = token.credits as number; // ✅ added
+        session.user.credits = token.credits as number;
       }
       return session;
     },
   },
 
   secret: process.env.NEXTAUTH_SECRET,
-};
+});
 
-const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
