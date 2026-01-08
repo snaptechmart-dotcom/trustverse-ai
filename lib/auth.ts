@@ -1,14 +1,10 @@
-import { NextAuthOptions } from "next-auth";
+import { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
-export const authOptions: NextAuthOptions = {
-  session: {
-    strategy: "jwt",
-  },
-
+export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -16,39 +12,28 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Missing credentials");
-        }
+        if (!credentials?.email || !credentials?.password) return null;
 
         await dbConnect();
+        const user = await User.findOne({ email: credentials.email }).select("+password");
+        if (!user) return null;
 
-        const user = await User.findOne({ email: credentials.email });
-        if (!user) {
-          throw new Error("User not found");
-        }
-
-        const isValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isValid) {
-          throw new Error("Invalid password");
-        }
+        const ok = await bcrypt.compare(credentials.password, user.password);
+        if (!ok) return null;
 
         return {
           id: user._id.toString(),
           email: user.email,
           role: user.role,
           plan: user.plan,
-          credits: user.credits,
+          credits: user.credits ?? 0,
         };
       },
     }),
   ],
-
+  session: { strategy: "jwt" },
+  pages: { signIn: "/login" },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -59,7 +44,6 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
-
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
@@ -70,10 +54,5 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-
-  pages: {
-    signIn: "/login",
-  },
+  secret: process.env.NEXTAUTH_SECRET,
 };
-
-export default authOptions;
