@@ -1,9 +1,5 @@
 "use client";
 
-/* 🔥 FORCE FULLY DYNAMIC (VERY IMPORTANT FOR VERCEL) */
-export const dynamic = "force-dynamic";
-
-
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 
@@ -79,7 +75,7 @@ const tools: Tool[] = [
   },
 ];
 
-export default function DashboardToolsPage() {
+export default function DashboardToolsClient() {
   const { data: session, status } = useSession();
 
   if (status === "loading") {
@@ -90,7 +86,6 @@ export default function DashboardToolsPage() {
 
   return (
     <div className="relative w-full">
-      {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold">AI Tools</h1>
@@ -112,7 +107,6 @@ export default function DashboardToolsPage() {
         </div>
       </div>
 
-      {/* TOOLS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {tools.map((tool, idx) => {
           const locked = tool.pro && !isPro;
@@ -145,8 +139,7 @@ export default function DashboardToolsPage() {
 
               <Link href={targetLink}>
                 <button
-                  className={`mt-5 px-4 py-2 rounded-lg text-sm font-medium w-full transition
-                  ${
+                  className={`mt-5 px-4 py-2 rounded-lg text-sm font-medium w-full transition ${
                     locked
                       ? "bg-black/30 text-white"
                       : "bg-white text-black hover:bg-gray-100"
