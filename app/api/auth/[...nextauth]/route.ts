@@ -1,4 +1,3 @@
-// 🔥 VERY IMPORTANT: Force Node.js runtime
 export const runtime = "nodejs";
 
 import NextAuth, { AuthOptions } from "next-auth";
@@ -16,9 +15,7 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
+        if (!credentials?.email || !credentials?.password) return null;
 
         await dbConnect();
 
@@ -35,7 +32,6 @@ export const authOptions: AuthOptions = {
 
         if (!isValid) return null;
 
-        // ✅ IMPORTANT: return full user data
         return {
           id: user._id.toString(),
           email: user.email,
@@ -49,31 +45,15 @@ export const authOptions: AuthOptions = {
 
   session: {
     strategy: "jwt",
-    maxAge: 60 * 60 * 24, // 1 day (recommended)
+    maxAge: 60 * 60 * 24,
   },
 
   pages: {
     signIn: "/login",
   },
 
-  // 🔥 COOKIE DOMAIN FIX (MOST IMPORTANT)
-  cookies: {
-    sessionToken: {
-      name: "__Secure-next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: true,
-        domain: ".trustverseai.com",
-      },
-    },
-  },
-
   callbacks: {
-    // 🔥 JWT CALLBACK WITH DB RESYNC
     async jwt({ token, user }) {
-      // First login
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -83,11 +63,9 @@ export const authOptions: AuthOptions = {
         return token;
       }
 
-      // 🔥 Every request → sync from DB
-      if (token?.email) {
+      if (token.email) {
         await dbConnect();
         const dbUser = await User.findOne({ email: token.email });
-
         if (dbUser) {
           token.role = dbUser.role;
           token.plan = dbUser.plan;
