@@ -134,22 +134,20 @@ https://trustverseai.com
       {/* HEADER */}
       <div>
         <h1 className="text-3xl font-bold">
-          Trustverse AI™ Advanced AI Analysis <span className="text-orange-600">(PRO)</span>
+          Trustverse AI™ Advanced AI Analysis{" "}
+          <span className="text-orange-600">(PRO)</span>
         </h1>
 
         <p className="text-gray-600 mt-3 leading-relaxed max-w-4xl">
           This advanced AI-powered analysis engine evaluates messages,
           conversations, and real-world scenarios to identify scams, fraud
-          attempts, manipulation tactics, and high-risk behavioral patterns that
-          are often invisible at first glance.
+          attempts, manipulation tactics, and high-risk behavioral patterns.
         </p>
 
         <p className="text-gray-600 mt-2 leading-relaxed max-w-4xl">
           The system analyzes urgency signals, emotional manipulation, deceptive
           intent, impersonation attempts, and financial pressure to generate a
-          clear and actionable risk assessment. This report is designed as a
-          decision-support tool and should not be considered legal or financial
-          advice.
+          clear and actionable risk assessment.
         </p>
       </div>
 
@@ -172,7 +170,7 @@ https://trustverseai.com
         </button>
       </div>
 
-      {/* RESULT CARD – POWER HOUSE */}
+      {/* RESULT CARD */}
       {result && (
         <div
           ref={reportRef}
@@ -208,7 +206,6 @@ https://trustverseai.com
             </span>
           </div>
 
-          {/* AI SIGNALS */}
           <div className="bg-slate-50 border rounded p-4">
             <p className="font-semibold mb-2">
               🔍 AI Risk Signals Detected
@@ -220,7 +217,6 @@ https://trustverseai.com
             </ul>
           </div>
 
-          {/* HUMAN EXPLANATION */}
           <div className="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
             <p className="font-semibold mb-2">
               What does this mean for you?
@@ -230,12 +226,10 @@ https://trustverseai.com
             </p>
           </div>
 
-          {/* QR */}
           <div className="flex justify-center">
             <QRCodeCanvas value={window.location.href} size={120} />
           </div>
 
-          {/* ACTIONS */}
           <div className="flex flex-wrap gap-3 justify-center">
             <button
               onClick={shareReport}
@@ -268,7 +262,7 @@ https://trustverseai.com
         </div>
       )}
 
-      {/* 🔥 LONG DESCRIPTION – ALWAYS VISIBLE */}
+      {/* LONG DESCRIPTION */}
       <div className="space-y-5 text-gray-700 max-w-4xl">
         <h2 className="text-xl font-semibold text-gray-900">
           How Trustverse AI™ Advanced Analysis Works
@@ -277,16 +271,13 @@ https://trustverseai.com
         <p>
           Trustverse AI™ Advanced Analysis uses behavioral intelligence,
           psychological pattern detection, and scam intelligence models to
-          evaluate suspicious messages, conversations, and scenarios. The system
-          is designed to surface risks that are often overlooked by traditional
-          spam or keyword-based filters.
+          evaluate suspicious messages, conversations, and scenarios.
         </p>
 
         <p>
           This tool is particularly effective for identifying social engineering,
           impersonation, investment fraud, romance scams, and pressure-based
-          manipulation tactics commonly used in digital and real-world fraud
-          cases.
+          manipulation tactics.
         </p>
 
         <ul className="list-disc pl-6 space-y-2">
@@ -297,10 +288,59 @@ https://trustverseai.com
         </ul>
 
         <p className="text-sm text-gray-500">
-          Disclaimer: This analysis is generated using automated AI models and is
-          intended for informational purposes only. Always apply independent
-          verification for critical decisions.
+          Automated AI analysis only. Always apply independent verification.
         </p>
+      </div>
+
+      {/* =========================
+          FAQ SECTION (NEW)
+      ========================= */}
+      <div className="max-w-4xl space-y-6 border-t pt-10">
+        <h2 className="text-2xl font-bold text-gray-900">
+          Advanced AI Analysis – FAQs
+        </h2>
+
+        <div>
+          <h3 className="font-semibold">
+            What type of content can I analyze with this tool?
+          </h3>
+          <p className="text-sm text-gray-600">
+            You can analyze messages, conversations, emails, investment offers,
+            job proposals, romance chats, and real-world scenarios where fraud
+            or manipulation is suspected.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold">
+            How accurate is Trustverse AI Advanced Analysis?
+          </h3>
+          <p className="text-sm text-gray-600">
+            The system uses multiple behavioral and scam intelligence models.
+            While highly effective, results should be used as decision-support
+            insights rather than absolute proof.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold">
+            Can results vary for similar messages?
+          </h3>
+          <p className="text-sm text-gray-600">
+            Yes. Slight variations in wording, context, and behavioral cues may
+            result in different risk signals and trust scores.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold">
+            Is this report legally binding?
+          </h3>
+          <p className="text-sm text-gray-600">
+            No. Trustverse AI reports are informational and do not constitute
+            legal, financial, or professional advice.
+          </p>
+        </div>
       </div>
     </div>
   );
