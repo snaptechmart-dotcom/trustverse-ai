@@ -144,7 +144,11 @@ export default function ProfileCheckerPage() {
         return;
       }
 
-      setResult(data);
+      // 🔥 FIX: creditsUsed forced to 2 (History View Full Report)
+      setResult({
+        ...data,
+        creditsUsed: 2,
+      });
 
       setName("");
       setEmail("");
@@ -215,15 +219,12 @@ https://trustverseai.com`;
     );
   };
 
-  /* =========================
-     SAFE DISPLAY VALUES
-  ========================= */
   const remainingCreditsText =
     result?.remainingCredits === "unlimited"
       ? "Unlimited (PRO)"
       : String(result?.remainingCredits ?? "0");
 
-  const creditsUsedDisplay = 2; // 🔥 PRO TOOL FIX
+  const creditsUsedDisplay = 2;
 
   return (
     <div className="space-y-16 max-w-5xl">
@@ -298,7 +299,7 @@ https://trustverseai.com`;
         </div>
       )}
 
-      {/* LONG DESCRIPTION – ALWAYS VISIBLE */}
+      {/* LONG DESCRIPTION */}
       <div className="max-w-4xl border-l-4 border-purple-600 bg-slate-50 p-6 rounded-md text-gray-700">
         <h2 className="text-xl font-semibold mb-3">
           How Profile Trust Checker Works
@@ -327,6 +328,69 @@ https://trustverseai.com`;
           independently.
         </p>
       </div>
+
+      {/* FAQ SECTION – NEW */}
+      <div className="mt-16 max-w-4xl space-y-6 text-gray-700">
+        <h2 className="text-2xl font-bold text-gray-900">
+          Profile Trust Checker – Frequently Asked Questions
+        </h2>
+
+        <p>
+          <strong>How does Trustverse AI Profile Trust Checker work?</strong><br />
+          It evaluates identity consistency using AI-driven heuristics,
+          email domain reputation, and behavioral indicators to assess
+          trustworthiness.
+        </p>
+
+        <p>
+          <strong>Can Profile Checker results change?</strong><br />
+          Yes. Results may vary slightly as identity signals, domains,
+          or behavioral indicators evolve.
+        </p>
+
+        <p>
+          <strong>Does this tool access private data?</strong><br />
+          No. Trustverse AI only analyzes user-provided input and public
+          identity signals.
+        </p>
+
+        <p>
+          <strong>Is this report legally binding?</strong><br />
+          No. Reports are informational and intended for risk awareness
+          only, not legal or financial decisions.
+        </p>
+      </div>
+
+      {/* FAQ SCHEMA */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: [
+              {
+                "@type": "Question",
+                name: "How does Trustverse AI Profile Trust Checker work?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text:
+                    "Trustverse AI Profile Trust Checker evaluates identity consistency using AI-driven heuristics and behavioral indicators."
+                }
+              },
+              {
+                "@type": "Question",
+                name: "Can Profile Checker results change?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text:
+                    "Yes. Results may change as identity signals and behavioral indicators evolve."
+                }
+              }
+            ]
+          }),
+        }}
+      />
     </div>
   );
 }
