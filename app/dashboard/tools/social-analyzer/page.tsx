@@ -186,7 +186,7 @@ https://trustverseai.com
         </button>
       </div>
 
-      {/* RESULT CARD (UNCHANGED, POWER HOUSE) */}
+      {/* RESULT CARD */}
       {result && (
         <div
           ref={reportRef}
@@ -282,7 +282,7 @@ https://trustverseai.com
         </div>
       )}
 
-      {/* 🔥 LONG DESCRIPTION – ALWAYS VISIBLE (FINAL FIX) */}
+      {/* 🔵 LONG DESCRIPTION – ALWAYS VISIBLE */}
       <div className="space-y-5 text-gray-700 max-w-4xl">
         <h2 className="text-xl font-semibold text-gray-900">
           How Trustverse AI™ Social Profile Analyzer Works
@@ -290,23 +290,22 @@ https://trustverseai.com
 
         <p>
           Trustverse AI™ Social Profile Analyzer evaluates public social media
-          usernames, profile bios, and message content using behavioral
-          intelligence and scam-detection models. The system is designed to
-          identify impersonation attempts, manipulation language, and social
-          engineering patterns commonly used in fraud and scam operations.
+          usernames, bios, and message content using behavioral intelligence and
+          scam-detection models. The system is designed to identify impersonation
+          attempts, manipulation language, and social engineering patterns.
         </p>
 
         <p>
           Each analysis produces a <strong>Trust Score (0–100)</strong>, a clear
-          risk classification, and a human-readable explanation to help you make
-          informed decisions before engaging with unknown profiles.
+          risk classification, and a human-readable explanation to help users
+          make informed decisions before engaging with unknown profiles.
         </p>
 
         <ul className="list-disc pl-6 space-y-2">
-          <li>Detect fake, cloned, or impersonated social accounts</li>
-          <li>Identify scam-linked usernames and behavioral signals</li>
-          <li>Reduce exposure to social engineering and online fraud</li>
-          <li>Increase confidence before online interaction</li>
+          <li>Detect fake or impersonated social accounts</li>
+          <li>Identify scam-linked behavioral patterns</li>
+          <li>Reduce social engineering and fraud risk</li>
+          <li>Increase confidence before online engagement</li>
         </ul>
 
         <p className="text-sm text-gray-500">
@@ -315,6 +314,67 @@ https://trustverseai.com
           critical decisions.
         </p>
       </div>
+
+      {/* 🟣 FAQ SECTION */}
+      <div className="mt-16 max-w-4xl space-y-6 text-gray-700">
+        <h2 className="text-2xl font-bold text-gray-900">
+          Social Profile Analyzer – Frequently Asked Questions
+        </h2>
+
+        <p>
+          <strong>How does Trustverse AI Social Analyzer work?</strong><br />
+          It evaluates publicly available social profile content using AI-driven
+          behavioral signals, impersonation indicators, and scam intelligence.
+        </p>
+
+        <p>
+          <strong>Can results change over time?</strong><br />
+          Yes. Results may vary slightly as profile behavior and risk indicators
+          evolve.
+        </p>
+
+        <p>
+          <strong>Does this tool access private data?</strong><br />
+          No. Trustverse AI only analyzes public information and user-provided
+          content.
+        </p>
+
+        <p>
+          <strong>Is this report legally binding?</strong><br />
+          No. Reports are informational and intended for awareness only.
+        </p>
+      </div>
+
+      {/* FAQ SCHEMA */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: [
+              {
+                "@type": "Question",
+                name: "How does Trustverse AI Social Analyzer work?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text:
+                    "Trustverse AI Social Analyzer evaluates publicly available social profile content using behavioral intelligence and scam detection signals."
+                }
+              },
+              {
+                "@type": "Question",
+                name: "Can Social Analyzer results change?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text:
+                    "Yes. Results may change as profile behavior and contextual risk indicators evolve."
+                }
+              }
+            ]
+          }),
+        }}
+      />
     </div>
   );
 }
