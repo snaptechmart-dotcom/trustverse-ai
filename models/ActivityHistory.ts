@@ -1,9 +1,10 @@
-import mongoose, { Schema, models } from "mongoose";
+import mongoose, { Schema, Types } from "mongoose";
 
 const ActivityHistorySchema = new Schema(
   {
-    userEmail: {
-      type: String,
+    userId: {
+      type: Types.ObjectId,
+      ref: "User",
       required: true,
       index: true,
     },
@@ -14,43 +15,33 @@ const ActivityHistorySchema = new Schema(
       index: true,
     },
 
-    // 🔹 ORIGINAL INPUT (UI ke liye)
     input: {
       type: String,
       required: true,
     },
 
-    // 🔹 NORMALIZED INPUT (logic / upsert ke liye)
     inputKey: {
       type: String,
       required: true,
       index: true,
     },
 
-    riskLevel: {
-      type: String,
-      default: null,
-    },
+    trustScore: Number,
+    riskLevel: String,
+    resultSummary: String,
 
-    trustScore: {
+    creditsUsed: {
       type: Number,
-      default: null,
+      default: 0,
     },
 
-    resultSummary: {
-      type: String,
-      default: null,
-    },
-
-    signals: {
-      type: [String],
-      default: [],
+    lastSeenAt: {
+      type: Date,
+      default: Date.now,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-export default models.ActivityHistory ||
+export default mongoose.models.ActivityHistory ||
   mongoose.model("ActivityHistory", ActivityHistorySchema);

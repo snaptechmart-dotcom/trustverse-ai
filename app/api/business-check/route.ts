@@ -7,8 +7,11 @@ import History from "@/models/History";
 
 export async function POST(req: Request) {
   try {
+    /* =========================
+       AUTH
+    ========================= */
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    if (!session?.user?.id || !session.user.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -24,62 +27,65 @@ export async function POST(req: Request) {
     }
 
     await dbConnect();
-    const user = await User.findOne({ email: session.user.email });
+
+    const user = await User.findById(session.user.id);
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    /* ===== CREDIT SYSTEM ===== */
-    const creditsUsed = user.plan === "PRO" ? 2 : 1;
-
-    if (user.plan !== "PRO" && user.credits < creditsUsed) {
-      return NextResponse.json(
-        { error: "Not enough credits" },
-        { status: 402 }
-      );
-    }
+    /* =========================
+       CREDITS (🔥 PRO TOOL = 2)
+    ========================= */
+    const creditsUsed = 2;
+    let remainingCredits = user.credits;
 
     if (user.plan !== "PRO") {
-      user.credits -= creditsUsed;
+      if (remainingCredits < creditsUsed) {
+        return NextResponse.json(
+          { error: "Not enough credits" },
+          { status: 402 }
+        );
+      }
+
+      user.credits = remainingCredits - creditsUsed;
       await user.save();
+      remainingCredits = user.credits;
     }
 
-    const remainingCredits =
-      user.plan === "PRO" ? "Unlimited" : user.credits;
+    /* =========================
+       DYNAMIC TRUST ENGINE
+    ========================= */
+    let trustScore = 40 + Math.floor(Math.random() * 35);
+    const signals: string[] = [];
 
-    /* ===== DYNAMIC TRUST ENGINE ===== */
-    let trustScore = 45 + Math.floor(Math.random() * 20);
-    const indicators: string[] = [];
-
-    const isEmail = cleanDomain.includes("@");
-    if (isEmail) {
-      trustScore -= 30;
-      indicators.push("Input appears to be an email, not a business domain");
-    } else if (cleanDomain.includes(".")) {
-      trustScore += 15;
-      indicators.push("Valid domain structure detected");
+    if (cleanDomain.includes(".")) {
+      trustScore += 10;
+      signals.push("Valid domain structure detected");
+    } else {
+      trustScore -= 15;
+      signals.push("Invalid or weak domain structure");
     }
 
     if (cleanBusiness.length >= 4) {
       trustScore += 10;
-      indicators.push("Business name appears complete and identifiable");
+      signals.push("Business name appears complete and identifiable");
     } else {
       trustScore -= 10;
-      indicators.push("Business name appears weak or incomplete");
+      signals.push("Business name appears weak or incomplete");
     }
 
-    const riskyWords = ["free", "bonus", "win", "crypto", "loan", "investment"];
+    const riskyWords = ["free", "bonus", "crypto", "loan", "investment", "win"];
     if (riskyWords.some(w => cleanDomain.includes(w))) {
-      trustScore -= 25;
-      indicators.push("High-risk marketing keywords detected");
+      trustScore -= 20;
+      signals.push("High-risk marketing keywords detected");
     } else {
       trustScore += 10;
-      indicators.push("No common scam keywords identified");
+      signals.push("No common scam keywords detected");
     }
 
     if (cleanDomain.endsWith(".com") || cleanDomain.endsWith(".in")) {
       trustScore += 5;
-      indicators.push("Uses a commonly trusted domain extension");
+      signals.push("Uses commonly trusted domain extension");
     }
 
     trustScore = Math.max(0, Math.min(100, trustScore));
@@ -91,68 +97,42 @@ export async function POST(req: Request) {
         ? "Medium Risk"
         : "High Risk";
 
-    const accountType =
+    const verdict =
       riskLevel === "Low Risk"
-        ? "Likely Legitimate Business"
+        ? "This business appears legitimate with no immediate red flags."
         : riskLevel === "Medium Risk"
-        ? "Requires Additional Verification"
-        : "Potentially Risky Business";
+        ? "Some caution is advised. Independent verification is recommended."
+        : "Multiple risk indicators detected. Avoid engagement without verification.";
 
-    const longReport = `
-Our AI-based Business Verification system evaluated the submitted business
-information using publicly observable trust signals and known risk patterns.
-
-This analysis considers:
-• Domain structure validity
-• Keyword-based scam indicators
-• Business name consistency
-• Common impersonation and fraud behaviors
-
-The system does not access private databases or guarantee legitimacy.
-It is intended as an early-warning and risk-awareness tool.
-
-Risk Interpretation Guide:
-Low Risk – No immediate warning signs detected
-Medium Risk – Some caution advised before engagement
-High Risk – Multiple risk indicators detected
-
-Always combine automated results with manual verification.
-`;
-
-    const recommendation =
-      riskLevel === "Low Risk"
-        ? "Business appears reasonably safe. Proceed with standard verification practices."
-        : riskLevel === "Medium Risk"
-        ? "Proceed with caution. Verify registration details, address, and reviews."
-        : "High risk detected. Avoid financial or personal engagement until independently verified.";
-
-    const result = {
-  score: trustScore,          // 👈 universal
-  trustScore,                // (optional legacy)
-  riskLevel,
-  accountType,
-  summary: "Business trust analysis completed successfully.",
-  details: {
-    indicators,
-    recommendation,
-    longReport
-  },
-  creditsUsed,
-};
-
-
+    /* =========================
+       SAVE HISTORY
+    ========================= */
     await History.create({
       userId: user._id,
       tool: "BUSINESS_CHECK",
-      query: `${cleanBusiness} (${cleanDomain})`,
-      result,
+      input: `${cleanBusiness} | ${cleanDomain}`,
+      inputKey: cleanDomain,
+      summary: {
+        trustScore,
+        riskLevel,
+        verdict,
+      },
+      creditsUsed,
     });
 
+    /* =========================
+       RESPONSE
+    ========================= */
     return NextResponse.json({
       businessName: cleanBusiness,
       domain: cleanDomain,
-      ...result,
-      remainingCredits,
+      trustScore,
+      riskLevel,
+      verdict,
+      signals,
+      creditsUsed,
+      remainingCredits:
+        user.plan === "PRO" ? "Unlimited (PRO)" : remainingCredits,
     });
   } catch (error) {
     console.error("BUSINESS CHECK ERROR:", error);

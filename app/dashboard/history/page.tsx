@@ -3,25 +3,44 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+/* =========================
+   TYPES
+========================= */
 type HistoryItem = {
   _id: string;
   tool: string;
-  query?: string;
-  input?: string;
-  result?: any;
+  input: string;
+  summary?: {
+    trustScore?: number;
+    riskLevel?: string;
+  };
   createdAt: string;
 };
 
+/* =========================
+   TOOL LABELS
+========================= */
 const TOOL_LABELS: Record<string, string> = {
+  TRUST_SCORE: "Trust Score Analyzer",
+  PHONE_CHECK: "Phone Number Checker",
+  EMAIL_CHECK: "Email Address Checker",
+  PROFILE_CHECK: "Profile Trust Checker",
   BUSINESS_CHECK: "Business / Domain Checker",
-  EMAIL_CHECK: "Email Checker",
-  PHONE_CHECK: "Phone Checker",
+  SOCIAL_CHECK: "Social Analyzer",
+  ADVANCED_AI: "Advanced AI Analysis",
 };
 
+/* =========================
+   TOOL ICONS
+========================= */
 const TOOL_ICONS: Record<string, string> = {
-  BUSINESS_CHECK: "🏢",
-  EMAIL_CHECK: "📧",
+  TRUST_SCORE: "🧠",
   PHONE_CHECK: "📞",
+  EMAIL_CHECK: "📧",
+  PROFILE_CHECK: "👤",
+  BUSINESS_CHECK: "🏢",
+  SOCIAL_CHECK: "🌐",
+  ADVANCED_AI: "🤖",
 };
 
 export default function HistoryPage() {
@@ -29,54 +48,85 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  /* =========================
+     LOAD HISTORY
+  ========================= */
   useEffect(() => {
-    const load = async () => {
+    const loadHistory = async () => {
       try {
         const res = await fetch("/api/history", {
           credentials: "include",
           cache: "no-store",
         });
+
         const data = await res.json();
-        setHistory(Array.isArray(data.history) ? data.history : []);
-      } catch {
+
+        if (data?.success && Array.isArray(data.history)) {
+          setHistory(data.history);
+        } else {
+          setHistory([]);
+        }
+      } catch (error) {
+        console.error("History load failed:", error);
         setHistory([]);
       } finally {
         setLoading(false);
       }
     };
-    load();
+
+    loadHistory();
   }, []);
 
-  if (loading) return <p className="text-gray-500">Loading history…</p>;
-  if (!history.length)
-    return <p className="text-gray-500">No activity yet.</p>;
+  /* =========================
+     STATES
+  ========================= */
+  if (loading) {
+    return (
+      <div className="text-gray-500">
+        Loading your Trustverse AI reports…
+      </div>
+    );
+  }
 
+  if (!history.length) {
+    return (
+      <div className="text-gray-500">
+        No reports yet. Start using Trustverse AI tools to generate reports.
+      </div>
+    );
+  }
+
+  /* =========================
+     UI
+  ========================= */
   return (
-    <div className="space-y-6 max-w-4xl">
-      <h1 className="text-2xl font-bold">Your Activity History</h1>
+    <div className="max-w-5xl space-y-6">
+      <h1 className="text-2xl font-bold">
+        Your Trustverse AI Reports
+      </h1>
 
       {history.map((item) => {
         const trustScore =
-          item.result?.score ??
-          item.result?.trustScore ??
-          null;
+          typeof item.summary?.trustScore === "number"
+            ? item.summary.trustScore
+            : null;
 
         const riskLevel =
-          item.result?.riskLevel ||
-          item.result?.risk ||
-          "Unknown";
+          item.summary?.riskLevel ?? "Completed";
 
         const borderColor =
           riskLevel === "Low Risk"
             ? "border-green-500"
             : riskLevel === "Medium Risk"
             ? "border-yellow-500"
-            : "border-red-500";
+            : riskLevel === "High Risk"
+            ? "border-red-500"
+            : "border-gray-300";
 
         return (
           <div
             key={item._id}
-            className={`bg-white border-l-4 ${borderColor} rounded-xl p-5 space-y-3 shadow-sm hover:shadow-md transition`}
+            className={`bg-white border-l-4 ${borderColor} rounded-xl p-5 shadow-sm space-y-3`}
           >
             {/* HEADER */}
             <div className="flex items-center gap-2">
@@ -90,11 +140,11 @@ export default function HistoryPage() {
 
             {/* INPUT */}
             <p className="text-sm text-gray-700 break-words">
-              <strong>Input:</strong> {item.query || item.input}
+              <b>Input:</b> {item.input}
             </p>
 
-            {/* SCORE */}
-            {typeof trustScore === "number" && (
+            {/* TRUST SCORE */}
+            {trustScore !== null && (
               <p className="font-semibold">
                 Trust Score:{" "}
                 <span className="text-blue-600">
@@ -103,14 +153,16 @@ export default function HistoryPage() {
               </p>
             )}
 
-            {/* RISK */}
+            {/* RISK LEVEL */}
             <p
               className={`text-sm font-semibold ${
                 riskLevel === "Low Risk"
                   ? "text-green-600"
                   : riskLevel === "Medium Risk"
                   ? "text-yellow-600"
-                  : "text-red-600"
+                  : riskLevel === "High Risk"
+                  ? "text-red-600"
+                  : "text-gray-500"
               }`}
             >
               {riskLevel}
@@ -126,6 +178,7 @@ export default function HistoryPage() {
               View Full Report →
             </button>
 
+            {/* DATE */}
             <p className="text-xs text-gray-400">
               {new Date(item.createdAt).toLocaleString()}
             </p>

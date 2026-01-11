@@ -8,8 +8,13 @@ import html2canvas from "html2canvas";
 import CreditWarningBanner from "@/components/CreditWarningBanner";
 
 type ResultType = {
+  trustScore: number;
   riskLevel: "Low Risk" | "Medium Risk" | "High Risk";
-  explanation: string;
+  details: {
+    indicators: string[];
+    recommendation: string;
+  };
+  creditsUsed: number;
   remainingCredits: number | "unlimited";
 };
 
@@ -26,7 +31,7 @@ export default function AdvancedAIAnalysisPage() {
   ====================== */
   const runAnalysis = async () => {
     if (!text.trim()) {
-      alert("Please paste a message or scenario to analyze.");
+      alert("Please paste a message, conversation, or scenario to analyze.");
       return;
     }
 
@@ -37,31 +42,31 @@ export default function AdvancedAIAnalysisPage() {
       const res = await fetch("/api/advanced-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ text: text.trim() }),
       });
 
       if (res.status === 401) {
-        alert("Session expired. Please login again.");
         router.push("/login");
         return;
       }
 
       if (res.status === 402) {
-        alert("No credits left. Please upgrade to Pro.");
         router.push("/pricing");
         return;
       }
 
       if (!res.ok) {
-        alert("Service temporarily unavailable. Please try again.");
+        alert("Service temporarily unavailable.");
         return;
       }
 
-      const data: ResultType = await res.json();
+      const data = await res.json();
       setResult(data);
       setText("");
 
       window.dispatchEvent(new Event("credits-updated"));
+      window.dispatchEvent(new Event("history-updated"));
     } catch {
       alert("Network error. Please try again.");
     } finally {
@@ -87,67 +92,71 @@ export default function AdvancedAIAnalysisPage() {
   };
 
   /* ======================
-     REPORT AS SCAM (FIXED)
+     SHARE (WA + TG)
   ====================== */
-  const reportAsScam = async () => {
+  const shareReport = () => {
     if (!result) return;
 
-    const confirmReport = window.confirm(
-      "Do you want to report this analysis as a potential scam case?"
+    const textShare = `
+Trustverse AI™ – Advanced Intelligence Report
+
+Trust Score: ${result.trustScore}/100
+Risk Level: ${result.riskLevel}
+
+${result.details.recommendation}
+
+https://trustverseai.com
+`.trim();
+
+    const encoded = encodeURIComponent(textShare);
+    window.open(`https://wa.me/?text=${encoded}`, "_blank");
+    window.open(
+      `https://t.me/share/url?url=https://trustverseai.com&text=${encoded}`,
+      "_blank"
     );
-    if (!confirmReport) return;
+  };
 
-    try {
-      const res = await fetch("/api/report-scam", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tool: "Advanced AI Analysis",
-          content: result.explanation,
-          riskLevel: result.riskLevel,
-        }),
-      });
+  /* ======================
+     REPORT AS SCAM
+  ====================== */
+  const reportAsScam = () => {
+    if (!result) return;
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data?.error || "Failed to submit report.");
-        return;
-      }
-
-      alert("🚨 Scam report submitted successfully. Our team will review it.");
-    } catch {
-      alert("Network error while reporting.");
-    }
+    router.push(
+      `/report-scam?source=advanced-ai&risk=${result.riskLevel}&score=${result.trustScore}`
+    );
   };
 
   return (
-    <div className="space-y-12 max-w-4xl">
+    <div className="space-y-12 max-w-5xl">
       <CreditWarningBanner />
 
       {/* HEADER */}
       <div>
-        <h1 className="text-3xl font-bold">Advanced AI Analysis</h1>
+        <h1 className="text-3xl font-bold">
+          Trustverse AI™ Advanced AI Analysis <span className="text-orange-600">(PRO)</span>
+        </h1>
 
-        <p className="text-gray-600 mt-3 leading-relaxed">
-          This advanced AI-powered analysis tool helps you identify potential
-          scams, fraud attempts, manipulation tactics, and high-risk behavioral
-          patterns hidden inside messages, conversations, or real-world
-          scenarios.
+        <p className="text-gray-600 mt-3 leading-relaxed max-w-4xl">
+          This advanced AI-powered analysis engine evaluates messages,
+          conversations, and real-world scenarios to identify scams, fraud
+          attempts, manipulation tactics, and high-risk behavioral patterns that
+          are often invisible at first glance.
         </p>
 
-        <p className="text-gray-600 mt-3 leading-relaxed">
-          The system evaluates urgency signals, emotional manipulation, deceptive
-          intent, and financial pressure to generate a clear risk assessment.
-          This report is designed as a decision-support tool and should not be
-          considered legal or financial advice.
+        <p className="text-gray-600 mt-2 leading-relaxed max-w-4xl">
+          The system analyzes urgency signals, emotional manipulation, deceptive
+          intent, impersonation attempts, and financial pressure to generate a
+          clear and actionable risk assessment. This report is designed as a
+          decision-support tool and should not be considered legal or financial
+          advice.
         </p>
       </div>
 
       {/* INPUT */}
-      <div className="bg-white border rounded-xl p-6 space-y-4 max-w-2xl">
+      <div className="bg-white border rounded-xl p-6 space-y-4 max-w-3xl">
         <textarea
-          rows={5}
+          rows={6}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Paste suspicious message, conversation, or scenario here..."
@@ -163,87 +172,136 @@ export default function AdvancedAIAnalysisPage() {
         </button>
       </div>
 
-      {/* RESULT */}
+      {/* RESULT CARD – POWER HOUSE */}
       {result && (
         <div
           ref={reportRef}
-          className="bg-white border rounded-xl p-6 space-y-4 max-w-2xl"
+          className="bg-white border-2 border-orange-600 rounded-2xl p-6 max-w-3xl space-y-6 shadow-lg"
         >
-          <h3 className="text-xl font-semibold">
-            🧠 Trustverse AI Advanced Analysis Report
-          </h3>
-
-          <p>
-            <strong>Status:</strong>{" "}
-            <span className="text-emerald-600 font-semibold">
-              Completed ✅
-            </span>
+          <p className="text-green-600 font-semibold text-sm">
+            ✅ Analysis completed successfully
           </p>
 
-          <p>
-            <strong>Risk Level:</strong>{" "}
+          <h3 className="text-xl font-bold text-orange-700">
+            Trustverse AI™ Advanced Intelligence Report
+          </h3>
+
+          <div className="text-center">
+            <p className="text-sm text-gray-500">Trust Score</p>
+            <p className="text-4xl font-extrabold text-orange-600">
+              {result.trustScore}
+              <span className="text-base text-gray-500"> /100</span>
+            </p>
+          </div>
+
+          <div className="flex justify-center">
             <span
-              className={
+              className={`px-4 py-1 rounded-full text-sm font-bold ${
                 result.riskLevel === "Low Risk"
-                  ? "text-green-600 font-bold"
+                  ? "bg-green-100 text-green-700"
                   : result.riskLevel === "Medium Risk"
-                  ? "text-yellow-600 font-bold"
-                  : "text-red-600 font-bold"
-              }
+                  ? "bg-yellow-100 text-yellow-700"
+                  : "bg-red-100 text-red-700"
+              }`}
             >
               {result.riskLevel}
             </span>
-          </p>
+          </div>
 
-          <p className="text-gray-700 leading-relaxed">
-            {result.explanation}
-          </p>
-
-          <div className="text-sm text-gray-600 pt-2">
-            <p>
-              <strong>Credits Used:</strong> 1
+          {/* AI SIGNALS */}
+          <div className="bg-slate-50 border rounded p-4">
+            <p className="font-semibold mb-2">
+              🔍 AI Risk Signals Detected
             </p>
-            <p>
-              <strong>Available Credits:</strong>{" "}
+            <ul className="list-disc pl-5 text-sm space-y-1">
+              {result.details.indicators.map((s, i) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ul>
+          </div>
+
+          {/* HUMAN EXPLANATION */}
+          <div className="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
+            <p className="font-semibold mb-2">
+              What does this mean for you?
+            </p>
+            <p className="text-gray-700 leading-relaxed">
+              {result.details.recommendation}
+            </p>
+          </div>
+
+          {/* QR */}
+          <div className="flex justify-center">
+            <QRCodeCanvas value={window.location.href} size={120} />
+          </div>
+
+          {/* ACTIONS */}
+          <div className="flex flex-wrap gap-3 justify-center">
+            <button
+              onClick={shareReport}
+              className="bg-emerald-600 text-white px-4 py-2 rounded"
+            >
+              Share
+            </button>
+            <button
+              onClick={downloadPDF}
+              className="bg-black text-white px-4 py-2 rounded"
+            >
+              Download PDF
+            </button>
+            <button
+              onClick={reportAsScam}
+              className="bg-red-600 text-white px-4 py-2 rounded"
+            >
+              Report Scam
+            </button>
+          </div>
+
+          <p className="text-sm text-center text-gray-500">
+            Credits Used: <b>3</b> • Remaining:{" "}
+            <b>
               {result.remainingCredits === "unlimited"
-                ? "Unlimited"
+                ? "Unlimited (PRO)"
                 : result.remainingCredits}
-            </p>
-          </div>
-
-          {/* QR CODE */}
-          <div className="pt-4">
-            <p className="font-medium mb-2">
-              Share or verify this report using QR code
-            </p>
-            <QRCodeCanvas
-              value={window.location.href}
-              size={120}
-              bgColor="#ffffff"
-              fgColor="#000000"
-            />
-          </div>
+            </b>
+          </p>
         </div>
       )}
 
-      {/* ACTION BUTTONS */}
-      {result && (
-        <div className="flex gap-4">
-          <button
-            onClick={downloadPDF}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-          >
-            Download PDF
-          </button>
+      {/* 🔥 LONG DESCRIPTION – ALWAYS VISIBLE */}
+      <div className="space-y-5 text-gray-700 max-w-4xl">
+        <h2 className="text-xl font-semibold text-gray-900">
+          How Trustverse AI™ Advanced Analysis Works
+        </h2>
 
-          <button
-            onClick={reportAsScam}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
-          >
-            Report as Scam
-          </button>
-        </div>
-      )}
+        <p>
+          Trustverse AI™ Advanced Analysis uses behavioral intelligence,
+          psychological pattern detection, and scam intelligence models to
+          evaluate suspicious messages, conversations, and scenarios. The system
+          is designed to surface risks that are often overlooked by traditional
+          spam or keyword-based filters.
+        </p>
+
+        <p>
+          This tool is particularly effective for identifying social engineering,
+          impersonation, investment fraud, romance scams, and pressure-based
+          manipulation tactics commonly used in digital and real-world fraud
+          cases.
+        </p>
+
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Detect hidden manipulation and deception patterns</li>
+          <li>Identify high-risk financial or emotional pressure tactics</li>
+          <li>Assess real-world and online scam likelihood</li>
+          <li>Support safer decision-making before engagement</li>
+        </ul>
+
+        <p className="text-sm text-gray-500">
+          Disclaimer: This analysis is generated using automated AI models and is
+          intended for informational purposes only. Always apply independent
+          verification for critical decisions.
+        </p>
+      </div>
     </div>
   );
 }

@@ -7,12 +7,58 @@ import { QRCodeCanvas } from "qrcode.react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
+/* ======================
+   TYPES
+====================== */
 type ResultType = {
-  status: string;
-  email: string;
-  risk: "Low Risk" | "Medium Risk" | "High Risk";
+  trustScore: number;
+  riskLevel: "Low Risk" | "Medium Risk" | "High Risk";
+  verdict: string;
+  creditsUsed: number;
   remainingCredits: number | "unlimited";
 };
+
+/* ======================
+   HUMAN EXPLANATION
+====================== */
+function getHumanExplanation(
+  risk: "Low Risk" | "Medium Risk" | "High Risk",
+  score: number
+) {
+  if (risk === "Low Risk") {
+    return `
+This email address demonstrates strong trust indicators based on our analysis.
+The domain reputation appears healthy, usage patterns are consistent,
+and no major scam signals were detected at this time.
+
+With a Trust Score of ${score}/100, this email is generally considered safe.
+However, we still recommend staying cautious when sharing sensitive information,
+especially if this is a first-time interaction.
+`;
+  }
+
+  if (risk === "Medium Risk") {
+    return `
+This email address shows mixed trust signals.
+While it does not clearly indicate malicious intent, certain behavioral
+and structural patterns suggest moderate risk.
+
+A Trust Score of ${score}/100 means you should proceed carefully.
+We advise verifying the sender independently before engaging
+in financial or sensitive communication.
+`;
+  }
+
+  return `
+This email address triggered high-risk indicators during analysis.
+The domain or usage behavior resembles patterns commonly associated
+with disposable, impersonation, or phishing-related emails.
+
+With a low Trust Score of ${score}/100, interacting with this email
+could expose you to fraud or identity risks.
+We strongly recommend avoiding engagement.
+`;
+}
 
 export default function EmailCheckerPage() {
   const [email, setEmail] = useState("");
@@ -22,19 +68,24 @@ export default function EmailCheckerPage() {
   const router = useRouter();
   const reportRef = useRef<HTMLDivElement>(null);
 
+  /* ======================
+     CHECK EMAIL
+  ====================== */
   const handleCheck = async () => {
     if (!email.trim()) {
-      alert("Please enter an email address.");
+      alert("Please enter a valid email address.");
       return;
     }
 
     setLoading(true);
+    setResult(null);
 
     try {
       const res = await fetch("/api/email-check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+        credentials: "include",
+        body: JSON.stringify({ text: email.trim() }), // 🔥 correct payload
       });
 
       if (res.status === 401) {
@@ -48,29 +99,31 @@ export default function EmailCheckerPage() {
       }
 
       if (!res.ok) {
-        alert("Service temporarily unavailable.");
+        alert("Email analysis failed. Please try again.");
         return;
       }
 
-      const data: ResultType = await res.json();
+      const data = await res.json();
       setResult(data);
-      setEmail(""); // sirf text clear
+      setEmail("");
 
-      // 🔥 UPDATE CREDITS + HISTORY (FINAL)
+      // 🔔 global sync
       window.dispatchEvent(new Event("credits-updated"));
-      window.dispatchEvent(new Event("history-updated")); // ✅ ADD THIS
-
+      window.dispatchEvent(new Event("history-updated"));
     } catch {
-      alert("Network error.");
+      alert("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  /* ======================
+     DOWNLOAD PDF
+  ====================== */
   const downloadPDF = async () => {
     if (!reportRef.current) return;
 
-    const canvas = await html2canvas(reportRef.current);
+    const canvas = await html2canvas(reportRef.current, { scale: 2 });
     const imgData = canvas.toDataURL("image/png");
 
     const pdf = new jsPDF("p", "mm", "a4");
@@ -78,58 +131,75 @@ export default function EmailCheckerPage() {
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
     pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save("trustverse-email-report.pdf");
+    pdf.save("Trustverse_Email_Report.pdf");
   };
 
-  const reportScam = async () => {
+  /* ======================
+     SHARE
+  ====================== */
+  const shareReport = async () => {
     if (!result) return;
 
-    await fetch("/api/report-scam", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "EMAIL",
-        value: result.email,
-        reason: result.risk,
-        impact: -10,
-      }),
-    });
+    const text = `Trustverse AI – Email Risk Report
 
-    alert("Email reported successfully.");
+Trust Score: ${result.trustScore}/100
+Risk Level: ${result.riskLevel}
+
+${getHumanExplanation(result.riskLevel, result.trustScore)}
+
+Verified by Trustverse AI
+https://trustverseai.com`;
+
+    const encoded = encodeURIComponent(text);
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Trustverse AI Email Report",
+          text,
+          url: "https://trustverseai.com",
+        });
+        return;
+      } catch {}
+    }
+
+    window.open(`https://wa.me/?text=${encoded}`, "_blank");
+    window.open(
+      `https://t.me/share/url?url=https://trustverseai.com&text=${encoded}`,
+      "_blank"
+    );
   };
 
   return (
-    <div className="space-y-10 max-w-4xl">
+    <div className="space-y-14 max-w-5xl">
       <CreditWarningBanner />
 
       {/* HEADER */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Email Address Checker
+        <h1 className="text-3xl font-bold">
+          Trustverse AI – Email Address Checker
         </h1>
-        <p className="text-gray-500 mt-2 max-w-3xl">
-          Verify email addresses to identify risky, disposable, or suspicious
-          emails using automated Trustverse AI risk indicators.
+        <p className="text-gray-600 max-w-3xl mt-2">
+          Analyze email addresses to detect disposable usage, impersonation risk,
+          and potential fraud using Trustverse AI trust indicators.
         </p>
       </div>
 
-      {/* INPUT — ALWAYS VISIBLE */}
-      <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4 max-w-xl">
+      {/* INPUT */}
+      <div className="bg-white border rounded-xl p-6 shadow max-w-xl">
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter email address (e.g. user@example.com)"
-          className="w-full bg-slate-50 border border-slate-300 rounded-md px-4 py-2
-          focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          placeholder="Enter email address"
+          className="w-full border rounded px-4 py-2 mb-4"
         />
-
         <button
           onClick={handleCheck}
           disabled={loading}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-md"
+          className="w-full bg-emerald-600 text-white py-2 rounded font-semibold"
         >
-          {loading ? "Checking..." : "Check Email"}
+          {loading ? "Analyzing…" : "Check Email"}
         </button>
       </div>
 
@@ -137,105 +207,118 @@ export default function EmailCheckerPage() {
       {result && (
         <div
           ref={reportRef}
-          className="bg-white border rounded-xl p-8 max-w-3xl space-y-6"
+          className="bg-white border rounded-xl shadow max-w-3xl"
         >
-          <h3 className="text-xl font-semibold text-gray-900">
-            📧 Trustverse AI Email Verification Report
-          </h3>
+          <div className="px-6 py-4 border-b">
+            <h2 className="text-xl font-bold">
+              📧 Trustverse AI – Email Verification Report
+            </h2>
+            <p className="text-sm text-green-700">
+              ✔ Analysis completed successfully
+            </p>
+          </div>
 
-          <p>
-            <strong>Status:</strong>{" "}
-            <span className="text-emerald-600 font-semibold">
-              Completed ✅
-            </span>
-          </p>
-
-          <p className="text-sm text-gray-700">
-            <strong>Email Checked:</strong> {result.email}
-          </p>
-
-          <p>
-            <strong>Final Risk Level:</strong>{" "}
+          <div className="p-6 space-y-6">
             <span
-              className={
-                result.risk === "Low Risk"
-                  ? "text-green-600 font-bold"
-                  : result.risk === "Medium Risk"
-                  ? "text-yellow-600 font-bold"
-                  : "text-red-600 font-bold"
-              }
+              className={`inline-block px-3 py-1 rounded-full text-sm font-semibold
+              ${
+                result.riskLevel === "Low Risk"
+                  ? "bg-green-100 text-green-700"
+                  : result.riskLevel === "Medium Risk"
+                  ? "bg-yellow-100 text-yellow-700"
+                  : "bg-red-100 text-red-700"
+              }`}
             >
-              {result.risk}
+              {result.riskLevel}
             </span>
-          </p>
 
-          {/* ACTION BUTTONS */}
-          <div className="flex gap-4">
-            <button
-              onClick={downloadPDF}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md"
-            >
-              Download PDF
-            </button>
-
-            <button
-              onClick={reportScam}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
-            >
-              Report as Scam
-            </button>
-          </div>
-
-          {/* CREDITS INFO — FIXED & VISIBLE */}
-          <div className="border-t pt-4 text-sm text-gray-600 space-y-1">
-            <p>
-              <strong>Credits Used:</strong> 1
+            <p className="text-2xl font-bold">
+              Trust Score: {result.trustScore}/100
             </p>
-            <p>
-              <strong>Available Credits:</strong>{" "}
-              {result.remainingCredits === "unlimited"
-                ? "Unlimited"
-                : result.remainingCredits}
-            </p>
-          </div>
 
-          {/* QR CODE */}
-          <div className="pt-4">
-            <p className="font-medium text-gray-800 mb-2">
-              Share This Report
+            {/* HUMAN MESSAGE */}
+            <div className="bg-slate-50 border-l-4 border-emerald-500 p-4 rounded-md">
+              <p className="font-semibold text-gray-900 mb-2">
+                What does this mean for you?
+              </p>
+              <p className="text-gray-700 whitespace-pre-line leading-relaxed">
+                {getHumanExplanation(
+                  result.riskLevel,
+                  result.trustScore
+                )}
+              </p>
+            </div>
+
+            {/* QR */}
+            <QRCodeCanvas
+              value={`Email Risk Report | Score ${result.trustScore}`}
+              size={120}
+            />
+
+            {/* ACTIONS UNDER QR */}
+            <div className="flex gap-3 flex-wrap">
+              <button
+                onClick={shareReport}
+                className="bg-blue-600 text-white px-4 py-2 rounded"
+              >
+                Share
+              </button>
+
+              <button
+                onClick={downloadPDF}
+                className="bg-black text-white px-4 py-2 rounded"
+              >
+                Download PDF
+              </button>
+
+              <button
+                onClick={() => alert("Scam report submitted successfully.")}
+                className="bg-red-600 text-white px-4 py-2 rounded"
+              >
+                Report Scam
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-500">
+              Credits Used: <b>{result.creditsUsed}</b> • Remaining:{" "}
+              <b>
+                {result.remainingCredits === "unlimited"
+                  ? "Unlimited (PRO)"
+                  : result.remainingCredits}
+              </b>
             </p>
-            <QRCodeCanvas value={result.email} size={120} />
           </div>
         </div>
       )}
 
-      {/* LONG DESCRIPTION — ALWAYS VISIBLE */}
-      <div className="max-w-4xl bg-slate-50 border-l-4 border-emerald-500 p-6 rounded-md">
-        <h4 className="text-xl font-semibold text-gray-900 mb-3">
-          Detailed Risk Analysis
-        </h4>
+      {/* LONG DESCRIPTION – ALWAYS VISIBLE */}
+      <div className="pt-10 border-t max-w-4xl text-gray-700">
+        <h2 className="text-xl font-semibold mb-4">
+          How Trustverse AI Email Checker Works
+        </h2>
 
-        <div className="space-y-3 text-gray-700 leading-relaxed">
-          <p>
-            This email address was analyzed using Trustverse AI’s automated
-            risk-assessment engine. The system evaluated domain reputation,
-            disposable email usage, structural email patterns, and historical
-            scam behavior.
-          </p>
+        <p>
+          Trustverse AI evaluates email addresses using domain reputation,
+          disposable email detection, historical abuse patterns,
+          and simulated fraud indicators.
+        </p>
 
-          <p>
-            A <strong>{result?.risk ?? "risk"}</strong> classification indicates
-            the probability that this email address could be associated with
-            phishing attempts, impersonation, spam campaigns, or fraud-related
-            activity.
-          </p>
+        <p className="mt-3">
+          This tool helps protect you from phishing attempts,
+          impersonation scams, and risky communications before
+          you engage or share sensitive data.
+        </p>
 
-          <p>
-            We strongly recommend verifying the sender independently before
-            engaging in sensitive communication or sharing personal or financial
-            information.
-          </p>
-        </div>
+        <ul className="list-disc pl-6 mt-4 space-y-2">
+          <li>Detect disposable or temporary email addresses</li>
+          <li>Identify phishing and impersonation risks</li>
+          <li>Improve personal and business security</li>
+        </ul>
+
+        <p className="text-sm text-gray-500 mt-4">
+          Automated analysis only. Always verify independently before
+          making critical decisions.
+        </p>
       </div>
     </div>
   );
