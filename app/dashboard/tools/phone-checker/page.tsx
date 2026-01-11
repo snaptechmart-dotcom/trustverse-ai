@@ -61,7 +61,7 @@ export default function PhoneCheckerPage() {
         return;
       }
 
-      setSubmittedPhone(phone.trim()); // 🔥 freeze input for report
+      setSubmittedPhone(phone.trim());
       setResult(data);
       setCredits(data.remainingCredits);
       setPhone("");
@@ -203,7 +203,6 @@ https://www.trustverseai.com`;
 
             <p className="text-gray-700">{result.explanation}</p>
 
-            {/* QR */}
             <div className="pt-6">
               <QRCodeCanvas
                 value={`Phone: ${submittedPhone} | Trust Score: ${result.trustScore}`}
@@ -211,7 +210,6 @@ https://www.trustverseai.com`;
               />
             </div>
 
-            {/* ACTIONS BELOW QR */}
             <div className="flex gap-3 flex-wrap pt-2">
               <button
                 onClick={shareResult}
@@ -249,7 +247,7 @@ https://www.trustverseai.com`;
         </div>
       )}
 
-      {/* LONG DESCRIPTION – ALWAYS VISIBLE */}
+      {/* LONG DESCRIPTION */}
       <div className="pt-10 border-t text-gray-700 max-w-4xl">
         <h2 className="text-xl font-semibold mb-4">
           How Trustverse AI Phone Checker Works
@@ -258,14 +256,12 @@ https://www.trustverseai.com`;
         <p>
           Trustverse AI Phone Checker analyzes phone numbers using
           advanced trust indicators, usage pattern evaluation, and
-          behavioral risk signals to help identify potential scam or
-          fraudulent activity.
+          behavioral risk signals.
         </p>
 
         <p className="mt-3">
           This tool is ideal for verifying unknown callers, online
-          sellers, service providers, or business contacts before
-          sharing sensitive information or making payments.
+          sellers, service providers, or business contacts.
         </p>
 
         <ul className="list-disc pl-6 mt-4 space-y-2">
@@ -275,9 +271,57 @@ https://www.trustverseai.com`;
         </ul>
 
         <p className="text-sm text-gray-500 mt-4">
-          Automated analysis only. Always verify independently before
-          making critical decisions.
+          Automated analysis only. Always verify independently.
         </p>
+      </div>
+
+      {/* =========================
+          FAQ SECTION (NEW)
+      ========================= */}
+      <div className="max-w-4xl space-y-6 border-t pt-10">
+        <h2 className="text-2xl font-bold text-gray-900">
+          Phone Number Checker – FAQs
+        </h2>
+
+        <div>
+          <h3 className="font-semibold">
+            What type of phone numbers can be analyzed?
+          </h3>
+          <p className="text-sm text-gray-600">
+            You can analyze mobile, landline, VoIP, and international phone
+            numbers to assess scam, spam, or fraud risk.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold">
+            Can a legitimate number show Medium or High Risk?
+          </h3>
+          <p className="text-sm text-gray-600">
+            Yes. New numbers, VoIP services, or limited usage history can
+            increase risk indicators even for legitimate users.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold">
+            Does Trustverse AI block scam calls?
+          </h3>
+          <p className="text-sm text-gray-600">
+            No. Trustverse AI provides intelligence and risk assessment,
+            not call blocking. Use call-blocking apps alongside this tool.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold">
+            Who should use Phone Number Checker?
+          </h3>
+          <p className="text-sm text-gray-600">
+            This tool is ideal for individuals and businesses verifying unknown
+            callers before responding, sharing information, or making payments.
+          </p>
+        </div>
       </div>
     </div>
   );
