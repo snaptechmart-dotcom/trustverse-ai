@@ -179,7 +179,7 @@ https://trustverseai.com
         </button>
       </div>
 
-      {/* 🔥 TOOL KE NEECHÉ LONG DESCRIPTION (FINAL FIX) */}
+      {/* TOOL DESCRIPTION */}
       <div className="max-w-xl bg-slate-50 border rounded-xl p-6 space-y-3">
         <h3 className="text-lg font-bold text-purple-700">
           How Trustverse AI Evaluates Business Trust
@@ -194,8 +194,7 @@ https://trustverseai.com
         <p className="text-sm text-gray-700">
           Our system evaluates multiple trust factors including domain age,
           behavioral patterns, reputation signals, scam similarity models, and
-          historical risk indicators collected from large-scale intelligence
-          sources.
+          historical risk indicators.
         </p>
 
         <p className="text-sm font-semibold text-black">
@@ -208,96 +207,144 @@ https://trustverseai.com
         </p>
       </div>
 
-      {/* =========================
-          RESULT CARD (UNCHANGED)
-      ========================= */}
+      {/* RESULT CARD */}
       {result && (
-        <>
-          <div className="bg-white border-2 border-purple-600 rounded-2xl p-6 max-w-xl space-y-6 shadow-lg">
-            <p className="text-green-600 font-semibold text-sm">
-              ✅ Analysis completed successfully
-            </p>
+        <div className="bg-white border-2 border-purple-600 rounded-2xl p-6 max-w-xl space-y-6 shadow-lg">
+          <p className="text-green-600 font-semibold text-sm">
+            ✅ Analysis completed successfully
+          </p>
 
-            <h3 className="text-xl font-bold text-purple-700">
-              🏢 Business Trust Intelligence Report
-            </h3>
+          <h3 className="text-xl font-bold text-purple-700">
+            🏢 Business Trust Intelligence Report
+          </h3>
 
-            <div className="text-center">
-              <p className="text-sm text-gray-500">Trust Score</p>
-              <p className="text-4xl font-extrabold text-purple-700">
-                {result.trustScore}
-                <span className="text-base text-gray-500"> /100</span>
-              </p>
-            </div>
-
-            <div className="flex justify-center">
-              <span className="px-4 py-1 rounded-full text-sm font-bold bg-yellow-100 text-yellow-700">
-                {result.riskLevel}
-              </span>
-            </div>
-
-            {/* AI SIGNALS */}
-            <div className="bg-slate-50 border rounded p-4">
-              <p className="font-semibold mb-2">
-                🔍 AI Risk Signals Detected
-              </p>
-              <ul className="list-disc pl-5 text-sm space-y-1">
-                {(result.details?.indicators?.length
-                  ? result.details.indicators
-                  : ["No strong negative indicators detected."]
-                ).map((s: string, i: number) => (
-                  <li key={i}>{s}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* HUMAN EXPLANATION */}
-            <div className="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
-              <p className="font-semibold mb-2">
-                What does this mean for you?
-              </p>
-              <p className="text-sm text-gray-700">
-                This analysis suggests a{" "}
-                <b>{result.riskLevel.toLowerCase()}</b> profile. While no critical
-                scam indicators were detected, users should remain cautious
-                during high-value transactions.
-              </p>
-            </div>
-
-            {qr && (
-              <div className="flex justify-center">
-                <img src={qr} className="w-28" />
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-3 justify-center">
-              <button
-                onClick={shareReport}
-                className="bg-emerald-600 text-white px-4 py-2 rounded"
-              >
-                Share
-              </button>
-              <button
-                onClick={downloadPDF}
-                className="bg-black text-white px-4 py-2 rounded"
-              >
-                Download PDF
-              </button>
-              <button
-                onClick={reportScam}
-                className="bg-red-600 text-white px-4 py-2 rounded"
-              >
-                Report Scam
-              </button>
-            </div>
-
-            <p className="text-sm text-center text-gray-500">
-              Credits Used: <b>{result.creditsUsed}</b> • Remaining:{" "}
-              <b>{result.remainingCredits}</b>
+          <div className="text-center">
+            <p className="text-sm text-gray-500">Trust Score</p>
+            <p className="text-4xl font-extrabold text-purple-700">
+              {result.trustScore}
+              <span className="text-base text-gray-500"> /100</span>
             </p>
           </div>
-        </>
+
+          <div className="flex justify-center">
+            <span className="px-4 py-1 rounded-full text-sm font-bold bg-yellow-100 text-yellow-700">
+              {result.riskLevel}
+            </span>
+          </div>
+
+          <div className="bg-slate-50 border rounded p-4">
+            <p className="font-semibold mb-2">
+              🔍 AI Risk Signals Detected
+            </p>
+            <ul className="list-disc pl-5 text-sm space-y-1">
+              {(result.details?.indicators?.length
+                ? result.details.indicators
+                : ["No strong negative indicators detected."]
+              ).map((s: string, i: number) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
+            <p className="font-semibold mb-2">
+              What does this mean for you?
+            </p>
+            <p className="text-sm text-gray-700">
+              This analysis suggests a{" "}
+              <b>{result.riskLevel.toLowerCase()}</b> profile. While no critical
+              scam indicators were detected, users should remain cautious
+              during high-value transactions.
+            </p>
+          </div>
+
+          {qr && (
+            <div className="flex justify-center">
+              <img src={qr} className="w-28" />
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3 justify-center">
+            <button
+              onClick={shareReport}
+              className="bg-emerald-600 text-white px-4 py-2 rounded"
+            >
+              Share
+            </button>
+            <button
+              onClick={downloadPDF}
+              className="bg-black text-white px-4 py-2 rounded"
+            >
+              Download PDF
+            </button>
+            <button
+              onClick={reportScam}
+              className="bg-red-600 text-white px-4 py-2 rounded"
+            >
+              Report Scam
+            </button>
+          </div>
+
+          <p className="text-sm text-center text-gray-500">
+            Credits Used: <b>{result.creditsUsed}</b> • Remaining:{" "}
+            <b>{result.remainingCredits}</b>
+          </p>
+        </div>
       )}
+
+      {/* =========================
+          FAQ SECTION (NEW – ADDED)
+      ========================= */}
+      <div className="max-w-4xl space-y-6 border-t pt-10">
+        <h2 className="text-2xl font-bold text-gray-900">
+          Business Trust Checker – FAQs
+        </h2>
+
+        <div>
+          <h3 className="font-semibold text-gray-800">
+            How accurate is the Business Trust Score?
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            The Trust Score is generated using multiple automated risk
+            intelligence signals including domain behavior, scam patterns,
+            reputation data, and historical fraud indicators. While highly
+            reliable, it should be used alongside human judgment.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-gray-800">
+            Can a legitimate business still show Medium or High Risk?
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Yes. New businesses, low online presence, or incomplete
+            transparency can increase risk scores. This does not always mean
+            a scam, but signals caution.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-gray-800">
+            Does Trustverse AI check payment safety?
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Trustverse AI evaluates business credibility signals, not payment
+            gateways directly. Always use secure payment methods and avoid
+            irreversible transfers.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-gray-800">
+            Why should I report a business?
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Reporting helps improve Trustverse AI’s intelligence system and
+            protects other users by enabling expert review of suspicious
+            entities.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
