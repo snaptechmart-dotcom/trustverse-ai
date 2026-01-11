@@ -7,6 +7,11 @@ import Script from "next/script";
 export const metadata = {
   title: "Trustverse AI",
   description: "AI Trust & Reputation Platform",
+
+  // ✅ Google Search Console Verification (ADDED)
+  verification: {
+    google: "ATPktU3iWa8a4kZJ1yOjWLCPiVQoPMdkbIeXGUt_3zM",
+  },
 };
 
 export default function RootLayout({
@@ -17,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Google Analytics */}
+        {/* ✅ Google Analytics */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-EYPDDSPKGN"
           strategy="afterInteractive"
