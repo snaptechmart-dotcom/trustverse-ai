@@ -64,7 +64,6 @@ export default function TrustScorePage() {
       setResult(data);
       setValue("");
 
-      // 🔔 sync credits + history
       window.dispatchEvent(new Event("credits-updated"));
       window.dispatchEvent(new Event("history-updated"));
     } catch {
@@ -163,7 +162,7 @@ https://trustverseai.com
         </button>
       </div>
 
-      {/* 🔥 LONG DESCRIPTION (ALWAYS VISIBLE) */}
+      {/* LONG DESCRIPTION */}
       <div className="bg-gray-50 border rounded-xl p-6 max-w-3xl">
         <h2 className="text-lg font-semibold mb-2">
           What is Trust Score Analyzer?
@@ -178,8 +177,7 @@ https://trustverseai.com
           <b> 0–100</b>.
           <br /><br />
           A higher score indicates lower risk, while a lower score suggests
-          potential fraud, spam, or scam behavior. This allows you to make
-          informed decisions before engaging with unknown contacts online.
+          potential fraud, spam, or scam behavior.
         </p>
       </div>
 
@@ -249,6 +247,57 @@ https://trustverseai.com
           </div>
         </div>
       )}
+
+      {/* =========================
+          FAQ SECTION (NEW)
+      ========================= */}
+      <div className="max-w-3xl space-y-6 border-t pt-10">
+        <h2 className="text-2xl font-bold text-gray-900">
+          Trust Score Analyzer – FAQs
+        </h2>
+
+        <div>
+          <h3 className="font-semibold">
+            What does the Trust Score represent?
+          </h3>
+          <p className="text-sm text-gray-600">
+            The Trust Score represents the likelihood that a phone number,
+            email, or username is safe to engage with. Higher scores indicate
+            lower risk based on behavioral and reputation signals.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold">
+            Can a high Trust Score guarantee safety?
+          </h3>
+          <p className="text-sm text-gray-600">
+            No system can guarantee complete safety. Trustverse AI provides
+            risk intelligence to support decisions, not absolute certainty.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold">
+            Why can the same input give slightly different results?
+          </h3>
+          <p className="text-sm text-gray-600">
+            Trust scores may vary due to dynamic risk modeling, evolving scam
+            patterns, and contextual signal weighting.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold">
+            Who should use Trust Score Analyzer?
+          </h3>
+          <p className="text-sm text-gray-600">
+            This tool is useful for individuals, businesses, and professionals
+            who want to assess trust before communication, payments, or data
+            sharing.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
