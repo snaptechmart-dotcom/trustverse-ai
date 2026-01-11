@@ -85,7 +85,7 @@ export default function EmailCheckerPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ text: email.trim() }), // 🔥 correct payload
+        body: JSON.stringify({ text: email.trim() }),
       });
 
       if (res.status === 401) {
@@ -107,7 +107,6 @@ export default function EmailCheckerPage() {
       setResult(data);
       setEmail("");
 
-      // 🔔 global sync
       window.dispatchEvent(new Event("credits-updated"));
       window.dispatchEvent(new Event("history-updated"));
     } catch {
@@ -220,8 +219,7 @@ https://trustverseai.com`;
 
           <div className="p-6 space-y-6">
             <span
-              className={`inline-block px-3 py-1 rounded-full text-sm font-semibold
-              ${
+              className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
                 result.riskLevel === "Low Risk"
                   ? "bg-green-100 text-green-700"
                   : result.riskLevel === "Medium Risk"
@@ -236,12 +234,11 @@ https://trustverseai.com`;
               Trust Score: {result.trustScore}/100
             </p>
 
-            {/* HUMAN MESSAGE */}
             <div className="bg-slate-50 border-l-4 border-emerald-500 p-4 rounded-md">
-              <p className="font-semibold text-gray-900 mb-2">
+              <p className="font-semibold mb-2">
                 What does this mean for you?
               </p>
-              <p className="text-gray-700 whitespace-pre-line leading-relaxed">
+              <p className="whitespace-pre-line text-gray-700">
                 {getHumanExplanation(
                   result.riskLevel,
                   result.trustScore
@@ -249,13 +246,11 @@ https://trustverseai.com`;
               </p>
             </div>
 
-            {/* QR */}
             <QRCodeCanvas
               value={`Email Risk Report | Score ${result.trustScore}`}
               size={120}
             />
 
-            {/* ACTIONS UNDER QR */}
             <div className="flex gap-3 flex-wrap">
               <button
                 onClick={shareReport}
@@ -291,7 +286,7 @@ https://trustverseai.com`;
         </div>
       )}
 
-      {/* LONG DESCRIPTION – ALWAYS VISIBLE */}
+      {/* LONG DESCRIPTION */}
       <div className="pt-10 border-t max-w-4xl text-gray-700">
         <h2 className="text-xl font-semibold mb-4">
           How Trustverse AI Email Checker Works
@@ -305,8 +300,7 @@ https://trustverseai.com`;
 
         <p className="mt-3">
           This tool helps protect you from phishing attempts,
-          impersonation scams, and risky communications before
-          you engage or share sensitive data.
+          impersonation scams, and risky communications.
         </p>
 
         <ul className="list-disc pl-6 mt-4 space-y-2">
@@ -316,9 +310,57 @@ https://trustverseai.com`;
         </ul>
 
         <p className="text-sm text-gray-500 mt-4">
-          Automated analysis only. Always verify independently before
-          making critical decisions.
+          Automated analysis only. Always verify independently.
         </p>
+      </div>
+
+      {/* =========================
+          FAQ SECTION (NEW)
+      ========================= */}
+      <div className="max-w-4xl space-y-6 border-t pt-10">
+        <h2 className="text-2xl font-bold">
+          Email Address Checker – FAQs
+        </h2>
+
+        <div>
+          <h3 className="font-semibold">
+            Can this tool detect fake or disposable emails?
+          </h3>
+          <p className="text-sm text-gray-600">
+            Yes. Trustverse AI checks for disposable providers, abnormal
+            domain behavior, and patterns commonly used in phishing attacks.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold">
+            Is a Low Risk email always safe?
+          </h3>
+          <p className="text-sm text-gray-600">
+            Low Risk means no strong scam indicators were found, but caution
+            is still advised for first-time or financial interactions.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold">
+            Can legitimate emails show Medium Risk?
+          </h3>
+          <p className="text-sm text-gray-600">
+            Yes. New domains, limited history, or uncommon patterns may
+            increase risk scores even for genuine users.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold">
+            Who should use Email Address Checker?
+          </h3>
+          <p className="text-sm text-gray-600">
+            This tool is ideal for individuals, businesses, and professionals
+            verifying unknown senders before responding or sharing data.
+          </p>
+        </div>
       </div>
     </div>
   );
