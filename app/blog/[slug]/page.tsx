@@ -8,7 +8,7 @@ const SITE_URL = "https://trustverseai.com";
 const SITE_NAME = "Trustverse AI";
 
 /* ======================
-   BLOG DATA
+   BLOG DATA (ALL SLUGS MUST BE HERE)
 ====================== */
 const posts = [
   {
@@ -61,13 +61,6 @@ const posts = [
           numbers are recycled, and phishing emails impersonate trusted brands.
         </p>
 
-        <ul>
-          <li>Receiving calls from unknown phone numbers</li>
-          <li>Visiting new or unfamiliar websites</li>
-          <li>Opening emails with links or attachments</li>
-          <li>Making online payments or sharing personal data</li>
-        </ul>
-
         <h2>How Trustverse AI Calculates Trust Scores</h2>
 
         <h3>Reputation Signals</h3>
@@ -88,63 +81,59 @@ const posts = [
           fraud scripts are matched using AI models.
         </p>
 
-        <h3>AI Risk Intelligence Models</h3>
-        <p>
-          Machine-learning models combine all signals to calculate a final
-          Trust Score that reflects real-world risk.
-        </p>
-
-        <h2>Real-World Use Cases of Trust Scores</h2>
-        <ul>
-          <li>Checking unknown phone numbers before answering</li>
-          <li>Verifying websites before making payments</li>
-          <li>Detecting phishing emails and fake offers</li>
-          <li>Evaluating online businesses and partners</li>
-        </ul>
-
-        <h2>Trust Score vs Traditional Scam Checks</h2>
-        <ul>
-          <li>Traditional checks rely on limited data sources</li>
-          <li>Trust Scores use AI-powered real-time analysis</li>
-          <li>Trustverse AI adapts to new scam patterns</li>
-          <li>Users get a clear risk score instead of guesswork</li>
-        </ul>
-
-        <h2>How to Check a Trust Score Using Trustverse AI</h2>
-        <ol>
-          <li>Open the Trustverse AI dashboard</li>
-          <li>Select the appropriate tool</li>
-          <li>Enter a website, phone number, or email</li>
-          <li>Receive instant Trust Score and insights</li>
-        </ol>
-
-        <h2>Frequently Asked Questions</h2>
-
-        <h3>What is a good Trust Score?</h3>
-        <p>
-          A Trust Score above 70 generally indicates low risk, but caution is
-          always recommended.
-        </p>
-
-        <h3>Can a Trust Score change over time?</h3>
-        <p>
-          Yes. Scores update as new data, reports, and behavior patterns appear.
-        </p>
-
-        <h3>Is Trustverse AI free to use?</h3>
-        <p>
-          Basic checks are free. Advanced insights are available in Pro plans.
-        </p>
-
         <h2>Final Thoughts</h2>
         <p>
-          A Trust Score empowers users to make informed decisions in seconds.
-          AI-powered trust verification is no longer optional.
+          Trust Scores help users make informed decisions in seconds. Staying
+          alert and using AI-powered tools is essential for online safety.
+        </p>
+      </>
+    ),
+  },
+
+  {
+    slug: "how-to-identify-online-scams",
+    title: "How to Identify Online Scams Before Losing Money",
+    date: "2026-01-12",
+    author: "Trustverse AI Team",
+    seo: {
+      title: "How to Identify Online Scams Before Losing Money",
+      description:
+        "Learn practical ways to detect online scams, fake profiles, phishing emails, and fraud attempts before they cause financial or personal damage.",
+      image: "/og/online-scams.png",
+    },
+    content: (
+      <>
+        <p>
+          Online scams are increasing worldwide, and attackers continuously
+          change their techniques to trick users into sharing money or data.
+        </p>
+
+        <h2>Common Types of Online Scams</h2>
+        <ul>
+          <li>Phishing emails and fake messages</li>
+          <li>Impersonation scams</li>
+          <li>Fake investment opportunities</li>
+          <li>Fraudulent shopping websites</li>
+        </ul>
+
+        <h2>Warning Signs You Should Never Ignore</h2>
+        <ul>
+          <li>Urgent payment or action requests</li>
+          <li>Unknown links or attachments</li>
+          <li>Offers that sound too good to be true</li>
+          <li>Pressure tactics and threats</li>
+        </ul>
+
+        <h2>How Trustverse AI Helps Detect Scams</h2>
+        <p>
+          Trustverse AI analyzes scam reports, reputation data, and behavioral
+          patterns to identify fraud before users suffer damage.
         </p>
 
         <p>
           <strong>
-            Stay alert. Stay informed. Protect yourself with Trustverse AI.
+            Awareness and verification are the strongest defenses against
+            online scams.
           </strong>
         </p>
       </>
@@ -153,7 +142,7 @@ const posts = [
 ];
 
 /* ======================
-   METADATA
+   SEO METADATA
 ====================== */
 export async function generateMetadata({
   params,
