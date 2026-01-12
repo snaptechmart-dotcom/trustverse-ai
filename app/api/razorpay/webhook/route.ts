@@ -27,35 +27,40 @@ export async function POST(req: Request) {
     const razorpay_payment_id = payment.id;
     const razorpay_order_id = payment.order_id;
 
-    // 🔁 duplicate protection
+    // 🔁 Duplicate protection
     const exists = await Payment.findOne({ razorpay_payment_id });
     if (exists) {
       return NextResponse.json({ received: true });
     }
 
-    const { userId, plan, billing, credits } = payment.notes || {};
+    const { userId, planKey } = payment.notes || {};
 
-    if (!userId || !credits) {
+    // 🔴 userId is mandatory
+    if (!userId) {
       return NextResponse.json({ received: true });
     }
+
+    // ✅ BACKEND decides credits (example: ₹49 = 10 credits)
+    const creditsToAdd = 10;
 
     // ✅ SAVE PAYMENT HISTORY
     await Payment.create({
       userId,
-      plan,
-      billing,
-      credits: Number(credits),
+      plan: planKey || "credits",
+      billing: "one_time",
+      credits: creditsToAdd,
       razorpay_payment_id,
       razorpay_order_id,
+      amount: payment.amount / 100,
       status: "SUCCESS",
       provider: "Razorpay",
     });
 
-    // ✅ ADD CREDITS
+    // ✅ ADD CREDITS TO USER
     await User.findByIdAndUpdate(userId, {
-      $inc: { credits: Number(credits) },
+      $inc: { credits: creditsToAdd },
       isPro: true,
-      plan,
+      plan: planKey || "credits",
       subscriptionStatus: "active",
     });
   }
@@ -67,6 +72,7 @@ export async function POST(req: Request) {
     await Payment.create({
       razorpay_payment_id: payment.id,
       razorpay_order_id: payment.order_id,
+      amount: payment.amount / 100,
       status: "FAILED",
       provider: "Razorpay",
     });
