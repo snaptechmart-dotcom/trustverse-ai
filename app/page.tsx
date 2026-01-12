@@ -27,7 +27,6 @@ export default function HomePage() {
           </a>
         </div>
 
-        {/* HERO REASSURANCE LINE */}
         <p className="mt-4 text-sm text-gray-400">
           No credit card required • Free access available
         </p>
@@ -46,7 +45,6 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* ================= FEATURE CARDS ================= */}
         <div className="grid md:grid-cols-3 gap-8">
           <div className="bg-white p-6 rounded-xl shadow hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
             <h3 className="font-semibold text-lg mb-2">
@@ -151,7 +149,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* SOFT CTA AFTER TESTIMONIALS */}
           <div className="mt-16 text-center">
             <h3 className="text-2xl font-bold mb-4">
               Start Verifying Before You Trust
@@ -166,6 +163,107 @@ export default function HomePage() {
             >
               Get Started Free
             </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= BLOG PREVIEW SECTION ================= */}
+      <section className="bg-gray-100 py-20 px-6">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl font-bold text-center mb-12">
+            Trust & Scam Awareness Blog
+          </h2>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-white p-6 rounded-xl shadow">
+              <h3 className="font-semibold text-lg mb-2">
+                How to Identify Online Scams in 2026
+              </h3>
+              <p className="text-gray-600 text-sm">
+                Learn common scam patterns, red flags, and how AI trust analysis
+                can protect you before financial loss occurs.
+              </p>
+              <a href="/blog" className="text-blue-600 text-sm font-semibold mt-3 inline-block">
+                Read More →
+              </a>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow">
+              <h3 className="font-semibold text-lg mb-2">
+                Phone Number Verification Explained
+              </h3>
+              <p className="text-gray-600 text-sm">
+                Understand how scam calls operate and how phone verification
+                helps reduce fraud and identity theft.
+              </p>
+              <a href="/blog" className="text-blue-600 text-sm font-semibold mt-3 inline-block">
+                Read More →
+              </a>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow">
+              <h3 className="font-semibold text-lg mb-2">
+                Why Trust Scores Matter Online
+              </h3>
+              <p className="text-gray-600 text-sm">
+                Discover how trust scores help individuals and businesses
+                make safer online decisions.
+              </p>
+              <a href="/blog" className="text-blue-600 text-sm font-semibold mt-3 inline-block">
+                Read More →
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= FAQ SECTION ================= */}
+      <section className="bg-white py-20 px-6">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-3xl font-bold text-center mb-12">
+            Frequently Asked Questions
+          </h2>
+
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-semibold">
+                What is Trustverse AI?
+              </h3>
+              <p className="text-gray-600">
+                Trustverse AI is an AI-powered trust and fraud detection platform
+                that helps users verify people, phone numbers, and online profiles.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold">
+                Is Trustverse AI free to use?
+              </h3>
+              <p className="text-gray-600">
+                Yes, free access is available with limited usage.
+                PRO plans offer unlimited advanced analysis features.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold">
+                How accurate are trust scores?
+              </h3>
+              <p className="text-gray-600">
+                Trust scores are generated using AI models trained on fraud patterns,
+                reputation data, and behavioral signals for high accuracy.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold">
+                Can businesses use Trustverse AI?
+              </h3>
+              <p className="text-gray-600">
+                Absolutely. Trustverse AI is designed for individuals,
+                professionals, and businesses worldwide.
+              </p>
+            </div>
           </div>
         </div>
       </section>

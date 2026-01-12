@@ -8,7 +8,7 @@ export default function Footer() {
       <div className="max-w-6xl mx-auto px-4">
 
         {/* Top Section */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
 
           {/* Brand */}
           <div>
@@ -16,8 +16,8 @@ export default function Footer() {
               Trustverse AI
             </h2>
             <p className="mt-2 text-sm text-gray-400">
-              AI-powered trust & reputation platform to verify people, phone numbers,
-              profiles and digital identities with confidence.
+              AI-powered trust & reputation platform to verify people,
+              phone numbers, profiles and digital identities with confidence.
             </p>
           </div>
 
@@ -27,14 +27,13 @@ export default function Footer() {
               Product
             </h2>
             <ul className="space-y-2 text-sm">
-
               <li>
                 <Link href="/" className="hover:text-white">
                   Home
                 </Link>
               </li>
 
-              {/* ✅ AI TOOLS → LOGIN ONLY */}
+              {/* AI Tools → Login */}
               <li>
                 <Link href="/login" className="hover:text-white">
                   AI Tools
@@ -52,7 +51,26 @@ export default function Footer() {
                   About Us
                 </Link>
               </li>
+            </ul>
+          </div>
 
+          {/* Resources (NEW – SEO GOLD) */}
+          <div>
+            <h2 className="text-white text-lg font-medium mb-3">
+              Resources
+            </h2>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/blog" className="hover:text-white">
+                  Blog
+                </Link>
+              </li>
+
+              <li>
+                <Link href="/faq" className="hover:text-white">
+                  FAQs
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -62,7 +80,6 @@ export default function Footer() {
               Trust & Safety
             </h2>
             <ul className="space-y-2 text-sm">
-
               <li>
                 <Link href="/privacy" className="hover:text-white">
                   Privacy Policy
@@ -86,7 +103,6 @@ export default function Footer() {
                   Data Safety
                 </Link>
               </li>
-
             </ul>
           </div>
 
@@ -96,7 +112,6 @@ export default function Footer() {
               Support
             </h2>
             <ul className="space-y-2 text-sm">
-
               <li>
                 <Link href="/contact" className="hover:text-white">
                   Contact Us
@@ -108,7 +123,6 @@ export default function Footer() {
                   Join Waitlist
                 </Link>
               </li>
-
             </ul>
           </div>
 
