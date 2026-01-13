@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
+import Script from "next/script";
 
 declare global {
   interface Window {
@@ -20,7 +21,7 @@ export default function PricingSection() {
     }
 
     try {
-      /* 1️⃣ CREATE ORDER */
+      /* ================= 1️⃣ CREATE ORDER ================= */
       const orderRes = await fetch("/api/razorpay/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -43,7 +44,7 @@ export default function PricingSection() {
         return;
       }
 
-      /* 2️⃣ OPEN RAZORPAY CHECKOUT */
+      /* ================= 2️⃣ OPEN RAZORPAY ================= */
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: orderData.amount,
@@ -53,34 +54,31 @@ export default function PricingSection() {
         order_id: orderData.orderId,
 
         handler: async function (response: any) {
-          try {
-            /* 3️⃣ VERIFY PAYMENT (MOST IMPORTANT FIX) */
-            const verifyRes = await fetch("/api/razorpay/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature,
-                planKey,
-                billing: "monthly",
-                userId: (session.user as any).id,
-              }),
-            });
+          console.log("🔥 PAYMENT HANDLER TRIGGERED", response);
 
-            const verifyData = await verifyRes.json();
+          /* ================= 3️⃣ VERIFY PAYMENT ================= */
+          const verifyRes = await fetch("/api/razorpay/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              planKey,
+              billing: "monthly",
+              userId: (session.user as any).id,
+            }),
+          });
 
-            if (!verifyRes.ok) {
-              alert(verifyData.error || "Payment verification failed");
-              return;
-            }
+          const verifyData = await verifyRes.json();
 
-            alert("✅ Payment successful! Credits added.");
-            window.location.href = "/dashboard/payments";
-          } catch (err) {
-            console.error("VERIFY ERROR:", err);
-            alert("Payment verification error");
+          if (!verifyRes.ok) {
+            alert(verifyData.error || "Payment verification failed");
+            return;
           }
+
+          alert("✅ Payment successful! Credits added.");
+          window.location.href = "/dashboard/payments";
         },
 
         theme: { color: "#2563eb" },
@@ -89,61 +87,68 @@ export default function PricingSection() {
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err) {
-      console.error("SUBSCRIBE ERROR:", err);
-      alert("Something went wrong. Please try again.");
+      console.error("PAYMENT ERROR:", err);
+      alert("Something went wrong. Try again.");
     }
   };
 
   return (
-    <section className="w-full py-20 bg-[#06152A] text-white">
-      <div className="max-w-7xl mx-auto px-4 text-center">
+    <>
+      {/* 🔑 RAZORPAY SCRIPT (MOST IMPORTANT) */}
+      <Script
+        src="https://checkout.razorpay.com/v1/checkout.js"
+        strategy="afterInteractive"
+      />
 
-        {/* Pricing Toggle */}
-        <div className="flex justify-center mb-10">
-          <div className="flex bg-[#0C203A] p-2 rounded-xl">
+      <section className="w-full py-20 bg-[#06152A] text-white">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          {/* Country Switch */}
+          <div className="flex justify-center mb-10">
+            <div className="flex bg-[#0C203A] p-2 rounded-xl">
+              <button
+                onClick={() => setIsIndia(true)}
+                className={`px-6 py-2 rounded-lg font-semibold ${
+                  isIndia ? "bg-blue-600" : "bg-transparent"
+                }`}
+              >
+                🇮🇳 India Pricing
+              </button>
+              <button
+                onClick={() => setIsIndia(false)}
+                className={`px-6 py-2 rounded-lg font-semibold ${
+                  !isIndia ? "bg-blue-600" : "bg-transparent"
+                }`}
+              >
+                🌍 Global Pricing
+              </button>
+            </div>
+          </div>
+
+          {/* Plans */}
+          <div className="grid md:grid-cols-3 gap-8">
             <button
-              onClick={() => setIsIndia(true)}
-              className={`px-6 py-2 rounded-lg font-semibold ${
-                isIndia ? "bg-blue-600" : "bg-transparent"
-              }`}
+              onClick={() => handleSubscribe("essential")}
+              className="py-4 bg-blue-600 rounded-lg font-semibold"
             >
-              🇮🇳 India Pricing
+              Basic Plan
             </button>
+
             <button
-              onClick={() => setIsIndia(false)}
-              className={`px-6 py-2 rounded-lg font-semibold ${
-                !isIndia ? "bg-blue-600" : "bg-transparent"
-              }`}
+              onClick={() => handleSubscribe("pro")}
+              className="py-4 bg-blue-600 rounded-lg font-semibold"
             >
-              🌍 Global Pricing
+              Pro Plan
+            </button>
+
+            <button
+              onClick={() => handleSubscribe("enterprise")}
+              className="py-4 bg-blue-600 rounded-lg font-semibold"
+            >
+              Agency Plan
             </button>
           </div>
         </div>
-
-        {/* Plans */}
-        <div className="grid md:grid-cols-3 gap-8">
-          <button
-            onClick={() => handleSubscribe("essential")}
-            className="py-4 bg-blue-600 rounded-lg font-semibold"
-          >
-            Basic Plan
-          </button>
-
-          <button
-            onClick={() => handleSubscribe("pro")}
-            className="py-4 bg-blue-600 rounded-lg font-semibold"
-          >
-            Pro Plan
-          </button>
-
-          <button
-            onClick={() => handleSubscribe("enterprise")}
-            className="py-4 bg-blue-600 rounded-lg font-semibold"
-          >
-            Agency Plan
-          </button>
-        </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }
