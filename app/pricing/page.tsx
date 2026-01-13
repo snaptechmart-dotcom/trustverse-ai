@@ -56,7 +56,8 @@ export default function PricingPage() {
 
     try {
       // 1️⃣ Create Razorpay Order
-      const res = await fetch("/api/razorpay", {
+      const res = await fetch("/api/razorpay/order", {
+
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
