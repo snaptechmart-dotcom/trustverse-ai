@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/dbConnect";
 import Payment from "@/models/Payment";
+import mongoose from "mongoose";
 
 export async function GET() {
   try {
@@ -14,8 +15,10 @@ export async function GET() {
 
     await dbConnect();
 
+    const userObjectId = new mongoose.Types.ObjectId(session.user.id);
+
     const payments = await Payment.find({
-      userId: session.user.id,
+      userId: userObjectId,
     })
       .sort({ createdAt: -1 })
       .lean();

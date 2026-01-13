@@ -3,6 +3,7 @@ import crypto from "crypto";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 import Payment from "@/models/Payment";
+import mongoose from "mongoose";
 
 const PLAN_CREDITS: Record<string, any> = {
   prelaunch: { monthly: 50, yearly: 600 },
@@ -14,8 +15,6 @@ const PLAN_CREDITS: Record<string, any> = {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    console.log("🔥 RAZORPAY VERIFY HIT");
-    console.log("🔥 BODY:", body);
 
     const {
       razorpay_payment_id,
@@ -41,7 +40,8 @@ export async function POST(req: Request) {
 
     await dbConnect();
 
-    /* ================= DUPLICATE PAYMENT CHECK ================= */
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
     const alreadyExists = await Payment.findOne({
       razorpay_payment_id,
     });
@@ -50,23 +50,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, duplicate: true });
     }
 
-    /* ================= SIGNATURE VERIFY ================= */
-    if (razorpay_signature) {
-      const sign = razorpay_order_id + "|" + razorpay_payment_id;
-      const expectedSignature = crypto
-        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
-        .update(sign)
-        .digest("hex");
+    const sign = razorpay_order_id + "|" + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+      .update(sign)
+      .digest("hex");
 
-      if (expectedSignature !== razorpay_signature) {
-        return NextResponse.json(
-          { error: "Invalid Razorpay signature" },
-          { status: 400 }
-        );
-      }
+    if (expectedSignature !== razorpay_signature) {
+      return NextResponse.json(
+        { error: "Invalid Razorpay signature" },
+        { status: 400 }
+      );
     }
 
-    /* ================= CREDIT CALC ================= */
     const credits = PLAN_CREDITS?.[planKey]?.[billing];
     if (!credits) {
       return NextResponse.json(
@@ -75,19 +71,14 @@ export async function POST(req: Request) {
       );
     }
 
-    /* ================= PLAN EXPIRY LOGIC ================= */
     const now = new Date();
-    let expiresAt = new Date(now);
+    const expiresAt = new Date(now);
+    billing === "monthly"
+      ? expiresAt.setMonth(expiresAt.getMonth() + 1)
+      : expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
-    if (billing === "monthly") {
-      expiresAt.setMonth(expiresAt.getMonth() + 1);
-    } else if (billing === "yearly") {
-      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-    }
-
-    /* ================= SAVE PAYMENT ================= */
     await Payment.create({
-      userId,
+      userId: userObjectId,
       plan: planKey,
       billing,
       credits,
@@ -98,8 +89,7 @@ export async function POST(req: Request) {
       expiresAt,
     });
 
-    /* ================= UPDATE USER ================= */
-    await User.findByIdAndUpdate(userId, {
+    await User.findByIdAndUpdate(userObjectId, {
       $inc: { credits },
       isPro: true,
       plan: planKey.toUpperCase(),
@@ -109,7 +99,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("❌ VERIFY ERROR:", error);
+    console.error("VERIFY ERROR:", error);
     return NextResponse.json(
       { error: "Payment verification failed" },
       { status: 500 }
