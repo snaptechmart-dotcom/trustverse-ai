@@ -4,6 +4,7 @@ import { useState } from "react";
 import Script from "next/script";
 import { useSession } from "next-auth/react";
 
+/* ================= RAZORPAY TYPE FIX ================= */
 declare global {
   interface Window {
     Razorpay: any;
@@ -19,7 +20,6 @@ export default function PricingPage() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   /* ================= PRICES ================= */
-
   const PRICES: any = {
     INR: {
       free: 0,
@@ -38,7 +38,6 @@ export default function PricingPage() {
   };
 
   /* ================= PAY NOW ================= */
-
   const payNow = async (planKey: string) => {
     if (!userId) {
       alert("Please login first");
@@ -47,7 +46,7 @@ export default function PricingPage() {
 
     const amount = PRICES[currency][planKey];
 
-    if (amount === 0) {
+    if (!amount || amount < 1) {
       window.location.href = "/dashboard";
       return;
     }
@@ -55,28 +54,30 @@ export default function PricingPage() {
     setLoadingPlan(planKey);
 
     try {
-      // 1️⃣ Create Razorpay Order
+      /* 1️⃣ CREATE RAZORPAY ORDER */
       const res = await fetch("/api/razorpay/order", {
-
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount,
           currency,
           planKey,
+          billing, // 🔥 VERY IMPORTANT (missing earlier)
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.orderId) {
-        alert(data.error || "Payment failed");
+        alert(data.error || "Order creation failed");
         return;
       }
 
-      // 2️⃣ Razorpay Checkout
+      /* 2️⃣ OPEN RAZORPAY CHECKOUT */
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: data.amount,
+        currency,
         order_id: data.orderId,
         name: "Trustverse AI",
         description: `${planKey.toUpperCase()} Plan`,
@@ -84,8 +85,8 @@ export default function PricingPage() {
 
         handler: async function (response: any) {
           try {
-            // 3️⃣ VERIFY PAYMENT + UPDATE CREDITS (VERY IMPORTANT)
-            await fetch("/api/razorpay/verify", {
+            /* 3️⃣ VERIFY PAYMENT (CREDIT + HISTORY SAVE) */
+            const verifyRes = await fetch("/api/razorpay/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -98,7 +99,14 @@ export default function PricingPage() {
               }),
             });
 
-            window.location.href = "/dashboard";
+            const verifyData = await verifyRes.json();
+
+            if (!verifyRes.ok) {
+              alert(verifyData.error || "Payment verification failed");
+              return;
+            }
+
+            window.location.href = "/dashboard/payments";
           } catch (err) {
             console.error(err);
             alert("Payment done but credit update failed");
@@ -118,9 +126,13 @@ export default function PricingPage() {
     }
   };
 
-  /* ================= CARD ================= */
-
-  const Card = ({ title, planKey, features, highlight = false }: any) => {
+  /* ================= PLAN CARD ================= */
+  const Card = ({
+    title,
+    planKey,
+    features,
+    highlight = false,
+  }: any) => {
     const price = PRICES[currency][planKey];
 
     return (
@@ -173,7 +185,6 @@ export default function PricingPage() {
   };
 
   /* ================= UI ================= */
-
   return (
     <>
       <Script
