@@ -7,7 +7,7 @@ import { authOptions } from "@/lib/auth";
 
 /* ================= CREDIT MAP ================= */
 
-const PLAN_CREDITS: any = {
+const PLAN_CREDITS: Record<string, any> = {
   prelaunch: { monthly: 50, yearly: 600 },
   essential: { monthly: 150, yearly: 1800 },
   pro: { monthly: 300, yearly: 3600 },
@@ -27,59 +27,47 @@ export async function POST(req: Request) {
 
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const user = await User.findOne({ email: session.user.email });
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const body = await req.json();
-    const { planKey, billing } = body;
+    console.log("ORDER BODY:", body);
 
-    if (!planKey || !billing) {
+    const { planKey, billing, amount } = body;
+
+    if (!planKey || !billing || !amount) {
       return NextResponse.json(
-        { error: "Missing plan or billing" },
+        { error: "Missing plan, billing or amount" },
         { status: 400 }
       );
     }
 
-    const creditsToAdd =
-      PLAN_CREDITS?.[planKey]?.[billing] || 0;
+    const credits =
+      PLAN_CREDITS?.[planKey]?.[billing];
 
-    if (creditsToAdd === 0) {
+    if (!credits) {
       return NextResponse.json(
-        { error: "Invalid plan credits" },
+        { error: "Invalid plan or billing" },
         { status: 400 }
       );
     }
-
-    // 💰 PRICE CALCULATION (₹5 test supported)
-    const amount =
-      billing === "monthly"
-        ? 500 // ₹5 in paise (TEST)
-        : 500; // ₹5 yearly test
 
     /* ================= CREATE ORDER ================= */
 
     const order = await razorpay.orders.create({
-      amount,
+      amount: Number(amount) * 100, // frontend ₹ → paise
       currency: "INR",
       receipt: `rcpt_${Date.now()}`,
-
-      // 🔥 MOST IMPORTANT PART (WEBHOOK DEPENDS ON THIS)
       notes: {
         userId: user._id.toString(),
-        plan: planKey.toUpperCase(),
+        planKey,
         billing,
-        credits: creditsToAdd.toString(),
+        credits: credits.toString(),
       },
     });
 
@@ -88,7 +76,7 @@ export async function POST(req: Request) {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      key: process.env.RAZORPAY_KEY_ID,
+      userId: user._id.toString(), // 🔥 VERY IMPORTANT
     });
   } catch (error) {
     console.error("ORDER CREATE ERROR:", error);
