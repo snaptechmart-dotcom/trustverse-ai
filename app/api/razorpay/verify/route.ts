@@ -11,81 +11,61 @@ export async function POST(req: Request) {
       razorpay_payment_id,
       razorpay_signature,
       plan,
+      credits,
+      userId,
+      amount,
     } = body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return NextResponse.json(
-        { error: "Missing Razorpay fields" },
-        { status: 400 }
-      );
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 🔐 VERIFY SIGNATURE
+    const secret = process.env.RAZORPAY_KEY_SECRET!;
     const generatedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+      .createHmac("sha256", secret)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
     if (generatedSignature !== razorpay_signature) {
-      return NextResponse.json(
-        { error: "Invalid payment signature" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
-    // 🛑 DUPLICATE PAYMENT CHECK
+    // 🔒 DUPLICATE PAYMENT PROTECTION
     const existing = await prisma.payment.findUnique({
       where: { razorpayPaymentId: razorpay_payment_id },
     });
 
     if (existing) {
-      return NextResponse.json(
-        { message: "Payment already processed" },
-        { status: 200 }
-      );
+      return NextResponse.json({ success: true });
     }
 
-    // 🎯 CREDIT MAP
-    const CREDIT_MAP: Record<string, number> = {
-      prelaunch: 10,
-      essential: 100,
-      pro: 300,
-      enterprise: 1000,
-    };
-
-    const creditsToAdd = CREDIT_MAP[plan] ?? 0;
-
-    // 💾 SAVE PAYMENT + ADD CREDITS (TRANSACTION)
-    await prisma.$transaction(async (tx) => {
-      await tx.payment.create({
-        data: {
-          razorpayOrderId: razorpay_order_id,
-          razorpayPaymentId: razorpay_payment_id,
-          plan,
-          creditsAdded: creditsToAdd,
-          status: "SUCCESS",
-        },
-      });
-
-      await tx.user.update({
-        where: { id: body.userId },
-        data: {
-          credits: {
-            increment: creditsToAdd,
-          },
-        },
-      });
+    // ✅ SAVE PAYMENT
+    await prisma.payment.create({
+      data: {
+        userId,
+        razorpayOrderId: razorpay_order_id,
+        razorpayPaymentId: razorpay_payment_id,
+        razorpaySignature: razorpay_signature,
+        plan,
+        amount,
+        creditsAdded: credits,
+        status: "success",
+      },
     });
 
-    return NextResponse.json({
-      success: true,
-      creditsAdded: creditsToAdd,
+    // ✅ ADD CREDITS
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        credits: {
+          increment: credits,
+        },
+      },
     });
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("VERIFY ERROR:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    console.error(error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

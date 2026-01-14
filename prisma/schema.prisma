@@ -10,14 +10,32 @@ datasource db {
 model User {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   email     String   @unique
+  name      String?
   credits   Int      @default(10)
+
+  payments  Payment[]
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Payment {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String
-  amount    Int
-  plan      String
-  createdAt DateTime @default(now())
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+
+  userId              String   @db.ObjectId
+  user                User     @relation(fields: [userId], references: [id])
+
+  razorpayOrderId     String   @unique
+  razorpayPaymentId   String   @unique
+  razorpaySignature   String
+
+  plan                String
+  amount              Int
+  creditsAdded        Int
+
+  status              String   @default("success")
+
+  createdAt           DateTime @default(now())
+
+  @@map("payments")
 }
