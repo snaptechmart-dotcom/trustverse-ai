@@ -11,23 +11,22 @@ model User {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   email     String   @unique
   credits   Int      @default(0)
+  createdAt DateTime @default(now())
 
   payments  Payment[]
 }
 
 model Payment {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-
-  userId            String   @db.ObjectId
-  plan              String
-  billing           String
-  amount            Float
-  currency          String
-
-  razorpayOrderId   String
-  razorpayPaymentId String   @unique
-
-  createdAt         DateTime @default(now())
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId              String   @db.ObjectId
+  plan                String
+  billing             String   // ✅ THIS FIXES YOUR ERROR
+  amount              Float
+  currency            String
+  razorpayPaymentId   String   @unique
+  razorpayOrderId     String
+  status              String
+  createdAt           DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
 }
