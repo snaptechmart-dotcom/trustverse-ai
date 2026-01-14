@@ -1,16 +1,9 @@
 import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth"; // ⚠️ path check karo
+import { authOptions } from "@/lib/auth"; // ✅ same file you use elsewhere
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
-
-/**
- * PRICE TABLE (₹ / $)
- */
+// 🔐 PRICE TABLE (MONTHLY + YEARLY)
 const PRICE_TABLE: any = {
   INR: {
     monthly: {
@@ -44,31 +37,52 @@ const PRICE_TABLE: any = {
 
 export async function POST(req: Request) {
   try {
-    // ✅ SESSION CHECK
+    // ✅ SESSION CHECK (FIXES 401)
     const session = await getServerSession(authOptions);
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const { plan, billing, currency } = await req.json();
+    const body = await req.json();
+    const { plan, billing, currency } = body;
 
-    const price =
-      PRICE_TABLE[currency]?.[billing]?.[plan];
-
-    if (!price) {
+    if (!plan || !billing || !currency) {
       return NextResponse.json(
-        { error: "Invalid plan" },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Razorpay needs smallest unit
-    const amount = price * 100;
+    // ✅ VALIDATE PRICE
+    const amount =
+      PRICE_TABLE?.[currency]?.[billing]?.[plan];
 
+    if (!amount) {
+      return NextResponse.json(
+        { error: "Invalid plan/billing/currency" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ RAZORPAY INSTANCE
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID!,
+      key_secret: process.env.RAZORPAY_KEY_SECRET!,
+    });
+
+    // ✅ CREATE ORDER (amount in paise/cents)
     const order = await razorpay.orders.create({
-      amount,
+      amount: amount * 100,
       currency,
       receipt: `rcpt_${Date.now()}`,
+      notes: {
+        userId: session.user.id,
+        plan,
+        billing,
+      },
     });
 
     return NextResponse.json({
@@ -77,10 +91,10 @@ export async function POST(req: Request) {
       currency: order.currency,
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
     });
-  } catch (err) {
-    console.error("ORDER ERROR:", err);
+  } catch (error) {
+    console.error("RAZORPAY ORDER ERROR:", error);
     return NextResponse.json(
-      { error: "Order creation failed" },
+      { error: "Failed to create order" },
       { status: 500 }
     );
   }
