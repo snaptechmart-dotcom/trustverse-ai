@@ -11,26 +11,39 @@ export async function POST(req: Request) {
       razorpay_payment_id,
       razorpay_signature,
       plan,
+      billing,
+      currency,
+      amount,
       credits,
       userId,
-      amount,
     } = body;
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const secret = process.env.RAZORPAY_KEY_SECRET!;
+    const secret = process.env.RAZORPAY_KEY_SECRET;
+    if (!secret) {
+      return NextResponse.json(
+        { error: "Razorpay secret missing" },
+        { status: 500 }
+      );
+    }
+
+    // 🔐 VERIFY SIGNATURE
     const generatedSignature = crypto
       .createHmac("sha256", secret)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
     if (generatedSignature !== razorpay_signature) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid payment signature" },
+        { status: 400 }
+      );
     }
 
-    // 🔒 DUPLICATE PAYMENT PROTECTION
+    // 🔒 DUPLICATE PAYMENT CHECK
     const existing = await prisma.payment.findUnique({
       where: { razorpayPaymentId: razorpay_payment_id },
     });
@@ -39,21 +52,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true });
     }
 
-    // ✅ SAVE PAYMENT
+    // 💾 SAVE PAYMENT (SCHEMA MATCHING)
     await prisma.payment.create({
       data: {
-        userId,
+        plan,
+        billing,
+        amount,
+        currency,
         razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id,
-        razorpaySignature: razorpay_signature,
-        plan,
-        amount,
-        creditsAdded: credits,
         status: "success",
+
+        // ✅ RELATION CONNECT
+        user: {
+          connect: { id: userId },
+        },
       },
     });
 
-    // ✅ ADD CREDITS
+    // 🎯 ADD CREDITS
     await prisma.user.update({
       where: { id: userId },
       data: {
@@ -65,7 +82,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    console.error("VERIFY ERROR:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
