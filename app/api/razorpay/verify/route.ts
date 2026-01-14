@@ -1,138 +1,87 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
-/**
- * ✅ PRICE TABLE (MONTHLY + YEARLY)
- * amount is in MAIN currency (₹ / $)
- */
-const PRICE_TABLE: any = {
-  INR: {
-    monthly: {
-      prelaunch: 5,
-      essential: 149,
-      pro: 299,
-      enterprise: 599,
-    },
-    yearly: {
-      prelaunch: 499,
-      essential: 1499,
-      pro: 2999,
-      enterprise: 5999,
-    },
-  },
-  USD: {
-    monthly: {
-      prelaunch: 1,
-      essential: 4,
-      pro: 9,
-      enterprise: 19,
-    },
-    yearly: {
-      prelaunch: 9,
-      essential: 40,
-      pro: 90,
-      enterprise: 190,
-    },
-  },
-};
-
-/**
- * 🎯 CREDIT RULES (ONE SOURCE OF TRUTH)
- */
-const CREDIT_TABLE: any = {
-  prelaunch: 50,
-  essential: 200,
+const CREDIT_MAP: any = {
+  prelaunch: 10,
+  essential: 100,
   pro: 500,
-  enterprise: 1200,
+  enterprise: 2000,
 };
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-      userId,
-      plan,        // prelaunch | essential | pro | enterprise
-      billing,     // monthly | yearly
-      currency,    // INR | USD
-      amount,      // in MAIN currency
-    } = body;
+      plan,
+      billing,
+      currency,
+      amount,
+    } = await req.json();
 
-    // 🛑 BASIC VALIDATION
-    if (!PRICE_TABLE[currency]?.[billing]?.[plan]) {
+    // 🔐 VERIFY SIGNATURE
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+      .update(body)
+      .digest("hex");
+
+    if (expectedSignature !== razorpay_signature) {
       return NextResponse.json(
-        { error: "Invalid plan / billing / currency" },
+        { error: "Invalid signature" },
         { status: 400 }
       );
     }
 
-    // 🔐 SIGNATURE VERIFY
-    const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-      .digest("hex");
-
-    if (expectedSignature !== razorpay_signature) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
-    }
-
-    // 🛑 DUPLICATE PAYMENT CHECK
+    // 🛑 DUPLICATE CHECK
     const existing = await prisma.payment.findUnique({
       where: { razorpayPaymentId: razorpay_payment_id },
     });
 
     if (existing) {
-      return NextResponse.json({ message: "Payment already processed" });
+      return NextResponse.json({ success: true });
     }
 
-    // 💰 AMOUNT VERIFY (SECURITY)
-    const expectedAmount = PRICE_TABLE[currency][billing][plan];
+    const credits = CREDIT_MAP[plan] || 0;
 
-    if (Number(amount) !== Number(expectedAmount)) {
-      return NextResponse.json(
-        { error: "Amount mismatch" },
-        { status: 400 }
-      );
-    }
-
-    // 🎯 CREDITS CALCULATION
-    let credits = CREDIT_TABLE[plan] || 0;
-    if (billing === "yearly") credits = credits * 12;
-
-    // 💾 SAVE PAYMENT (STRICTLY PRISMA FIELDS)
+    // 💾 SAVE PAYMENT
     await prisma.payment.create({
       data: {
-        userId,
+        userId: session.user.id,
         plan,
         billing,
-        amount: Number(amount),
+        amount,
         currency,
-        razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id,
+        razorpayOrderId: razorpay_order_id,
         status: "success",
       },
     });
 
-    // ➕ ADD CREDITS TO USER
+    // ➕ ADD CREDITS
     await prisma.user.update({
-      where: { id: userId },
+      where: { id: session.user.id },
       data: {
-        credits: { increment: credits },
+        credits: {
+          increment: credits,
+        },
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      creditsAdded: credits,
-    });
-  } catch (error) {
-    console.error("RAZORPAY VERIFY ERROR:", error);
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("VERIFY ERROR:", err);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Payment verification failed" },
       { status: 500 }
     );
   }
