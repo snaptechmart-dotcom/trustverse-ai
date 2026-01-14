@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import Razorpay from "razorpay";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 import Payment from "@/models/Payment";
-import mongoose from "mongoose";
 
-const PLAN_CREDITS: Record<string, any> = {
-  prelaunch: { monthly: 50, yearly: 600 },
-  essential: { monthly: 150, yearly: 1800 },
-  pro: { monthly: 300, yearly: 3600 },
-  enterprise: { monthly: 1000, yearly: 12000 },
-};
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID!,
+  key_secret: process.env.RAZORPAY_KEY_SECRET!,
+});
 
 export async function POST(req: Request) {
   try {
@@ -20,36 +18,16 @@ export async function POST(req: Request) {
       razorpay_payment_id,
       razorpay_order_id,
       razorpay_signature,
-      planKey,
-      billing,
-      userId,
     } = body;
 
-    if (
-      !razorpay_payment_id ||
-      !razorpay_order_id ||
-      !planKey ||
-      !billing ||
-      !userId
-    ) {
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing Razorpay fields" },
         { status: 400 }
       );
     }
 
-    await dbConnect();
-
-    const userObjectId = new mongoose.Types.ObjectId(userId);
-
-    const alreadyExists = await Payment.findOne({
-      razorpay_payment_id,
-    });
-
-    if (alreadyExists) {
-      return NextResponse.json({ success: true, duplicate: true });
-    }
-
+    /* 🔐 SIGNATURE VERIFY */
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
@@ -63,25 +41,39 @@ export async function POST(req: Request) {
       );
     }
 
-    const credits = PLAN_CREDITS?.[planKey]?.[billing];
-    if (!credits) {
+    await dbConnect();
+
+    /* 🚫 DUPLICATE CHECK */
+    const exists = await Payment.findOne({ razorpay_payment_id });
+    if (exists) {
+      return NextResponse.json({ success: true, duplicate: true });
+    }
+
+    /* 🔍 FETCH ORDER FROM RAZORPAY */
+    const order = await razorpay.orders.fetch(razorpay_order_id);
+
+    const { userId, plan, billing, credits } = order.notes as any;
+
+    if (!userId || !plan || !billing || !credits) {
       return NextResponse.json(
-        { error: "Invalid plan or billing" },
+        { error: "Order notes missing" },
         { status: 400 }
       );
     }
 
+    /* ⏰ EXPIRY */
     const now = new Date();
     const expiresAt = new Date(now);
-    billing === "monthly"
-      ? expiresAt.setMonth(expiresAt.getMonth() + 1)
-      : expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    billing === "yearly"
+      ? expiresAt.setFullYear(expiresAt.getFullYear() + 1)
+      : expiresAt.setMonth(expiresAt.getMonth() + 1);
 
+    /* 💾 SAVE PAYMENT */
     await Payment.create({
-      userId: userObjectId,
-      plan: planKey,
+      userId,
+      plan,
       billing,
-      credits,
+      credits: Number(credits),
       razorpay_payment_id,
       razorpay_order_id,
       status: "SUCCESS",
@@ -89,17 +81,18 @@ export async function POST(req: Request) {
       expiresAt,
     });
 
-    await User.findByIdAndUpdate(userObjectId, {
-      $inc: { credits },
+    /* 👤 UPDATE USER */
+    await User.findByIdAndUpdate(userId, {
+      $inc: { credits: Number(credits) },
       isPro: true,
-      plan: planKey.toUpperCase(),
+      plan,
       subscriptionStatus: "active",
       subscriptionExpiresAt: expiresAt,
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("VERIFY ERROR:", error);
+  } catch (err) {
+    console.error("VERIFY ERROR:", err);
     return NextResponse.json(
       { error: "Payment verification failed" },
       { status: 500 }
