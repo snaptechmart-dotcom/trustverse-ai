@@ -12,6 +12,8 @@ declare global {
 
 export default function PricingPage() {
   const { data: session } = useSession();
+
+  // ✅ FIX 1: userId correctly extract
   const userId = session?.user?.id;
 
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
@@ -55,20 +57,21 @@ export default function PricingPage() {
     setLoadingPlan(planKey);
 
     try {
-      // 1️⃣ CREATE ORDER (SERVER)
+      // 1️⃣ CREATE ORDER
       const res = await fetch("/api/razorpay/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          plan: planKey, // ✅ FIX: backend expects "plan"
+          plan: planKey,
           billing,
           currency,
+          userId, // ✅ FIX 2: SEND userId to backend
         }),
       });
 
       const data = await res.json();
 
-      if (!res.ok || !data.orderId) {
+      if (!res.ok) {
         alert(data.error || "Order creation failed");
         return;
       }
@@ -83,11 +86,7 @@ export default function PricingPage() {
         order_id: data.orderId,
         image: "/logo.png",
 
-        /**
-         * FINAL DECISION (UNCHANGED)
-         * - Frontend verify ❌
-         * - Webhook handles credits & history
-         */
+        // ✔ Frontend verify intentionally skipped
         handler: function () {
           alert("Payment successful 🎉 Credits will be added shortly.");
           window.location.href = "/dashboard";
