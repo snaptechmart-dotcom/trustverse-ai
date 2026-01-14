@@ -1,58 +1,45 @@
-import { AuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
-import dbConnect from "@/lib/dbConnect";
+import { NextAuthOptions } from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+import dbConnect from "@/lib/db";
 import User from "@/models/User";
 
-export const authOptions: AuthOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
-
-        await dbConnect();
-        const user = await User.findOne({ email: credentials.email }).select("+password");
-        if (!user) return null;
-
-        const ok = await bcrypt.compare(credentials.password, user.password);
-        if (!ok) return null;
-
-        return {
-          id: user._id.toString(),
-          email: user.email,
-          role: user.role,
-          plan: user.plan,
-          credits: user.credits ?? 0,
-        };
-      },
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
   ],
-  session: { strategy: "jwt" },
-  pages: { signIn: "/login" },
+
+  session: {
+    strategy: "jwt",
+  },
+
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
-        token.plan = user.plan;
-        token.credits = user.credits;
+    async signIn({ user }) {
+      await dbConnect();
+
+      const existingUser = await User.findOne({ email: user.email });
+
+      if (!existingUser) {
+        // ✅ FIRST TIME USER ONLY
+        await User.create({
+          email: user.email,
+          name: user.name,
+          credits: 0, // ❗ NO BONUS CREDIT HERE
+        });
       }
+
+      return true;
+    },
+
+    async jwt({ token }) {
       return token;
     },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-        session.user.plan = token.plan as string;
-        session.user.credits = token.credits as number;
-      }
+
+    async session({ session }) {
+      // ❌ NO CREDIT LOGIC HERE
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
 };
