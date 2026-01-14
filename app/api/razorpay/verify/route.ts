@@ -2,11 +2,12 @@ import crypto from "crypto";
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import User from "@/models/User";
-import History from "@/models/History";
+import Payment from "@/models/Payment";
 import { getServerSession } from "next-auth";
 
 export async function POST(req: Request) {
   const session = await getServerSession();
+
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -36,23 +37,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const creditMap: any = {
-    basic: 10,
-    pro: 500,
-  };
-
-  user.credits += creditMap[plan];
+  // ✅ ADD CREDITS
+  user.credits += 10;
   await user.save();
 
-  await History.create({
+  // ✅ SAVE PAYMENT HISTORY
+  await Payment.create({
     userId: user._id,
-    type: "PAYMENT",
-    title: "Plan Purchased",
-    description: `${plan} plan activated`,
-    meta: {
-      orderId: razorpay_order_id,
-      paymentId: razorpay_payment_id,
-    },
+    razorpayOrderId: razorpay_order_id,
+    razorpayPaymentId: razorpay_payment_id,
+    plan,
+    amount: 5,
+    status: "success",
   });
 
   return NextResponse.json({ success: true });

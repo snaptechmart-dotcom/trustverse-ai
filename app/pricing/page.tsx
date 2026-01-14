@@ -12,8 +12,6 @@ declare global {
 
 export default function PricingPage() {
   const { data: session } = useSession();
-
-  // ✅ FIX 1: userId correctly extract
   const userId = session?.user?.id;
 
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
@@ -65,7 +63,7 @@ export default function PricingPage() {
           plan: planKey,
           billing,
           currency,
-          userId, // ✅ FIX 2: SEND userId to backend
+          userId,
         }),
       });
 
@@ -86,10 +84,27 @@ export default function PricingPage() {
         order_id: data.orderId,
         image: "/logo.png",
 
-        // ✔ Frontend verify intentionally skipped
-        handler: function () {
-          alert("Payment successful 🎉 Credits will be added shortly.");
-          window.location.href = "/dashboard";
+        // ✅ VERIFY FLOW (FINAL & WORKING)
+        handler: async function (response: any) {
+          const verifyRes = await fetch("/api/razorpay/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              plan: planKey,
+            }),
+          });
+
+          const verifyData = await verifyRes.json();
+
+          if (verifyRes.ok) {
+            alert("Payment successful 🎉 Credits added");
+            window.location.href = "/dashboard/payments";
+          } else {
+            alert(verifyData.error || "Payment verification failed");
+          }
         },
 
         theme: { color: "#0C1633" },
