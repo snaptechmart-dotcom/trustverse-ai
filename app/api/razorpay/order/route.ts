@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 /**
  * ✅ PRICE TABLE (MONTHLY + YEARLY)
@@ -36,56 +38,60 @@ const PRICE_TABLE: any = {
   },
 };
 
-// 🔑 Razorpay instance
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
-
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-
-    const {
-      plan,      // prelaunch | essential | pro | enterprise
-      billing,   // monthly | yearly
-      currency,  // INR | USD
-      userId,
-    } = body;
-
-    // 🛑 BASIC VALIDATION
-    if (!PRICE_TABLE[currency]?.[billing]?.[plan]) {
+    // 🔐 CHECK LOGIN
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
       return NextResponse.json(
-        { error: "Invalid plan / billing / currency" },
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // 📥 REQUEST DATA
+    const body = await req.json();
+    const { plan, billing, currency } = body;
+
+    if (!plan || !billing || !currency) {
+      return NextResponse.json(
+        { error: "Missing plan/billing/currency" },
         { status: 400 }
       );
     }
 
-    // 💰 AMOUNT (convert to smallest unit)
-    const amountMain = PRICE_TABLE[currency][billing][plan];
-    const amountSub = amountMain * 100; // paise / cents
+    // 💰 PRICE LOOKUP
+    const price =
+      PRICE_TABLE?.[currency]?.[billing]?.[plan];
 
-    // 🧾 CREATE ORDER
+    if (!price) {
+      return NextResponse.json(
+        { error: "Invalid pricing selection" },
+        { status: 400 }
+      );
+    }
+
+    // 💳 RAZORPAY INSTANCE
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID!,
+      key_secret: process.env.RAZORPAY_KEY_SECRET!,
+    });
+
+    // 🧾 CREATE ORDER (amount in paise/cents)
     const order = await razorpay.orders.create({
-      amount: amountSub,
+      amount: price * 100,
       currency,
-      receipt: `rcpt_${userId}_${Date.now()}`,
+      receipt: `rcpt_${Date.now()}`,
       notes: {
-        userId,
         plan,
         billing,
-        currency,
+        userEmail: session.user.email,
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      orderId: order.id,
-      amount: amountSub,
-      currency,
-    });
+    return NextResponse.json(order);
   } catch (error) {
-    console.error("RAZORPAY ORDER ERROR:", error);
+    console.error("❌ Razorpay order error:", error);
     return NextResponse.json(
       { error: "Failed to create order" },
       { status: 500 }
