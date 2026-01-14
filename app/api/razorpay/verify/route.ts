@@ -1,17 +1,24 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import Razorpay from "razorpay";
+
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 import Payment from "@/models/Payment";
 
+/* ================= RAZORPAY ================= */
+
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
+  key_id: process.env.RAZORPAY_KEY_ID as string,
+  key_secret: process.env.RAZORPAY_KEY_SECRET as string,
 });
+
+/* ================= VERIFY ROUTE ================= */
 
 export async function POST(req: Request) {
   try {
+    await dbConnect();
+
     const body = await req.json();
 
     const {
@@ -20,17 +27,25 @@ export async function POST(req: Request) {
       razorpay_signature,
     } = body;
 
-    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+    /* ---------- BASIC CHECK ---------- */
+
+    if (
+      !razorpay_payment_id ||
+      !razorpay_order_id ||
+      !razorpay_signature
+    ) {
       return NextResponse.json(
         { error: "Missing Razorpay fields" },
         { status: 400 }
       );
     }
 
-    /* 🔐 SIGNATURE VERIFY */
-    const sign = razorpay_order_id + "|" + razorpay_payment_id;
+    /* ---------- SIGNATURE VERIFY ---------- */
+
+    const sign = `${razorpay_order_id}|${razorpay_payment_id}`;
+
     const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET as string)
       .update(sign)
       .digest("hex");
 
@@ -41,39 +56,65 @@ export async function POST(req: Request) {
       );
     }
 
-    await dbConnect();
+    /* ---------- DUPLICATE CHECK ---------- */
 
-    /* 🚫 DUPLICATE CHECK */
-    const exists = await Payment.findOne({ razorpay_payment_id });
-    if (exists) {
-      return NextResponse.json({ success: true, duplicate: true });
+    const alreadyExists = await Payment.findOne({
+      razorpay_payment_id,
+    });
+
+    if (alreadyExists) {
+      return NextResponse.json({
+        success: true,
+        duplicate: true,
+      });
     }
 
-    /* 🔍 FETCH ORDER FROM RAZORPAY */
+    /* ---------- FETCH ORDER ---------- */
+
     const order = await razorpay.orders.fetch(razorpay_order_id);
+    const notes: any = order?.notes || {};
 
-    const { userId, plan, billing, credits } = order.notes as any;
+    /**
+     * NOTES EXPECTED (from /order route)
+     * userId
+     * planKey
+     * billing  (monthly | yearly)
+     * currency (INR | USD)
+     * credits
+     */
 
-    if (!userId || !plan || !billing || !credits) {
+    const userId = notes.userId;
+    const planKey = notes.planKey;
+    const billing = notes.billing;
+    const currency = notes.currency || "INR";
+    const credits = Number(notes.credits);
+
+    if (!userId || !planKey || !billing || !credits) {
       return NextResponse.json(
         { error: "Order notes missing" },
         { status: 400 }
       );
     }
 
-    /* ⏰ EXPIRY */
+    /* ---------- EXPIRY ---------- */
+
     const now = new Date();
     const expiresAt = new Date(now);
-    billing === "yearly"
-      ? expiresAt.setFullYear(expiresAt.getFullYear() + 1)
-      : expiresAt.setMonth(expiresAt.getMonth() + 1);
 
-    /* 💾 SAVE PAYMENT */
+    if (billing === "yearly") {
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    } else {
+      expiresAt.setMonth(expiresAt.getMonth() + 1);
+    }
+
+    /* ---------- SAVE PAYMENT ---------- */
+
     await Payment.create({
       userId,
-      plan,
+      plan: planKey,
       billing,
-      credits: Number(credits),
+      currency,
+      credits,
       razorpay_payment_id,
       razorpay_order_id,
       status: "SUCCESS",
@@ -81,18 +122,19 @@ export async function POST(req: Request) {
       expiresAt,
     });
 
-    /* 👤 UPDATE USER */
+    /* ---------- UPDATE USER ---------- */
+
     await User.findByIdAndUpdate(userId, {
-      $inc: { credits: Number(credits) },
+      $inc: { credits },
       isPro: true,
-      plan,
+      plan: planKey.toUpperCase(),
       subscriptionStatus: "active",
       subscriptionExpiresAt: expiresAt,
     });
 
     return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("VERIFY ERROR:", err);
+  } catch (error) {
+    console.error("❌ VERIFY ERROR:", error);
     return NextResponse.json(
       { error: "Payment verification failed" },
       { status: 500 }

@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import Razorpay from "razorpay";
-import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
 import { getServerSession } from "next-auth";
+import Razorpay from "razorpay";
+
+import dbConnect from "@/lib/dbConnect";
 import { authOptions } from "@/lib/auth";
+import User from "@/models/User";
 
 /* ================= CREDIT MAP ================= */
 
-const PLAN_CREDITS: Record<string, any> = {
+const PLAN_CREDITS: Record<string, { monthly: number; yearly: number }> = {
   prelaunch: { monthly: 50, yearly: 600 },
   essential: { monthly: 150, yearly: 1800 },
   pro: { monthly: 300, yearly: 3600 },
@@ -17,8 +18,8 @@ const PLAN_CREDITS: Record<string, any> = {
 /* ================= RAZORPAY INSTANCE ================= */
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
+  key_id: process.env.RAZORPAY_KEY_ID as string,
+  key_secret: process.env.RAZORPAY_KEY_SECRET as string,
 });
 
 export async function POST(req: Request) {
@@ -26,19 +27,25 @@ export async function POST(req: Request) {
     await dbConnect();
 
     const session = await getServerSession(authOptions);
+
     if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const user = await User.findOne({ email: session.user.email });
+
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
     }
 
     const body = await req.json();
-    console.log("ORDER BODY:", body);
-
-    const { planKey, billing, amount } = body;
+    const { planKey, billing, amount, currency } = body;
 
     if (!planKey || !billing || !amount) {
       return NextResponse.json(
@@ -48,20 +55,18 @@ export async function POST(req: Request) {
     }
 
     const credits =
-      PLAN_CREDITS?.[planKey]?.[billing];
+      PLAN_CREDITS?.[planKey]?.[billing] ?? 0;
 
     if (!credits) {
       return NextResponse.json(
-        { error: "Invalid plan or billing" },
+        { error: "Invalid plan credits" },
         { status: 400 }
       );
     }
 
-    /* ================= CREATE ORDER ================= */
-
     const order = await razorpay.orders.create({
-      amount: Number(amount) * 100, // frontend ₹ → paise
-      currency: "INR",
+      amount: Math.round(amount * 100), // rupees → paise
+      currency: currency || "INR",
       receipt: `rcpt_${Date.now()}`,
       notes: {
         userId: user._id.toString(),
@@ -72,14 +77,11 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({
-      success: true,
       orderId: order.id,
-      amount: order.amount,
-      currency: order.currency,
-      userId: user._id.toString(), // 🔥 VERY IMPORTANT
+      key: process.env.RAZORPAY_KEY_ID,
     });
   } catch (error) {
-    console.error("ORDER CREATE ERROR:", error);
+    console.error("RAZORPAY ORDER ERROR:", error);
     return NextResponse.json(
       { error: "Order creation failed" },
       { status: 500 }
