@@ -4,7 +4,7 @@ import dbConnect from "@/lib/db";
 import User from "@/models/User";
 import Payment from "@/models/Payment";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth"; // 👈 MUST
+import { authOptions } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
@@ -36,8 +36,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ VERIFY SIGNATURE
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    // 🔐 STEP 1: VERIFY SIGNATURE
+    const body = `${razorpay_order_id}|${razorpay_payment_id}`;
 
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
@@ -53,8 +53,21 @@ export async function POST(req: Request) {
 
     await dbConnect();
 
-    const user = await User.findOne({ email: session.user.email });
+    // 🔁 STEP 2: IDEMPOTENCY CHECK (MOST IMPORTANT)
+    const alreadyProcessed = await Payment.findOne({
+      razorpayPaymentId: razorpay_payment_id,
+    });
 
+    if (alreadyProcessed) {
+      // ✅ Payment already handled earlier
+      return NextResponse.json({
+        success: true,
+        message: "Payment already verified",
+      });
+    }
+
+    // 👤 STEP 3: USER
+    const user = await User.findOne({ email: session.user.email });
     if (!user) {
       return NextResponse.json(
         { error: "User not found" },
@@ -62,37 +75,39 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ CREDIT MAP
-    const CREDIT_MAP: any = {
+    // 💳 STEP 4: CREDIT MAP (FIXED – NO DOUBLE)
+    const CREDIT_MAP: Record<string, number> = {
       prelaunch: 10,
       essential: 100,
       pro: 300,
       enterprise: 1000,
     };
 
-    // ✅ ADD CREDITS
-    user.credits += CREDIT_MAP[plan] || 0;
+    const creditsToAdd = CREDIT_MAP[plan] ?? 0;
+
+    // ➕ STEP 5: ADD CREDITS (ONLY ONCE)
+    user.credits += creditsToAdd;
     await user.save();
 
-    // ✅ SAVE PAYMENT HISTORY
+    // 🧾 STEP 6: SAVE PAYMENT HISTORY
     await Payment.create({
       userId: user._id,
       razorpayOrderId: razorpay_order_id,
       razorpayPaymentId: razorpay_payment_id,
       plan,
-      amount: plan === "prelaunch" ? 5 : 0,
+      creditsAdded: creditsToAdd,
       status: "success",
     });
 
-    // ✅ ALWAYS RETURN JSON
+    // ✅ FINAL RESPONSE
     return NextResponse.json({
       success: true,
-      message: "Payment verified, credits added",
+      message: "Payment verified & credits added",
+      creditsAdded: creditsToAdd,
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("VERIFY ERROR:", err);
 
-    // ✅ IMPORTANT: NEVER RETURN EMPTY RESPONSE
     return NextResponse.json(
       { error: "Verification failed" },
       { status: 500 }
