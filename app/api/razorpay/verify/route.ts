@@ -1,71 +1,51 @@
-import crypto from "crypto";
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/db";
-import User from "@/models/User";
-import Payment from "@/models/Payment";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import crypto from "crypto";
+import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const body = await req.json();
 
     const {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
       plan,
-    } = await req.json();
+    } = body;
 
-    if (
-      !razorpay_order_id ||
-      !razorpay_payment_id ||
-      !razorpay_signature ||
-      !plan
-    ) {
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return NextResponse.json(
-        { error: "Missing fields" },
+        { error: "Missing Razorpay fields" },
         { status: 400 }
       );
     }
 
-    // 🔐 SIGNATURE VERIFY
-    const body = `${razorpay_order_id}|${razorpay_payment_id}`;
-    const expectedSignature = crypto
+    // 🔐 VERIFY SIGNATURE
+    const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
-      .update(body)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
-    if (expectedSignature !== razorpay_signature) {
+    if (generatedSignature !== razorpay_signature) {
       return NextResponse.json(
-        { error: "Invalid signature" },
+        { error: "Invalid payment signature" },
         { status: 400 }
       );
     }
 
-    await dbConnect();
-
-    // 🔁 IDEMPOTENT CHECK
-    const existingPayment = await Payment.findOne({
-      razorpayPaymentId: razorpay_payment_id,
+    // 🛑 DUPLICATE PAYMENT CHECK
+    const existing = await prisma.payment.findUnique({
+      where: { razorpayPaymentId: razorpay_payment_id },
     });
 
-    if (existingPayment) {
-      return NextResponse.json({
-        success: true,
-        message: "Already verified",
-      });
+    if (existing) {
+      return NextResponse.json(
+        { message: "Payment already processed" },
+        { status: 200 }
+      );
     }
 
-    const user = await User.findOne({ email: session.user.email });
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
+    // 🎯 CREDIT MAP
     const CREDIT_MAP: Record<string, number> = {
       prelaunch: 10,
       essential: 100,
@@ -75,26 +55,36 @@ export async function POST(req: Request) {
 
     const creditsToAdd = CREDIT_MAP[plan] ?? 0;
 
-    user.credits += creditsToAdd;
-    await user.save();
+    // 💾 SAVE PAYMENT + ADD CREDITS (TRANSACTION)
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.create({
+        data: {
+          razorpayOrderId: razorpay_order_id,
+          razorpayPaymentId: razorpay_payment_id,
+          plan,
+          creditsAdded: creditsToAdd,
+          status: "SUCCESS",
+        },
+      });
 
-    await Payment.create({
-      userId: user._id,
-      razorpayOrderId: razorpay_order_id,
-      razorpayPaymentId: razorpay_payment_id,
-      plan,
-      creditsAdded: creditsToAdd,
-      status: "success",
+      await tx.user.update({
+        where: { id: body.userId },
+        data: {
+          credits: {
+            increment: creditsToAdd,
+          },
+        },
+      });
     });
 
     return NextResponse.json({
       success: true,
-      message: "Payment verified & credits added",
+      creditsAdded: creditsToAdd,
     });
-  } catch (err) {
-    console.error("VERIFY ERROR:", err);
+  } catch (error) {
+    console.error("VERIFY ERROR:", error);
     return NextResponse.json(
-      { error: "Verification failed" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
