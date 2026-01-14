@@ -4,7 +4,6 @@ import { useState } from "react";
 import Script from "next/script";
 import { useSession } from "next-auth/react";
 
-/* ================= RAZORPAY TYPE FIX ================= */
 declare global {
   interface Window {
     Razorpay: any;
@@ -20,6 +19,7 @@ export default function PricingPage() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   /* ================= PRICES ================= */
+
   const PRICES: any = {
     INR: {
       free: 0,
@@ -38,6 +38,7 @@ export default function PricingPage() {
   };
 
   /* ================= PAY NOW ================= */
+
   const payNow = async (planKey: string) => {
     if (!userId) {
       alert("Please login first");
@@ -46,7 +47,7 @@ export default function PricingPage() {
 
     const amount = PRICES[currency][planKey];
 
-    if (!amount || amount < 1) {
+    if (amount === 0) {
       window.location.href = "/dashboard";
       return;
     }
@@ -54,15 +55,14 @@ export default function PricingPage() {
     setLoadingPlan(planKey);
 
     try {
-      /* 1️⃣ CREATE RAZORPAY ORDER */
+      // 1️⃣ CREATE RAZORPAY ORDER
       const res = await fetch("/api/razorpay/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount,
-          currency,
           planKey,
-          billing, // 🔥 VERY IMPORTANT (missing earlier)
+          billing,
+          currency,
         }),
       });
 
@@ -73,44 +73,24 @@ export default function PricingPage() {
         return;
       }
 
-      /* 2️⃣ OPEN RAZORPAY CHECKOUT */
+      // 2️⃣ OPEN RAZORPAY CHECKOUT
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: data.amount,
-        currency,
-        order_id: data.orderId,
+        currency: data.currency,
         name: "Trustverse AI",
         description: `${planKey.toUpperCase()} Plan`,
+        order_id: data.orderId,
         image: "/logo.png",
 
-        handler: async function (response: any) {
-          try {
-            /* 3️⃣ VERIFY PAYMENT (CREDIT + HISTORY SAVE) */
-            const verifyRes = await fetch("/api/razorpay/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature,
-                planKey,
-                billing,
-                userId,
-              }),
-            });
-
-            const verifyData = await verifyRes.json();
-
-            if (!verifyRes.ok) {
-              alert(verifyData.error || "Payment verification failed");
-              return;
-            }
-
-            window.location.href = "/dashboard/payments";
-          } catch (err) {
-            console.error(err);
-            alert("Payment done but credit update failed");
-          }
+        /**
+         * 🔥 IMPORTANT CHANGE
+         * ❌ NO VERIFY API CALL HERE
+         * ✅ WEBHOOK WILL HANDLE CREDIT + HISTORY
+         */
+        handler: function () {
+          alert("Payment successful! Credits will be added shortly.");
+          window.location.href = "/dashboard";
         },
 
         theme: { color: "#0C1633" },
@@ -126,13 +106,9 @@ export default function PricingPage() {
     }
   };
 
-  /* ================= PLAN CARD ================= */
-  const Card = ({
-    title,
-    planKey,
-    features,
-    highlight = false,
-  }: any) => {
+  /* ================= CARD ================= */
+
+  const Card = ({ title, planKey, features, highlight = false }: any) => {
     const price = PRICES[currency][planKey];
 
     return (
@@ -185,6 +161,7 @@ export default function PricingPage() {
   };
 
   /* ================= UI ================= */
+
   return (
     <>
       <Script
