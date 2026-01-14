@@ -1,57 +1,62 @@
+import crypto from "crypto";
 import { NextResponse } from "next/server";
-import Razorpay from "razorpay";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth"; // ⚠️ path check kar lena
-
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+import dbConnect from "@/lib/db";
+import User from "@/models/User";
+import Payment from "@/models/Payment";
 
 export async function POST(req: Request) {
-  try {
-    // ✅ Logged-in user session
-    const session = await getServerSession(authOptions);
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET!;
 
-    if (!session?.user?.id || !session.user.email) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+  const body = await req.text();
+  const signature = req.headers.get("x-razorpay-signature")!;
 
-    const { amount, planKey } = await req.json();
+  const expectedSignature = crypto
+    .createHmac("sha256", secret)
+    .update(body)
+    .digest("hex");
 
-    if (!amount || !planKey) {
-      return NextResponse.json(
-        { error: "Amount and planKey are required" },
-        { status: 400 }
-      );
-    }
-
-    // ✅ MOST IMPORTANT FIX: userId + email in notes
-    const order = await razorpay.orders.create({
-      amount: amount * 100, // INR → paise
-      currency: "INR",
-      receipt: `trustverse_${planKey}_${Date.now()}`,
-      notes: {
-        userId: session.user.id,       // 🔥 WEBHOOK YAHI SE USER PEHCHANEGA
-        email: session.user.email,
-        planKey,
-      },
-    });
-
-    return NextResponse.json({
-      orderId: order.id,
-      amount: order.amount,
-      currency: order.currency,
-      key: process.env.RAZORPAY_KEY_ID, // frontend ke liye
-    });
-  } catch (error) {
-    console.error("Razorpay order error:", error);
-    return NextResponse.json(
-      { error: "Order creation failed" },
-      { status: 500 }
-    );
+  if (expectedSignature !== signature) {
+    console.error("Webhook signature mismatch");
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
+
+  const event = JSON.parse(body);
+
+  if (event.event !== "payment.captured") {
+    return NextResponse.json({ received: true });
+  }
+
+  const payment = event.payload.payment.entity;
+  const notes = payment.notes;
+
+  await dbConnect();
+
+  const user = await User.findById(notes.userId);
+  if (!user) {
+    console.error("User not found for payment");
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const CREDIT_MAP: any = {
+    prelaunch: 10,
+    essential: 100,
+    pro: 300,
+    enterprise: 1000,
+  };
+
+  // ✅ ADD CREDITS
+  user.credits += CREDIT_MAP[notes.plan] || 0;
+  await user.save();
+
+  // ✅ SAVE PAYMENT HISTORY
+  await Payment.create({
+    userId: user._id,
+    razorpayPaymentId: payment.id,
+    amount: payment.amount / 100,
+    currency: payment.currency,
+    plan: notes.plan,
+    status: "success",
+  });
+
+  return NextResponse.json({ success: true });
 }

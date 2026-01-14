@@ -8,16 +8,14 @@ const razorpay = new Razorpay({
 
 export async function POST(req: Request) {
   try {
-    const { plan, billing, currency } = await req.json();
+    const { plan, billing, currency, userId } = await req.json();
 
-    if (!plan || !billing || !currency) {
+    if (!plan || !billing || !currency || !userId) {
       return NextResponse.json(
-        { error: "Missing plan, billing or currency" },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
-
-    /* ================= PRICE MAP ================= */
 
     const PRICE_MAP: any = {
       INR: {
@@ -52,19 +50,22 @@ export async function POST(req: Request) {
 
     const amount = PRICE_MAP?.[currency]?.[billing]?.[plan];
 
-    if (!amount || amount <= 0) {
+    if (!amount) {
       return NextResponse.json(
-        { error: "Invalid plan amount" },
+        { error: "Invalid plan" },
         { status: 400 }
       );
     }
 
-    /* ================= CREATE ORDER ================= */
-
     const order = await razorpay.orders.create({
-      amount: amount * 100, // paisa / cents
+      amount: amount * 100,
       currency,
       receipt: `rcpt_${plan}_${Date.now()}`,
+      notes: {
+        userId,   // 🔑 VERY IMPORTANT
+        plan,
+        billing,
+      },
     });
 
     return NextResponse.json({
@@ -72,11 +73,10 @@ export async function POST(req: Request) {
       amount: order.amount,
       currency: order.currency,
     });
-  } catch (err: any) {
-    console.error("RAZORPAY ORDER ERROR:", err);
-
+  } catch (err) {
+    console.error("ORDER ERROR:", err);
     return NextResponse.json(
-      { error: "Server error while creating order" },
+      { error: "Order creation failed" },
       { status: 500 }
     );
   }
