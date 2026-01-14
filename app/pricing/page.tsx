@@ -60,7 +60,7 @@ export default function PricingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planKey,
+          plan: planKey, // ✅ FIX: backend expects "plan"
           billing,
           currency,
         }),
@@ -84,12 +84,9 @@ export default function PricingPage() {
         image: "/logo.png",
 
         /**
-         * ✅ IMPORTANT (FINAL DECISION)
-         * - Frontend VERIFY ❌
-         * - Webhook handles:
-         *   ✔ payment save
-         *   ✔ credits add
-         *   ✔ subscription update
+         * FINAL DECISION (UNCHANGED)
+         * - Frontend verify ❌
+         * - Webhook handles credits & history
          */
         handler: function () {
           alert("Payment successful 🎉 Credits will be added shortly.");
