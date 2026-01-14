@@ -11,10 +11,7 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const {
@@ -31,14 +28,13 @@ export async function POST(req: Request) {
       !plan
     ) {
       return NextResponse.json(
-        { error: "Missing payment fields" },
+        { error: "Missing fields" },
         { status: 400 }
       );
     }
 
-    // 🔐 STEP 1: VERIFY SIGNATURE
+    // 🔐 SIGNATURE VERIFY
     const body = `${razorpay_order_id}|${razorpay_payment_id}`;
-
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
       .update(body)
@@ -53,29 +49,23 @@ export async function POST(req: Request) {
 
     await dbConnect();
 
-    // 🔁 STEP 2: IDEMPOTENCY CHECK (MOST IMPORTANT)
-    const alreadyProcessed = await Payment.findOne({
+    // 🔁 IDEMPOTENT CHECK
+    const existingPayment = await Payment.findOne({
       razorpayPaymentId: razorpay_payment_id,
     });
 
-    if (alreadyProcessed) {
-      // ✅ Payment already handled earlier
+    if (existingPayment) {
       return NextResponse.json({
         success: true,
-        message: "Payment already verified",
+        message: "Already verified",
       });
     }
 
-    // 👤 STEP 3: USER
     const user = await User.findOne({ email: session.user.email });
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // 💳 STEP 4: CREDIT MAP (FIXED – NO DOUBLE)
     const CREDIT_MAP: Record<string, number> = {
       prelaunch: 10,
       essential: 100,
@@ -85,11 +75,9 @@ export async function POST(req: Request) {
 
     const creditsToAdd = CREDIT_MAP[plan] ?? 0;
 
-    // ➕ STEP 5: ADD CREDITS (ONLY ONCE)
     user.credits += creditsToAdd;
     await user.save();
 
-    // 🧾 STEP 6: SAVE PAYMENT HISTORY
     await Payment.create({
       userId: user._id,
       razorpayOrderId: razorpay_order_id,
@@ -99,15 +87,12 @@ export async function POST(req: Request) {
       status: "success",
     });
 
-    // ✅ FINAL RESPONSE
     return NextResponse.json({
       success: true,
       message: "Payment verified & credits added",
-      creditsAdded: creditsToAdd,
     });
   } catch (err) {
     console.error("VERIFY ERROR:", err);
-
     return NextResponse.json(
       { error: "Verification failed" },
       { status: 500 }

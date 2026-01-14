@@ -55,7 +55,7 @@ export default function PricingPage() {
     setLoadingPlan(planKey);
 
     try {
-      // 1️⃣ CREATE ORDER
+      // 1️⃣ CREATE ORDER (SERVER)
       const res = await fetch("/api/razorpay/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -69,7 +69,7 @@ export default function PricingPage() {
 
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || !data.orderId) {
         alert(data.error || "Order creation failed");
         return;
       }
@@ -84,27 +84,18 @@ export default function PricingPage() {
         order_id: data.orderId,
         image: "/logo.png",
 
-        // ✅ VERIFY FLOW (FINAL & WORKING)
-        handler: async function (response: any) {
-          const verifyRes = await fetch("/api/razorpay/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              plan: planKey,
-            }),
-          });
-
-          const verifyData = await verifyRes.json();
-
-          if (verifyRes.ok) {
-            alert("Payment successful 🎉 Credits added");
-            window.location.href = "/dashboard/payments";
-          } else {
-            alert(verifyData.error || "Payment verification failed");
-          }
+        /**
+         * ✅ FINAL, STABLE HANDLER
+         * - NO verify
+         * - NO credits
+         * - NO history
+         * Webhook will handle everything safely
+         */
+        handler: function () {
+          alert(
+            "Payment successful 🎉\nCredits will be added automatically in a few seconds."
+          );
+          window.location.href = "/dashboard";
         },
 
         theme: { color: "#0C1633" },
