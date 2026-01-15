@@ -42,11 +42,13 @@ export default function PricingPage() {
   const payNow = async (planKey: string) => {
     if (!userId) {
       alert("Please login first");
+      window.location.href = "/login";
       return;
     }
 
     const amount = PRICES[currency][planKey];
 
+    // ✅ FREE PLAN
     if (amount === 0) {
       window.location.href = "/dashboard";
       return;
@@ -56,17 +58,18 @@ export default function PricingPage() {
 
     try {
       // 1️⃣ CREATE ORDER (SERVER)
-  const res = await fetch("/api/razorpay/order", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    plan: planKey,
-    billing,
-    currency,
-  }),
-});
-
-
+      const res = await fetch("/api/razorpay/order", {
+        method: "POST",
+        credentials: "include", // 🔥 MOST IMPORTANT FIX
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          plan: planKey,
+          billing,
+          currency,
+        }),
+      });
 
       const data = await res.json();
 
@@ -86,11 +89,9 @@ export default function PricingPage() {
         image: "/logo.png",
 
         /**
-         * ✅ FINAL, STABLE HANDLER
-         * - NO verify
-         * - NO credits
-         * - NO history
-         * Webhook will handle everything safely
+         * ✅ WEBHOOK-ONLY FLOW (SAFE & CORRECT)
+         * - Frontend does NOT save payment
+         * - Webhook will save payment + add credits
          */
         handler: function () {
           alert(
@@ -99,7 +100,9 @@ export default function PricingPage() {
           window.location.href = "/dashboard";
         },
 
-        theme: { color: "#0C1633" },
+        theme: {
+          color: "#0C1633",
+        },
       };
 
       const rzp = new window.Razorpay(options);
@@ -154,7 +157,7 @@ export default function PricingPage() {
         <button
           disabled={loadingPlan === planKey}
           onClick={() => payNow(planKey)}
-          className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold"
+          className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold disabled:opacity-60"
         >
           {loadingPlan === planKey
             ? "Please wait..."
