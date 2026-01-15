@@ -4,6 +4,26 @@ import dbConnect from "@/lib/db";
 import Payment from "@/models/Payment";
 import User from "@/models/User";
 
+/* ================= CREDIT CONFIG (FIXED) ================= */
+const CREDIT_TABLE: any = {
+  prelaunch: {
+    monthly: 50,
+    yearly: 800,
+  },
+  essential: {
+    monthly: 200,
+    yearly: 2500,
+  },
+  pro: {
+    monthly: 600,
+    yearly: 8000,
+  },
+  enterprise: {
+    monthly: 2000,
+    yearly: 30000,
+  },
+};
+
 export async function POST(req: Request) {
   await dbConnect();
 
@@ -11,7 +31,7 @@ export async function POST(req: Request) {
   const body = await req.text();
   const signature = req.headers.get("x-razorpay-signature") || "";
 
-  // 🔐 Verify signature
+  /* ================= VERIFY SIGNATURE ================= */
   const expectedSignature = crypto
     .createHmac("sha256", secret)
     .update(body)
@@ -23,7 +43,7 @@ export async function POST(req: Request) {
 
   const event = JSON.parse(body);
 
-  // ✅ Only handle successful payment
+  /* ================= HANDLE ONLY SUCCESS ================= */
   if (event.event !== "payment.captured") {
     return NextResponse.json({ status: "ignored" });
   }
@@ -38,40 +58,36 @@ export async function POST(req: Request) {
 
   const userId = notes.userId;
   const plan = notes.plan;
-  const billing = notes.billing;
+  const billing = notes.billing || "monthly";
 
   if (!userId || !plan) {
     return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
   }
 
-  // 🔁 Prevent duplicate save
+  /* ================= PREVENT DUPLICATE ================= */
   const existing = await Payment.findOne({ razorpayPaymentId });
   if (existing) {
     return NextResponse.json({ status: "already_saved" });
   }
 
-  // 💾 SAVE PAYMENT
+  /* ================= CALCULATE CREDITS ================= */
+  const credits =
+    CREDIT_TABLE?.[plan]?.[billing] ?? 0;
+
+  /* ================= SAVE PAYMENT ================= */
   await Payment.create({
     userId,
     plan,
     billing,
     amount,
     currency,
-    razorpayPaymentId,
-    razorpayOrderId,
+    creditsAdded: credits,
+    razorpay_payment_id: razorpayPaymentId,
+    razorpay_order_id: razorpayOrderId,
     status: "success",
   });
 
-  // 🎁 ADD CREDITS
-  const CREDIT_MAP: any = {
-    prelaunch: 50,
-    essential: 200,
-    pro: 500,
-    enterprise: 1000,
-  };
-
-  const credits = CREDIT_MAP[plan] || 0;
-
+  /* ================= ADD USER CREDITS ================= */
   await User.findByIdAndUpdate(userId, {
     $inc: { credits },
   });
