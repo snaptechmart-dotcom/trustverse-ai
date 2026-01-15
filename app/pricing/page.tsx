@@ -58,13 +58,13 @@ export default function PricingPage() {
     setLoadingPlan(planKey);
 
     try {
-      // ✅ CREATE ORDER (SESSION COOKIE REQUIRED)
+      // ✅ CREATE ORDER (AUTH FIXED)
       const res = await fetch("/api/razorpay/order", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // 🔥 FINAL FIX (MOST IMPORTANT)
+        credentials: "include", // 🔥 THIS FIXES 401
         body: JSON.stringify({
           plan: planKey,
           billing,
@@ -74,14 +74,19 @@ export default function PricingPage() {
 
       const data = await res.json();
 
-      if (!res.ok || !data.orderId) {
+      if (!res.ok) {
         alert(data.error || "Order creation failed");
+        return;
+      }
+
+      if (!data.orderId) {
+        alert("Order ID missing from server");
         return;
       }
 
       // ✅ RAZORPAY CHECKOUT
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
         amount: data.amount,
         currency: data.currency,
         name: "Trustverse AI",
@@ -89,6 +94,13 @@ export default function PricingPage() {
         order_id: data.orderId,
         image: "/logo.png",
 
+        /**
+         * ✅ FINAL SAFE HANDLER
+         * Webhook handles:
+         * - payment save
+         * - credits
+         * - history
+         */
         handler: function () {
           alert(
             "Payment successful 🎉\nCredits will be added automatically in a few seconds."
@@ -102,7 +114,7 @@ export default function PricingPage() {
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err) {
-      console.error(err);
+      console.error("PAYMENT ERROR:", err);
       alert("Something went wrong");
     } finally {
       setLoadingPlan(null);
@@ -151,7 +163,7 @@ export default function PricingPage() {
         <button
           disabled={loadingPlan === planKey}
           onClick={() => payNow(planKey)}
-          className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold"
+          className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold disabled:opacity-60"
         >
           {loadingPlan === planKey
             ? "Please wait..."
