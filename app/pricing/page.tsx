@@ -11,7 +11,7 @@ declare global {
 }
 
 export default function PricingPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const userId = session?.user?.id;
 
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
@@ -40,6 +40,8 @@ export default function PricingPage() {
   /* ================= PAY NOW ================= */
 
   const payNow = async (planKey: string) => {
+    if (status === "loading") return;
+
     if (!userId) {
       alert("Please login first");
       window.location.href = "/login";
@@ -48,7 +50,6 @@ export default function PricingPage() {
 
     const amount = PRICES[currency][planKey];
 
-    // ✅ FREE PLAN
     if (amount === 0) {
       window.location.href = "/dashboard";
       return;
@@ -57,13 +58,13 @@ export default function PricingPage() {
     setLoadingPlan(planKey);
 
     try {
-      // 1️⃣ CREATE ORDER (SERVER)
+      // ✅ CREATE ORDER (SESSION COOKIE REQUIRED)
       const res = await fetch("/api/razorpay/order", {
         method: "POST",
-        credentials: "include", // 🔥 MOST IMPORTANT FIX
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include", // 🔥 FINAL FIX (MOST IMPORTANT)
         body: JSON.stringify({
           plan: planKey,
           billing,
@@ -78,7 +79,7 @@ export default function PricingPage() {
         return;
       }
 
-      // 2️⃣ RAZORPAY CHECKOUT
+      // ✅ RAZORPAY CHECKOUT
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: data.amount,
@@ -88,11 +89,6 @@ export default function PricingPage() {
         order_id: data.orderId,
         image: "/logo.png",
 
-        /**
-         * ✅ WEBHOOK-ONLY FLOW (SAFE & CORRECT)
-         * - Frontend does NOT save payment
-         * - Webhook will save payment + add credits
-         */
         handler: function () {
           alert(
             "Payment successful 🎉\nCredits will be added automatically in a few seconds."
@@ -100,9 +96,7 @@ export default function PricingPage() {
           window.location.href = "/dashboard";
         },
 
-        theme: {
-          color: "#0C1633",
-        },
+        theme: { color: "#0C1633" },
       };
 
       const rzp = new window.Razorpay(options);
@@ -157,7 +151,7 @@ export default function PricingPage() {
         <button
           disabled={loadingPlan === planKey}
           onClick={() => payNow(planKey)}
-          className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold disabled:opacity-60"
+          className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold"
         >
           {loadingPlan === planKey
             ? "Please wait..."
