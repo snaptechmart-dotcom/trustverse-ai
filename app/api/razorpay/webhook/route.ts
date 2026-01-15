@@ -4,34 +4,34 @@ import dbConnect from "@/lib/db";
 import Payment from "@/models/Payment";
 import User from "@/models/User";
 
-/* ================= CREDIT CONFIG (FIXED) ================= */
+/* ================= CREDIT CONFIG (FINAL) ================= */
 const CREDIT_TABLE: any = {
   prelaunch: {
     monthly: 50,
-    yearly: 800,
+    yearly: 600,
   },
   essential: {
-    monthly: 200,
-    yearly: 2500,
+    monthly: 300,
+    yearly: 3600,
   },
   pro: {
     monthly: 600,
     yearly: 8000,
   },
   enterprise: {
-    monthly: 2000,
-    yearly: 30000,
+    monthly: 1000,
+    yearly: 12000,
   },
 };
 
 export async function POST(req: Request) {
   await dbConnect();
 
+  /* ================= VERIFY SIGNATURE ================= */
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET!;
   const body = await req.text();
   const signature = req.headers.get("x-razorpay-signature") || "";
 
-  /* ================= VERIFY SIGNATURE ================= */
   const expectedSignature = crypto
     .createHmac("sha256", secret)
     .update(body)
@@ -64,14 +64,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
   }
 
-  /* ================= PREVENT DUPLICATE ================= */
-  const existing = await Payment.findOne({ razorpayPaymentId });
+  /* ================= PREVENT DUPLICATE PAYMENT ================= */
+  const existing = await Payment.findOne({ razorpay_payment_id: razorpayPaymentId });
   if (existing) {
     return NextResponse.json({ status: "already_saved" });
   }
 
   /* ================= CALCULATE CREDITS ================= */
-  const credits =
+  const creditsAdded =
     CREDIT_TABLE?.[plan]?.[billing] ?? 0;
 
   /* ================= SAVE PAYMENT ================= */
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
     billing,
     amount,
     currency,
-    creditsAdded: credits,
+    creditsAdded,
     razorpay_payment_id: razorpayPaymentId,
     razorpay_order_id: razorpayOrderId,
     status: "success",
@@ -89,8 +89,11 @@ export async function POST(req: Request) {
 
   /* ================= ADD USER CREDITS ================= */
   await User.findByIdAndUpdate(userId, {
-    $inc: { credits },
+    $inc: { credits: creditsAdded },
   });
 
-  return NextResponse.json({ status: "payment_processed" });
+  return NextResponse.json({
+    status: "payment_processed",
+    creditsAdded,
+  });
 }
