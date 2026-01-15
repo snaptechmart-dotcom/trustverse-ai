@@ -16,29 +16,41 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
+    // ✅ LOGIN / SIGNUP
     async signIn({ user }) {
       await dbConnect();
 
-      const existingUser = await User.findOne({ email: user.email });
+      let dbUser = await User.findOne({ email: user.email });
 
-      if (!existingUser) {
-        // ✅ FIRST TIME USER ONLY
-        await User.create({
+      if (!dbUser) {
+        dbUser = await User.create({
           email: user.email,
           name: user.name,
-          credits: 0, // ❗ NO BONUS CREDIT HERE
+          credits: 0,
         });
       }
 
       return true;
     },
 
-    async jwt({ token }) {
+    // ✅ JWT = DB USER ID ATTACH
+    async jwt({ token, user }) {
+      if (user?.email) {
+        await dbConnect();
+        const dbUser = await User.findOne({ email: user.email });
+        if (dbUser) {
+          token.id = dbUser._id.toString(); // 🔥 MOST IMPORTANT
+        }
+      }
       return token;
     },
 
-    async session({ session }) {
-      // ❌ NO CREDIT LOGIC HERE
+    // ✅ SESSION = USER ID EXPOSE
+    async session({ session, token }) {
+      if (session.user && token.id) {
+        // @ts-ignore
+        session.user.id = token.id;
+      }
       return session;
     },
   },

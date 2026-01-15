@@ -8,14 +8,9 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 });
 
-const PRICE_TABLE: any = {
-  INR: {
-    monthly: { prelaunch: 5 },
-  },
-};
-
 export async function POST(req: Request) {
   try {
+    // 🔐 AUTH (MOST IMPORTANT)
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user?.id) {
@@ -27,8 +22,26 @@ export async function POST(req: Request) {
 
     const { plan, billing, currency } = await req.json();
 
-    const amount =
-      PRICE_TABLE[currency]?.[billing]?.[plan];
+    if (!plan || !billing || !currency) {
+      return NextResponse.json(
+        { error: "Invalid request" },
+        { status: 400 }
+      );
+    }
+
+    /* ✅ PRICE TABLE (SINGLE SOURCE OF TRUTH) */
+    const PRICE_TABLE: any = {
+      INR: {
+        monthly: { prelaunch: 5, essential: 149, pro: 299, enterprise: 599 },
+        yearly: { prelaunch: 499, essential: 1499, pro: 2999, enterprise: 5999 },
+      },
+      USD: {
+        monthly: { prelaunch: 1, essential: 4, pro: 9, enterprise: 19 },
+        yearly: { prelaunch: 9, essential: 40, pro: 90, enterprise: 190 },
+      },
+    };
+
+    const amount = PRICE_TABLE[currency]?.[billing]?.[plan];
 
     if (!amount) {
       return NextResponse.json(
@@ -37,8 +50,9 @@ export async function POST(req: Request) {
       );
     }
 
+    // 💳 CREATE RAZORPAY ORDER
     const order = await razorpay.orders.create({
-      amount: amount * 100,
+      amount: amount * 100, // paise
       currency,
       receipt: `rcpt_${Date.now()}`,
     });
@@ -49,9 +63,9 @@ export async function POST(req: Request) {
       currency: order.currency,
     });
   } catch (err) {
-    console.error("ORDER ERROR", err);
+    console.error("ORDER ERROR:", err);
     return NextResponse.json(
-      { error: "Order creation failed" },
+      { error: "Server error" },
       { status: 500 }
     );
   }
