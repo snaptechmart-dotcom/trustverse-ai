@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
+import dbConnect from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
@@ -8,65 +9,38 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 });
 
-export async function POST(req: Request) {
-  try {
-    // 🔐 AUTH (MOST IMPORTANT)
-    const session = await getServerSession(authOptions);
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
 
-    if (!session || !session.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { plan, billing, currency } = await req.json();
-
-    if (!plan || !billing || !currency) {
-      return NextResponse.json(
-        { error: "Invalid request" },
-        { status: 400 }
-      );
-    }
-
-    /* ✅ PRICE TABLE (SINGLE SOURCE OF TRUTH) */
-    const PRICE_TABLE: any = {
-      INR: {
-        monthly: { prelaunch: 5, essential: 149, pro: 299, enterprise: 599 },
-        yearly: { prelaunch: 499, essential: 1499, pro: 2999, enterprise: 5999 },
-      },
-      USD: {
-        monthly: { prelaunch: 1, essential: 4, pro: 9, enterprise: 19 },
-        yearly: { prelaunch: 9, essential: 40, pro: 90, enterprise: 190 },
-      },
-    };
-
-    const amount = PRICE_TABLE[currency]?.[billing]?.[plan];
-
-    if (!amount) {
-      return NextResponse.json(
-        { error: "Invalid plan" },
-        { status: 400 }
-      );
-    }
-
-    // 💳 CREATE RAZORPAY ORDER
-    const order = await razorpay.orders.create({
-      amount: amount * 100, // paise
-      currency,
-      receipt: `rcpt_${Date.now()}`,
-    });
-
-    return NextResponse.json({
-      orderId: order.id,
-      amount: order.amount,
-      currency: order.currency,
-    });
-  } catch (err) {
-    console.error("ORDER ERROR:", err);
-    return NextResponse.json(
-      { error: "Server error" },
-      { status: 500 }
-    );
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const { plan, billing, currency } = await req.json();
+
+  const priceMap: any = {
+    prelaunch: 5,
+    essential: 149,
+    pro: 299,
+    enterprise: 599,
+  };
+
+  const amount = priceMap[plan] * 100;
+
+  const order = await razorpay.orders.create({
+    amount,
+    currency,
+    receipt: `rcpt_${Date.now()}`,
+    notes: {
+      userId: session.user.id,
+      plan,
+      billing,
+    },
+  });
+
+  return NextResponse.json({
+    orderId: order.id,
+    amount: order.amount,
+    currency: order.currency,
+  });
 }
