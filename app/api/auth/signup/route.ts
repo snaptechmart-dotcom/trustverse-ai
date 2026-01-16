@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import User from "@/models/User";
-import connectDB from "@/lib/mongodb";
-
+import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    await connectDB();
-
     const { email, password } = await req.json();
 
     if (!email || !password) {
@@ -17,7 +13,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const existingUser = await User.findOne({ email });
+    // 🔍 CHECK EXISTING USER (PRISMA)
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
     if (existingUser) {
       return NextResponse.json(
         { message: "User already exists" },
@@ -25,11 +25,19 @@ export async function POST(req: Request) {
       );
     }
 
+    // 🔐 HASH PASSWORD
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await User.create({
-      email,
-      password: hashedPassword,
+    // 👤 CREATE USER (DEFAULT FREE PLAN)
+    await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        plan: "free",
+        billing: null,
+        credits: 10,          // ✅ free user credits
+        planExpiresAt: null, // ✅ no expiry for free
+      },
     });
 
     return NextResponse.json(

@@ -8,24 +8,41 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  email     String   @unique
-  credits   Int      @default(0)
-  createdAt DateTime @default(now())
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  email         String   @unique
 
-  payments  Payment[]
+  // 🔐 AUTH (LOGIN / SIGNUP)
+  password      String
+
+  // 🎯 CREDITS SYSTEM
+  // ✅ FREE USER = 10 (SINGLE SOURCE OF TRUTH)
+  credits       Int      @default(10)
+
+  // 💳 PLAN SYSTEM
+  // ✅ DEFAULT FREE (IMPORTANT FOR NEXTAUTH + JWT)
+  plan          String   @default("free")   // free / prelaunch / essential / pro / enterprise
+  billing       String?                     // monthly / yearly
+  planExpiresAt DateTime?                   // auto expiry via verify API
+
+  createdAt     DateTime @default(now())
+
+  // 🔗 RELATION
+  payments      Payment[]
 }
 
 model Payment {
   id                String   @id @default(auto()) @map("_id") @db.ObjectId
   userId            String   @db.ObjectId
+
   plan              String
   billing           String
   amount            Float
   currency          String
+
   razorpayPaymentId String   @unique
   razorpayOrderId   String
   status            String
+
   createdAt         DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
-import dbConnect from "@/lib/db";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/authOptions";
+
+import { getPlanData } from "@/lib/plans";
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
@@ -10,26 +11,31 @@ const razorpay = new Razorpay({
 });
 
 export async function POST(req: NextRequest) {
+  // 🔐 AUTH CHECK (FINAL FIX)
   const session = await getServerSession(authOptions);
 
-  if (!session?.user?.id) {
+  if (!session || !session.user || !session.user.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { plan, billing, currency } = await req.json();
 
-  const priceMap: any = {
-    prelaunch: 49,
-    essential: 149,
-    pro: 299,
-    enterprise: 599,
-  };
+  // 🧠 PLAN VALIDATION (SINGLE SOURCE OF TRUTH)
+  const planData = getPlanData(plan, billing);
+  if (!planData || !planData.isPaid) {
+    return NextResponse.json(
+      { error: "Invalid plan" },
+      { status: 400 }
+    );
+  }
 
-  const amount = priceMap[plan] * 100;
+  // 💰 AMOUNT (IN PAISE)
+  const amount = planData.amount * 100;
 
+  // 🧾 CREATE RAZORPAY ORDER
   const order = await razorpay.orders.create({
     amount,
-    currency,
+    currency: currency || "INR",
     receipt: `rcpt_${Date.now()}`,
     notes: {
       userId: session.user.id,

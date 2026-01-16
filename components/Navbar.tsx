@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const pathname = usePathname();
 
   const [credits, setCredits] = useState<number | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
@@ -40,13 +39,11 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const isPro = plan === "PRO" || plan === "pro";
-
   return (
     <header className="sticky top-0 z-50 bg-[#0B1220] border-b border-white/10">
       <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
 
-        {/* LOGO → MAIN PAGE */}
+        {/* LOGO */}
         <button
           onClick={() => router.push("/")}
           className="text-white text-lg font-semibold"
@@ -54,11 +51,10 @@ export default function Navbar() {
           Trustverse AI
         </button>
 
-        {/* RIGHT SIDE */}
         {status === "authenticated" ? (
           <div className="flex items-center gap-4 relative" ref={menuRef}>
 
-            {/* PLAN / CREDITS */}
+            {/* CREDITS / PLAN */}
             {plan === "PRO" ? (
               <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                 PRO · Unlimited
@@ -86,21 +82,27 @@ export default function Navbar() {
               {session.user?.email?.[0]?.toUpperCase() ?? "U"}
             </button>
 
-            {/* DROPDOWN (DESKTOP ONLY) */}
+            {/* DROPDOWN (DESKTOP + MOBILE) */}
             {menuOpen && (
-              <div className="hidden md:block absolute right-0 top-12 w-44 bg-[#0B1220] border border-white/10 rounded-md shadow-lg">
+              <div className="absolute right-0 top-12 w-44 bg-[#0B1220] border border-white/10 rounded-md shadow-lg">
 
+                {/* ✅ IMPORTANT FIX HERE */}
                 <button
                   onClick={() => {
                     setMenuOpen(false);
-                    router.push("/dashboard");
+
+                    // 🔥 Mobile → open dashboard WITH sidebar
+                    if (window.innerWidth < 768) {
+                      router.push("/dashboard?menu=open");
+                    } else {
+                      router.push("/dashboard");
+                    }
                   }}
                   className="block w-full px-4 py-2 text-left text-sm text-white hover:bg-white/10"
                 >
                   Dashboard
                 </button>
 
-                {/* ✅ DIVIDER — DESKTOP ONLY */}
                 <div className="border-t border-white/10 my-1"></div>
 
                 <button

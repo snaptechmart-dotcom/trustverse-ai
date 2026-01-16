@@ -9,17 +9,14 @@ export const metadata: Metadata = {
   title: "Trustverse AI",
   description: "AI Trust & Reputation Platform",
 
-  // ✅ FAVICON (MOST IMPORTANT)
   icons: {
     icon: "/favicon.ico",
   },
 
-  // ✅ Google Search Console
   verification: {
     google: "ATPktU3iWa8a4kZJ1yOjWLCPiVQoPMdkbIeXGUt_3zM",
   },
 
-  // ✅ Better Google Branding (optional but powerful)
   openGraph: {
     title: "Trustverse AI",
     description: "AI Trust & Fraud Detection Platform",
@@ -62,8 +59,16 @@ export default function RootLayout({
 
       <body className="min-h-screen bg-white">
         <Providers>
-          <Navbar />
-          <main>{children}</main>
+          {/* 🔐 NAVBAR LAYER FIX (MOBILE SAFE) */}
+          <div className="relative z-50 pointer-events-auto">
+            <Navbar />
+          </div>
+
+          {/* 📄 MAIN CONTENT */}
+          <main className="relative z-0">
+            {children}
+          </main>
+
           <Footer />
         </Providers>
       </body>

@@ -1,41 +1,42 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
-import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
+import prisma from "@/lib/prisma";
 
 type ProfileUser = {
   email: string;
-  plan: "free" | "pro";
+  plan: string | null;
+  billing: string | null;
   credits: number;
+  planExpiresAt: Date | null;
   createdAt: Date;
 };
 
 export default async function ProfilePage() {
-  // 🔐 SESSION
-  const session = await getServerSession(authOptions);
+  // 🔐 SESSION (APP ROUTER SAFE)
+  const session = await getServerSession();
 
   if (!session?.user?.email) {
     redirect("/login");
   }
 
-  // 🔌 DB
-  await dbConnect();
-
-  // 👤 USER (SAFE TYPING)
-  const user = (await User.findOne(
-    { email: session.user.email },
-    {
-      email: 1,
-      plan: 1,
-      credits: 1,
-      createdAt: 1,
-    }
-  ).lean()) as ProfileUser | null;
+  // 👤 USER (PRISMA – SINGLE SOURCE OF TRUTH)
+  const user = (await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: {
+      email: true,
+      plan: true,
+      billing: true,
+      credits: true,
+      planExpiresAt: true,
+      createdAt: true,
+    },
+  })) as ProfileUser | null;
 
   if (!user) {
     redirect("/login");
   }
+
+  const planName = user.plan ?? "free";
 
   return (
     <div className="max-w-3xl space-y-8">
@@ -49,27 +50,40 @@ export default async function ProfilePage() {
         </p>
       </div>
 
-      {/* ACCOUNT CARD */}
+      {/* ACCOUNT DETAILS CARD */}
       <div className="bg-white border rounded-xl p-6 space-y-6">
+        {/* EMAIL */}
         <div>
           <p className="text-sm text-gray-500">Email</p>
           <p className="font-medium">{user.email}</p>
         </div>
 
+        {/* PLAN */}
         <div>
           <p className="text-sm text-gray-500">Plan</p>
-          <p className="font-medium">
-            {user.plan === "pro" ? "Pro (Unlimited)" : "Free"}
+          <p className="font-medium capitalize">
+            {planName}
+            {user.billing ? ` (${user.billing})` : ""}
           </p>
         </div>
 
+        {/* CREDITS */}
         <div>
           <p className="text-sm text-gray-500">Credits</p>
-          <p className="font-medium">
-            {user.plan === "pro" ? "Unlimited" : user.credits}
-          </p>
+          <p className="font-medium">{user.credits}</p>
         </div>
 
+        {/* PLAN EXPIRY (PAID USERS) */}
+        {user.planExpiresAt && (
+          <div>
+            <p className="text-sm text-gray-500">Plan Expiry</p>
+            <p className="font-medium">
+              {new Date(user.planExpiresAt).toLocaleDateString()}
+            </p>
+          </div>
+        )}
+
+        {/* ACCOUNT CREATED */}
         <div>
           <p className="text-sm text-gray-500">Account Created</p>
           <p className="font-medium">
@@ -78,7 +92,7 @@ export default async function ProfilePage() {
         </div>
       </div>
 
-      {/* ACTIONS */}
+      {/* ACTION BUTTONS */}
       <div className="flex gap-4">
         <a
           href="/dashboard/settings"
@@ -87,12 +101,12 @@ export default async function ProfilePage() {
           Account Settings
         </a>
 
-        {user.plan !== "pro" && (
+        {planName === "free" && (
           <a
             href="/pricing"
             className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded"
           >
-            Upgrade to Pro
+            Upgrade Plan
           </a>
         )}
       </div>

@@ -1,12 +1,12 @@
 export const runtime = "nodejs";
 
-import NextAuth, { AuthOptions } from "next-auth";
+import NextAuth from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
+import prisma from "@/lib/prisma";
 
-export const authOptions: AuthOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -14,16 +14,17 @@ export const authOptions: AuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
+
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
 
-        await dbConnect();
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
 
-        const user = await User.findOne({ email: credentials.email }).select(
-          "+password"
-        );
-
-        if (!user) return null;
+        if (!user || !user.password) return null;
 
         const isValid = await bcrypt.compare(
           credentials.password,
@@ -33,10 +34,9 @@ export const authOptions: AuthOptions = {
         if (!isValid) return null;
 
         return {
-          id: user._id.toString(),
+          id: user.id,
           email: user.email,
-          role: user.role,
-          plan: user.plan,
+          plan: user.plan ?? "free",
           credits: user.credits ?? 0,
         };
       },
@@ -45,7 +45,6 @@ export const authOptions: AuthOptions = {
 
   session: {
     strategy: "jwt",
-    maxAge: 60 * 60 * 24,
   },
 
   pages: {
@@ -57,18 +56,17 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.id = user.id;
         token.email = user.email;
-        token.role = user.role;
         token.plan = user.plan;
         token.credits = user.credits;
-        return token;
       }
 
       if (token.email) {
-        await dbConnect();
-        const dbUser = await User.findOne({ email: token.email });
+        const dbUser = await prisma.user.findUnique({
+          where: { email: token.email },
+        });
+
         if (dbUser) {
-          token.role = dbUser.role;
-          token.plan = dbUser.plan;
+          token.plan = dbUser.plan ?? "free";
           token.credits = dbUser.credits ?? 0;
         }
       }
@@ -80,7 +78,6 @@ export const authOptions: AuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
-        session.user.role = token.role as string;
         session.user.plan = token.plan as string;
         session.user.credits = token.credits as number;
       }
@@ -92,4 +89,5 @@ export const authOptions: AuthOptions = {
 };
 
 const handler = NextAuth(authOptions);
+
 export { handler as GET, handler as POST };

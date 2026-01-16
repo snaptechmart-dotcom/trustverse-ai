@@ -1,15 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { HiMenu, HiX } from "react-icons/hi";
 
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [open, setOpen] = useState(false);
+
+  // ✅ AUTO-OPEN SIDEBAR ON MOBILE WHEN ?menu=open
+  useEffect(() => {
+    if (searchParams.get("menu") === "open") {
+      setOpen(true);
+    }
+  }, [searchParams]);
 
   const navItem = (href: string, label: string) => (
     <Link
@@ -85,10 +94,7 @@ export default function Sidebar() {
           {navItem("/dashboard", "Dashboard")}
           {navItem("/dashboard/tools", "AI Tools")}
           {navItem("/dashboard/history", "History")}
-
-          {/* ✅ NEW: PAYMENT HISTORY */}
           {navItem("/dashboard/payments", "Payment History")}
-
           {navItem("/dashboard/settings", "Settings")}
 
           <div className="mt-1">
