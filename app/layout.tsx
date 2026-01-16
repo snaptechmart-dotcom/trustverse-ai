@@ -3,14 +3,37 @@ import Providers from "./providers";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Script from "next/script";
+import type { Metadata } from "next";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Trustverse AI",
   description: "AI Trust & Reputation Platform",
 
-  // ✅ Google Search Console Verification (ADDED)
+  // ✅ FAVICON (MOST IMPORTANT)
+  icons: {
+    icon: "/favicon.ico",
+  },
+
+  // ✅ Google Search Console
   verification: {
     google: "ATPktU3iWa8a4kZJ1yOjWLCPiVQoPMdkbIeXGUt_3zM",
+  },
+
+  // ✅ Better Google Branding (optional but powerful)
+  openGraph: {
+    title: "Trustverse AI",
+    description: "AI Trust & Fraud Detection Platform",
+    url: "https://trustverseai.com",
+    siteName: "Trustverse AI",
+    images: [
+      {
+        url: "/trustverse-logo.png",
+        width: 512,
+        height: 512,
+        alt: "Trustverse AI Logo",
+      },
+    ],
+    type: "website",
   },
 };
 
