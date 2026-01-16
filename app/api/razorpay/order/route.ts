@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const { plan, billing, currency } = await req.json();
 
   const priceMap: any = {
-    prelaunch: 5,
+    prelaunch: 49,
     essential: 149,
     pro: 299,
     enterprise: 599,
