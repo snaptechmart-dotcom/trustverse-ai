@@ -1,10 +1,10 @@
-import { AuthOptions } from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
-export const authOptions: AuthOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -33,12 +33,12 @@ export const authOptions: AuthOptions = {
 
         if (!isPasswordValid) return null;
 
-        // ✅ credits MUST be returned
+        // ✅ RETURN FULL USER SHAPE (TYPE-SAFE)
         return {
           id: user._id.toString(),
           email: user.email,
-          role: user.role,
-          plan: user.plan,
+          role: user.role ?? "user",   // 🔐 REQUIRED FIX
+          plan: user.plan ?? "free",
           credits: user.credits ?? 0,
         };
       },

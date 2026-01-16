@@ -3,7 +3,8 @@ import { PLANS } from "@/lib/plans";
 
 export async function upgradeUserPlan(
   userId: string,
-  newPlan: keyof typeof PLANS
+  newPlan: keyof typeof PLANS,
+  billing: "monthly" | "yearly"
 ) {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
@@ -13,9 +14,9 @@ export async function upgradeUserPlan(
 
   // 🗓️ Expiry calculation
   let expiresAt: Date | undefined = undefined;
-  if (planConfig.durationDays > 0) {
+  if (planConfig.validityDays > 0) {
     expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + planConfig.durationDays);
+    expiresAt.setDate(expiresAt.getDate() + planConfig.validityDays);
   }
 
   // 🔄 Apply upgrade
@@ -23,8 +24,18 @@ export async function upgradeUserPlan(
   user.planActivatedAt = new Date();
   user.planExpiresAt = expiresAt;
 
-  // 💳 Add credits
-  user.credits += planConfig.credits;
+  // 💳 Add credits (✅ FIXED LOGIC)
+  let addedCredits = 0;
+
+  if (billing === "monthly" && planConfig.monthly) {
+    addedCredits = planConfig.monthly.credits;
+  }
+
+  if (billing === "yearly" && planConfig.yearly) {
+    addedCredits = planConfig.yearly.credits;
+  }
+
+  user.credits += addedCredits;
 
   await user.save();
   return user;
