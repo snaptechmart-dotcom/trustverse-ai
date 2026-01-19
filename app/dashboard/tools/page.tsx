@@ -82,7 +82,8 @@ export default function DashboardToolsPage() {
     return <p className="text-gray-500">Loading tools…</p>;
   }
 
-  const isPro = session?.user?.plan === "PRO";
+  const userPlan = session?.user?.plan?.toLowerCase() || "free";
+  const isPaidUser = userPlan !== "free";
 
   return (
     <div className="w-full">
@@ -95,15 +96,16 @@ export default function DashboardToolsPage() {
           </p>
         </div>
 
+        {/* RIGHT SIDE STATUS */}
         <div className="hidden md:flex items-center gap-3">
-          <span className="text-sm text-gray-700">
-            Credits Available:{" "}
-            <b>{isPro ? "Unlimited" : session?.user?.credits ?? 0}</b>
-          </span>
-
-          {isPro && (
-            <span className="bg-purple-600 text-white text-xs px-3 py-1 rounded-full">
-              PRO
+          {isPaidUser ? (
+            <span className="text-sm font-semibold text-green-600">
+              {userPlan.toUpperCase()} – Unlimited
+            </span>
+          ) : (
+            <span className="text-sm text-gray-700">
+              Credits Available:{" "}
+              <b>{session?.user?.credits ?? 0}</b>
             </span>
           )}
         </div>
@@ -112,7 +114,7 @@ export default function DashboardToolsPage() {
       {/* TOOLS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {tools.map((tool, idx) => {
-          const locked = tool.pro && !isPro;
+          const locked = !isPaidUser && tool.pro;
           const href = locked ? "/pricing" : tool.link;
 
           return (
@@ -124,7 +126,7 @@ export default function DashboardToolsPage() {
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-lg font-semibold">{tool.title}</h2>
 
-                  {tool.pro && (
+                  {!isPaidUser && tool.pro && (
                     <span className="bg-black/30 text-xs px-2 py-0.5 rounded">
                       PRO
                     </span>
@@ -133,7 +135,7 @@ export default function DashboardToolsPage() {
 
                 <p className="text-sm opacity-90">{tool.desc}</p>
 
-                {tool.credits > 0 && (
+                {!isPaidUser && tool.credits > 0 && (
                   <p className="text-xs mt-3 opacity-80">
                     Credits per use: {tool.credits}
                   </p>

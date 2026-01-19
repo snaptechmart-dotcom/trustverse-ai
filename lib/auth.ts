@@ -1,7 +1,8 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import dbConnect from "@/lib/db";
-import User from "@/models/User";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -16,30 +17,41 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    // ✅ LOGIN / SIGNUP
+    // ✅ LOGIN / SIGNUP (GOOGLE)
     async signIn({ user }) {
-      await dbConnect();
+      if (!user.email) return false;
 
-      let dbUser = await User.findOne({ email: user.email });
+      const email = user.email.toLowerCase();
+
+      let dbUser = await prisma.user.findUnique({
+        where: { email },
+      });
 
       if (!dbUser) {
-        dbUser = await User.create({
-          email: user.email,
-          name: user.name,
-          credits: 0,
+        await prisma.user.create({
+          data: {
+            email,
+            password: "GOOGLE_AUTH", // dummy (required field)
+            credits: 0,
+            plan: "free",
+          },
         });
       }
 
       return true;
     },
 
-    // ✅ JWT = DB USER ID ATTACH
+    // ✅ JWT = USER ID ATTACH
     async jwt({ token, user }) {
       if (user?.email) {
-        await dbConnect();
-        const dbUser = await User.findOne({ email: user.email });
+        const email = user.email.toLowerCase();
+
+        const dbUser = await prisma.user.findUnique({
+          where: { email },
+        });
+
         if (dbUser) {
-          token.id = dbUser._id.toString(); // 🔥 MOST IMPORTANT
+          token.id = dbUser.id; // 🔥 MOST IMPORTANT
         }
       }
       return token;

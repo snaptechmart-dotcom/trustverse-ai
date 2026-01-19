@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
+import prisma from "@/lib/prisma";
 
-
-import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
-import History from "@/models/History";
+console.log("🔥 PHONE CHECKER API HIT");
 
 /* =========================
    HELPER: DETERMINISTIC SCORE
@@ -46,15 +44,16 @@ The number exhibits patterns commonly associated with spam, fraud, or scam activ
 It is strongly advised to avoid calls, messages, or any form of engagement.`;
 }
 
+/* =========================
+   POST
+========================= */
 export async function POST(req: Request) {
   try {
     /* =========================
-       DB + AUTH
+       AUTH
     ========================= */
-    await dbConnect();
-
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -77,7 +76,10 @@ export async function POST(req: Request) {
     /* =========================
        USER
     ========================= */
-    const user = await User.findOne({ email: session.user.email });
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    });
+
     if (!user) {
       return NextResponse.json(
         { error: "User not found" },
@@ -86,12 +88,12 @@ export async function POST(req: Request) {
     }
 
     /* =========================
-       CREDITS (LOCKED LOGIC)
+       CREDITS
     ========================= */
     let creditsUsed = 0;
     let remainingCredits = user.credits;
 
-    if (user.plan === "FREE") {
+    if (user.plan === "free") {
       if (remainingCredits <= 0) {
         return NextResponse.json(
           { error: "No credits left" },
@@ -100,13 +102,17 @@ export async function POST(req: Request) {
       }
 
       creditsUsed = 1;
-      user.credits = remainingCredits - 1;
-      await user.save();
-      remainingCredits = user.credits;
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { credits: remainingCredits - 1 },
+      });
+
+      remainingCredits = remainingCredits - 1;
     }
 
     /* =========================
-       PHONE ANALYSIS (LOGIC)
+       PHONE ANALYSIS
     ========================= */
     const trustScore = generatePhoneTrustScore(input);
 
@@ -127,20 +133,37 @@ export async function POST(req: Request) {
     );
 
     /* =========================
-       SAVE HISTORY (FINAL)
+       SAVE HISTORY (UNIVERSAL FORMAT ✅)
     ========================= */
-    await History.create({
-      userId: user._id,
-      tool: "PHONE_CHECK",
-      input,
-      inputKey: input,
-      summary: {
-        trustScore,
-        riskLevel,
-        verdict,
-        explanation,
+    await prisma.history.create({
+      data: {
+        userId: user.id,
+        tool: "phone_checker",
+
+        // ✅ JSON input (same as Trust Score)
+        input: { phone: input },
+
+        // ✅ string key (optional but safe)
+        inputKey: input,
+
+        // ✅ short summary (history list)
+        summary: {
+          trustScore,
+          riskLevel,
+          verdict,
+        },
+
+        // ✅ full result (detail page)
+        result: {
+          trustScore,
+          riskLevel,
+          verdict,
+          explanation,
+        },
+
+        // ✅ NEVER NULL
+        creditsUsed: creditsUsed ?? 0,
       },
-      creditsUsed,
     });
 
     /* =========================
@@ -153,7 +176,7 @@ export async function POST(req: Request) {
       explanation,
       creditsUsed,
       remainingCredits:
-        user.plan === "PRO" ? "unlimited" : remainingCredits,
+        user.plan === "free" ? remainingCredits : "unlimited",
     });
   } catch (error) {
     console.error("PHONE CHECK API ERROR:", error);

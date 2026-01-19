@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
-
-
-import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
-import History from "@/models/History";
+import prisma from "@/lib/prisma";
 
 /**
  * PROFILE TRUST CHECKER – POWER HOUSE (PRO TOOL)
@@ -17,12 +13,10 @@ import History from "@/models/History";
 export async function POST(req: Request) {
   try {
     /* =========================
-       DB + AUTH
+       AUTH
     ========================= */
-    await dbConnect();
-
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email || !session.user.id) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -47,7 +41,10 @@ export async function POST(req: Request) {
     /* =========================
        USER
     ========================= */
-    const user = await User.findById(session.user.id);
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    });
+
     if (!user) {
       return NextResponse.json(
         { error: "User not found" },
@@ -56,13 +53,12 @@ export async function POST(req: Request) {
     }
 
     /* =========================
-       CREDITS LOGIC (PRO TOOL)
-       🔥 COST = 2 CREDITS
+       CREDITS (PRO TOOL – 2)
     ========================= */
     let creditsUsed = 0;
     let remainingCredits = user.credits;
 
-    if (user.plan === "FREE") {
+    if (user.plan === "free") {
       if (remainingCredits < 2) {
         return NextResponse.json(
           { error: "This is a PRO tool. 2 credits required." },
@@ -70,22 +66,22 @@ export async function POST(req: Request) {
         );
       }
 
-      creditsUsed = 2;                     // 🔥 PRO TOOL COST
-      user.credits = remainingCredits - 2;
-      await user.save();
-      remainingCredits = user.credits;
-    } else {
-      creditsUsed = 0;                     // PRO = unlimited
+      creditsUsed = 2;
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { credits: remainingCredits - 2 },
+      });
+
+      remainingCredits = remainingCredits - 2;
     }
 
     /* =========================
-       TRUST ANALYSIS (DYNAMIC)
-       🔥 NEVER SAME RESULT
+       TRUST ANALYSIS (LOGIC SAME)
     ========================= */
     const baseScore = 55 + Math.floor(Math.random() * 25); // 55–79
     let trustScore = baseScore;
 
-    // Trusted email providers
     if (
       email.endsWith("@gmail.com") ||
       email.endsWith("@outlook.com") ||
@@ -94,17 +90,17 @@ export async function POST(req: Request) {
       trustScore += 8;
     }
 
-    // Custom / business domain
-    if (!email.includes("@gmail.") && !email.includes("@yahoo.")) {
+    if (
+      !email.includes("@gmail.") &&
+      !email.includes("@yahoo.")
+    ) {
       trustScore += 6;
     }
 
-    // Phone credibility
     if (phone && phone.length >= 8) {
       trustScore += 6;
     }
 
-    // Full name adds confidence
     if (name.split(" ").length >= 2) {
       trustScore += 5;
     }
@@ -123,24 +119,40 @@ export async function POST(req: Request) {
         : "High-risk indicators detected. This profile may be unreliable or associated with impersonation.";
 
     /* =========================
-       SUMMARY (STANDARD FORMAT)
+       SAVE HISTORY (UNIVERSAL ✅)
     ========================= */
-    const summary = {
-      trustScore,
-      riskLevel,
-      verdict,
-    };
+    await prisma.history.create({
+      data: {
+        userId: user.id,
+        tool: "profile_checker",
 
-    /* =========================
-       SAVE HISTORY (FINAL)
-    ========================= */
-    await History.create({
-      userId: user._id,
-      tool: "PROFILE_CHECK",
-      input: `${name} | ${email}${phone ? " | " + phone : ""}`,
-      inputKey: email,
-      summary,
-      creditsUsed,
+        // JSON input
+        input: {
+          name,
+          email,
+          phone: phone || null,
+        },
+
+        // string key (for search & grouping)
+        inputKey: email,
+
+        // short list view
+        summary: {
+          trustScore,
+          riskLevel,
+          verdict,
+        },
+
+        // full report
+        result: {
+          trustScore,
+          riskLevel,
+          verdict,
+        },
+
+        // NEVER null
+        creditsUsed: creditsUsed ?? 0,
+      },
     });
 
     /* =========================
@@ -155,9 +167,8 @@ export async function POST(req: Request) {
       verdict,
       creditsUsed,
       remainingCredits:
-        user.plan === "PRO" ? "unlimited" : remainingCredits,
+        user.plan === "free" ? remainingCredits : "unlimited",
     });
-
   } catch (error) {
     console.error("PROFILE CHECK API ERROR:", error);
     return NextResponse.json(

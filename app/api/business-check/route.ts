@@ -1,24 +1,30 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
-
-import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
-import History from "@/models/History";
+import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
+  console.log("🔥 BUSINESS CHECK API HIT");
+
   try {
     /* =========================
        AUTH
     ========================= */
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session.user.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const { businessName, domain } = await req.json();
-    const cleanBusiness = String(businessName || "").trim();
-    const cleanDomain = String(domain || "").trim().toLowerCase();
+    /* =========================
+       INPUT
+    ========================= */
+    const body = await req.json();
+    const cleanBusiness = String(body?.businessName || "").trim();
+    const cleanDomain = String(body?.domain || "").trim().toLowerCase();
 
     if (!cleanBusiness || !cleanDomain) {
       return NextResponse.json(
@@ -27,34 +33,49 @@ export async function POST(req: Request) {
       );
     }
 
-    await dbConnect();
+    /* =========================
+       USER (PRISMA ONLY)
+    ========================= */
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    });
 
-    const user = await User.findById(session.user.id);
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
     }
 
     /* =========================
-       CREDITS (🔥 PRO TOOL = 2)
+       CREDITS (PRO TOOL = 2)
     ========================= */
-    const creditsUsed = 2;
+    const TOOL_COST = 2;
+    let creditsUsed = 0;
     let remainingCredits = user.credits;
 
-    if (user.plan !== "PRO") {
-      if (remainingCredits < creditsUsed) {
+    if (user.plan === "free") {
+      if (remainingCredits < TOOL_COST) {
         return NextResponse.json(
           { error: "Not enough credits" },
           { status: 402 }
         );
       }
 
-      user.credits = remainingCredits - creditsUsed;
-      await user.save();
-      remainingCredits = user.credits;
+      creditsUsed = TOOL_COST;
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          credits: remainingCredits - TOOL_COST,
+        },
+      });
+
+      remainingCredits = remainingCredits - TOOL_COST;
     }
 
     /* =========================
-       DYNAMIC TRUST ENGINE
+       TRUST ENGINE (SAME LOGIC)
     ========================= */
     let trustScore = 40 + Math.floor(Math.random() * 35);
     const signals: string[] = [];
@@ -75,7 +96,15 @@ export async function POST(req: Request) {
       signals.push("Business name appears weak or incomplete");
     }
 
-    const riskyWords = ["free", "bonus", "crypto", "loan", "investment", "win"];
+    const riskyWords = [
+      "free",
+      "bonus",
+      "crypto",
+      "loan",
+      "investment",
+      "win",
+    ];
+
     if (riskyWords.some(w => cleanDomain.includes(w))) {
       trustScore -= 20;
       signals.push("High-risk marketing keywords detected");
@@ -84,7 +113,10 @@ export async function POST(req: Request) {
       signals.push("No common scam keywords detected");
     }
 
-    if (cleanDomain.endsWith(".com") || cleanDomain.endsWith(".in")) {
+    if (
+      cleanDomain.endsWith(".com") ||
+      cleanDomain.endsWith(".in")
+    ) {
       trustScore += 5;
       signals.push("Uses commonly trusted domain extension");
     }
@@ -106,19 +138,40 @@ export async function POST(req: Request) {
         : "Multiple risk indicators detected. Avoid engagement without verification.";
 
     /* =========================
-       SAVE HISTORY
+       SAVE HISTORY (UNIVERSAL ✅)
     ========================= */
-    await History.create({
-      userId: user._id,
-      tool: "BUSINESS_CHECK",
-      input: `${cleanBusiness} | ${cleanDomain}`,
-      inputKey: cleanDomain,
-      summary: {
-        trustScore,
-        riskLevel,
-        verdict,
+    await prisma.history.create({
+      data: {
+        userId: user.id,
+        tool: "business_checker",
+
+        // JSON input (standard)
+        input: {
+          businessName: cleanBusiness,
+          domain: cleanDomain,
+        },
+
+        // string key
+        inputKey: cleanDomain,
+
+        // list view
+        summary: {
+          trustScore,
+          riskLevel,
+          verdict,
+        },
+
+        // full report
+        result: {
+          trustScore,
+          riskLevel,
+          verdict,
+          signals,
+        },
+
+        // NEVER NULL
+        creditsUsed: creditsUsed ?? 0,
       },
-      creditsUsed,
     });
 
     /* =========================
@@ -133,7 +186,7 @@ export async function POST(req: Request) {
       signals,
       creditsUsed,
       remainingCredits:
-        user.plan === "PRO" ? "Unlimited (PRO)" : remainingCredits,
+        user.plan === "free" ? remainingCredits : "unlimited",
     });
   } catch (error) {
     console.error("BUSINESS CHECK ERROR:", error);

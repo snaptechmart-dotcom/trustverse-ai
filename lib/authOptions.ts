@@ -1,8 +1,7 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
+import prisma from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -18,27 +17,27 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        await dbConnect();
+        const email = credentials.email.trim().toLowerCase();
 
-        const user = await User.findOne({ email: credentials.email }).select(
-          "+password"
-        );
+        const user = await prisma.user.findUnique({
+          where: { email },
+        });
 
-        if (!user) return null;
+        if (!user || !user.password) return null;
 
-        const isPasswordValid = await bcrypt.compare(
+        const isValid = await bcrypt.compare(
           credentials.password,
           user.password
         );
 
-        if (!isPasswordValid) return null;
+        if (!isValid) return null;
 
-        // ✅ RETURN FULL USER SHAPE (TYPE-SAFE)
         return {
-          id: user._id.toString(),
+          id: user.id,
           email: user.email,
-          role: user.role ?? "user",   // 🔐 REQUIRED FIX
-          plan: user.plan ?? "free",
+          role: "user",
+          plan: user.plan?.toLowerCase() ?? "free",
+
           credits: user.credits ?? 0,
         };
       },
@@ -70,7 +69,8 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.role = token.role as string;
-        session.user.plan = token.plan as string;
+        session.user.plan = (token.plan as string)?.toLowerCase();
+
         session.user.credits = token.credits as number;
       }
       return session;

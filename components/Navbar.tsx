@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
 
   const [credits, setCredits] = useState<number | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
@@ -16,19 +17,23 @@ export default function Navbar() {
 
   const fetchCredits = async () => {
     if (!session?.user) return;
+
     const res = await fetch("/api/credits", { cache: "no-store" });
     if (!res.ok) return;
+
     const data = await res.json();
-    setCredits(data.credits ?? null);
-    setPlan(data.plan ?? null);
+    setCredits(data.credits ?? 0);
+    setPlan(data.plan ?? "free");
   };
 
+  // ✅ Refresh on auth + route change
   useEffect(() => {
     if (status === "authenticated") {
       fetchCredits();
     }
-  }, [status]);
+  }, [status, pathname]);
 
+  // ✅ Outside click close
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -38,6 +43,9 @@ export default function Navbar() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  // ✅ Case-insensitive PRO check (CRITICAL FIX)
+  const isPro = plan?.toLowerCase() === "pro";
 
   return (
     <header className="sticky top-0 z-50 bg-[#0B1220] border-b border-white/10">
@@ -55,7 +63,7 @@ export default function Navbar() {
           <div className="flex items-center gap-4 relative" ref={menuRef}>
 
             {/* CREDITS / PLAN */}
-            {plan === "PRO" ? (
+            {isPro ? (
               <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                 PRO · Unlimited
               </span>
@@ -65,7 +73,7 @@ export default function Navbar() {
               </span>
             )}
 
-            {plan !== "PRO" && (
+            {!isPro && (
               <Link
                 href="/pricing"
                 className="text-xs px-3 py-1 rounded-md bg-indigo-600 text-white"
@@ -82,16 +90,15 @@ export default function Navbar() {
               {session.user?.email?.[0]?.toUpperCase() ?? "U"}
             </button>
 
-            {/* DROPDOWN (DESKTOP + MOBILE) */}
+            {/* DROPDOWN */}
             {menuOpen && (
               <div className="absolute right-0 top-12 w-44 bg-[#0B1220] border border-white/10 rounded-md shadow-lg">
 
-                {/* ✅ IMPORTANT FIX HERE */}
                 <button
                   onClick={() => {
                     setMenuOpen(false);
 
-                    // 🔥 Mobile → open dashboard WITH sidebar
+                    // ✅ Mobile opens dashboard with sidebar
                     if (window.innerWidth < 768) {
                       router.push("/dashboard?menu=open");
                     } else {
@@ -106,7 +113,10 @@ export default function Navbar() {
                 <div className="border-t border-white/10 my-1"></div>
 
                 <button
-                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    signOut({ callbackUrl: "/login" });
+                  }}
                   className="block w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-white/10"
                 >
                   Logout

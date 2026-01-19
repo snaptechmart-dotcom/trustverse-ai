@@ -1,7 +1,6 @@
 import React from "react";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
-
 import { redirect } from "next/navigation";
 
 import Sidebar from "@/components/Sidebar";
@@ -22,7 +21,8 @@ export default async function DashboardLayout({
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* SIDEBAR — FIXED HEIGHT */}
       <aside className="h-full shrink-0">
-        <Sidebar />
+        {/* ✅ PASS SESSION (THIS WAS MISSING) */}
+        <Sidebar session={session} />
       </aside>
 
       {/* MAIN CONTENT — SCROLL AREA */}

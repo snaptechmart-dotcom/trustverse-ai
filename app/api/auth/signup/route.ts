@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    const { email, password } = await req.json();
+    let { email, password } = await req.json();
 
     if (!email || !password) {
       return NextResponse.json(
@@ -13,7 +13,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔍 CHECK EXISTING USER (PRISMA)
+    // ✅ NORMALIZE EMAIL (CRITICAL FIX)
+    email = email.trim().toLowerCase();
+
+    // 🔍 CHECK EXISTING USER
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
@@ -28,7 +31,7 @@ export async function POST(req: Request) {
     // 🔐 HASH PASSWORD
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 👤 CREATE USER (DEFAULT FREE PLAN)
+    // 👤 CREATE USER (FREE PLAN DEFAULT)
     await prisma.user.create({
       data: {
         email,
@@ -36,7 +39,7 @@ export async function POST(req: Request) {
         plan: "free",
         billing: null,
         credits: 10,          // ✅ free user credits
-        planExpiresAt: null, // ✅ no expiry for free
+        planExpiresAt: null, // ✅ no expiry
       },
     });
 

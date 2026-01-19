@@ -5,13 +5,21 @@ import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { HiMenu, HiX } from "react-icons/hi";
+import { Session } from "next-auth";
 
-export default function Sidebar() {
+export default function Sidebar({
+  session,
+}: {
+  session: Session;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const [open, setOpen] = useState(false);
+
+  // ✅ USER PLAN (NOW AVAILABLE FOR FUTURE LOGIC)
+  const userPlan = session?.user?.plan?.toLowerCase() || "free";
 
   // ✅ AUTO-OPEN SIDEBAR ON MOBILE WHEN ?menu=open
   useEffect(() => {

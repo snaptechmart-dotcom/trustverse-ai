@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 
 export async function GET() {
-  // 🔐 SESSION (NO authOptions import)
-  const session = await getServerSession();
+  // 🔐 SESSION (FINAL & CORRECT)
+  const session = await getServerSession(authOptions);
 
   if (!session?.user?.email) {
     return NextResponse.json(
@@ -13,11 +14,15 @@ export async function GET() {
     );
   }
 
+  // ✅ NORMALIZE EMAIL (CRITICAL)
+  const email = session.user.email.toLowerCase();
+
   // 👤 USER FROM DB
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+    where: { email },
     select: {
       credits: true,
+      plan: true,
     },
   });
 
@@ -30,5 +35,6 @@ export async function GET() {
 
   return NextResponse.json({
     credits: user.credits ?? 0,
+    plan: user.plan ?? "free",
   });
 }

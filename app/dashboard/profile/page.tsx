@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { authOptions } from "@/lib/authOptions";
 
 type ProfileUser = {
   email: string;
@@ -12,16 +13,19 @@ type ProfileUser = {
 };
 
 export default async function ProfilePage() {
-  // 🔐 SESSION (APP ROUTER SAFE)
-  const session = await getServerSession();
+  // 🔐 SESSION (FINAL & STABLE)
+  const session = await getServerSession(authOptions);
 
   if (!session?.user?.email) {
     redirect("/login");
   }
 
+  // ✅ NORMALIZE EMAIL
+  const email = session.user.email.toLowerCase();
+
   // 👤 USER (PRISMA – SINGLE SOURCE OF TRUTH)
   const user = (await prisma.user.findUnique({
-    where: { email: session.user.email },
+    where: { email },
     select: {
       email: true,
       plan: true,
@@ -52,13 +56,11 @@ export default async function ProfilePage() {
 
       {/* ACCOUNT DETAILS CARD */}
       <div className="bg-white border rounded-xl p-6 space-y-6">
-        {/* EMAIL */}
         <div>
           <p className="text-sm text-gray-500">Email</p>
           <p className="font-medium">{user.email}</p>
         </div>
 
-        {/* PLAN */}
         <div>
           <p className="text-sm text-gray-500">Plan</p>
           <p className="font-medium capitalize">
@@ -67,13 +69,11 @@ export default async function ProfilePage() {
           </p>
         </div>
 
-        {/* CREDITS */}
         <div>
           <p className="text-sm text-gray-500">Credits</p>
           <p className="font-medium">{user.credits}</p>
         </div>
 
-        {/* PLAN EXPIRY (PAID USERS) */}
         {user.planExpiresAt && (
           <div>
             <p className="text-sm text-gray-500">Plan Expiry</p>
@@ -83,7 +83,6 @@ export default async function ProfilePage() {
           </div>
         )}
 
-        {/* ACCOUNT CREATED */}
         <div>
           <p className="text-sm text-gray-500">Account Created</p>
           <p className="font-medium">

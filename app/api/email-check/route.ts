@@ -1,21 +1,15 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
-
-
-import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
-import History from "@/models/History";
+import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
     /* =========================
-       DB + AUTH
+       AUTH
     ========================= */
-    await dbConnect();
-
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -26,13 +20,11 @@ export async function POST(req: Request) {
        INPUT
     ========================= */
     const body = await req.json();
-    const email = String(body?.text || "").trim().toLowerCase();
+    const email = String(body?.text || "")
+      .trim()
+      .toLowerCase();
 
-    if (
-      !email ||
-      !email.includes("@") ||
-      !email.includes(".")
-    ) {
+    if (!email || !email.includes("@") || !email.includes(".")) {
       return NextResponse.json(
         { error: "Valid email address is required" },
         { status: 400 }
@@ -42,7 +34,10 @@ export async function POST(req: Request) {
     /* =========================
        USER
     ========================= */
-    const user = await User.findOne({ email: session.user.email });
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    });
+
     if (!user) {
       return NextResponse.json(
         { error: "User not found" },
@@ -51,12 +46,12 @@ export async function POST(req: Request) {
     }
 
     /* =========================
-       CREDITS – SINGLE SOURCE
+       CREDITS
     ========================= */
     let creditsUsed = 0;
     let remainingCredits = user.credits;
 
-    if (user.plan === "FREE") {
+    if (user.plan === "free") {
       if (remainingCredits <= 0) {
         return NextResponse.json(
           { error: "No credits left" },
@@ -65,15 +60,18 @@ export async function POST(req: Request) {
       }
 
       creditsUsed = 1;
-      user.credits = remainingCredits - 1;
-      await user.save();
-      remainingCredits = user.credits;
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { credits: remainingCredits - 1 },
+      });
+
+      remainingCredits = remainingCredits - 1;
     }
 
     /* =========================
        EMAIL ANALYSIS (SAFE MOCK)
     ========================= */
-
     const disposableDomains = [
       "tempmail",
       "10minutemail",
@@ -105,24 +103,37 @@ export async function POST(req: Request) {
         : "High risk detected. This email may be disposable or unsafe.";
 
     /* =========================
-       SUMMARY (STANDARD FORMAT)
+       SAVE HISTORY (UNIVERSAL ✅)
     ========================= */
-    const summary = {
-      trustScore,
-      riskLevel,
-      verdict,
-    };
+    await prisma.history.create({
+      data: {
+        userId: user.id,
+        tool: "email_checker",
 
-    /* =========================
-       SAVE HISTORY (POWER HOUSE)
-    ========================= */
-    await History.create({
-      userId: user._id,
-      tool: "EMAIL_CHECK",
-      input: email,
-      inputKey: email,
-      summary,
-      creditsUsed,
+        // ✅ JSON input
+        input: { email },
+
+        // ✅ string key
+        inputKey: email,
+
+        // ✅ short (history list)
+        summary: {
+          trustScore,
+          riskLevel,
+          verdict,
+        },
+
+        // ✅ full detail
+        result: {
+          trustScore,
+          riskLevel,
+          verdict,
+          isDisposable,
+        },
+
+        // ✅ never null
+        creditsUsed: creditsUsed ?? 0,
+      },
     });
 
     /* =========================
@@ -132,9 +143,10 @@ export async function POST(req: Request) {
       trustScore,
       riskLevel,
       verdict,
+      isDisposable,
       creditsUsed,
       remainingCredits:
-        user.plan === "PRO" ? "unlimited" : remainingCredits,
+        user.plan === "free" ? remainingCredits : "unlimited",
     });
   } catch (error) {
     console.error("EMAIL CHECK API ERROR:", error);

@@ -1,27 +1,25 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
-
-
-import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
-import History from "@/models/History";
+import prisma from "@/lib/prisma";
 
 /**
  * ADVANCED AI ANALYSIS – FINAL BOSS TOOL
  * Credits: 3 (FREE users)
  * Output: Long, human-like, premium analysis
  */
+
 export async function POST(req: Request) {
   try {
     /* =========================
-       1️⃣ DB + AUTH
+       1️⃣ AUTH
     ========================= */
-    await dbConnect();
-
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     /* =========================
@@ -38,20 +36,26 @@ export async function POST(req: Request) {
     }
 
     /* =========================
-       3️⃣ USER
+       3️⃣ USER (PRISMA)
     ========================= */
-    const user = await User.findById(session.user.id);
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    });
+
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
     }
 
     /* =========================
        4️⃣ CREDIT LOGIC (LOCKED = 3)
     ========================= */
-    let creditsUsed = 3;
+    let creditsUsed = 0;
     let remainingCredits = user.credits;
 
-    if (user.plan === "FREE") {
+    if (user.plan === "free") {
       if (remainingCredits < 3) {
         return NextResponse.json(
           { error: "Advanced AI Analysis requires 3 credits." },
@@ -59,9 +63,16 @@ export async function POST(req: Request) {
         );
       }
 
-      user.credits = remainingCredits - 3;
-      await user.save();
-      remainingCredits = user.credits;
+      creditsUsed = 3;
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          credits: remainingCredits - 3,
+        },
+      });
+
+      remainingCredits = remainingCredits - 3;
     }
 
     /* =========================
@@ -113,7 +124,7 @@ export async function POST(req: Request) {
     }
 
     /* =========================
-       6️⃣ TRUST SCORE (DYNAMIC)
+       6️⃣ TRUST SCORE
     ========================= */
     let trustScore =
       riskScore >= 6
@@ -134,10 +145,10 @@ export async function POST(req: Request) {
     ========================= */
     const explanation =
       riskLevel === "Low Risk"
-        ? `Trustverse AI™ Advanced Analysis did not detect any critical scam, fraud, or manipulation patterns in this content. The message appears behaviorally consistent and does not strongly resemble known deceptive or high-risk messaging techniques. While the overall risk is low, users are still encouraged to apply standard caution when interacting with unknown individuals or sources online.`
+        ? `Trustverse AI™ Advanced Analysis did not detect any critical scam, fraud, or manipulation patterns in this content. The message appears behaviorally consistent and does not strongly resemble known deceptive or high-risk messaging techniques.`
         : riskLevel === "Medium Risk"
-        ? `Trustverse AI™ Advanced Analysis identified multiple behavioral warning signals within this content. These include urgency-driven language, persuasive framing, or exaggerated claims that are commonly used in misleading or manipulative messaging. Although this does not confirm malicious intent, the presence of such patterns increases the likelihood of deception. Independent verification is strongly recommended before any form of engagement or financial action.`
-        : `Trustverse AI™ Advanced Analysis detected several high-risk indicators that closely align with known scam, fraud, and social engineering patterns. These include strong pressure tactics, manipulation language, and potential financial exploitation signals. This content poses a significant risk, and engagement is strongly discouraged unless the source can be conclusively verified through trusted and independent channels.`;
+        ? `Trustverse AI™ Advanced Analysis identified multiple behavioral warning signals within this content. While not conclusively malicious, these patterns increase the likelihood of deception. Independent verification is strongly recommended.`
+        : `Trustverse AI™ Advanced Analysis detected several high-risk indicators closely aligned with scam, fraud, and social engineering patterns. Engagement is strongly discouraged unless the source is independently verified.`;
 
     const finalIndicators =
       indicators.length > 0
@@ -145,24 +156,38 @@ export async function POST(req: Request) {
         : ["No strong negative behavioral indicators detected"];
 
     /* =========================
-       8️⃣ SAVE HISTORY (SCHEMA PERFECT)
+       8️⃣ SAVE HISTORY (UNIVERSAL ✅)
     ========================= */
-    await History.create({
-      userId: user._id,
-      tool: "ADVANCED_AI",
-      input: text,
-      inputKey: text.slice(0, 80),
-      summary: {
-        trustScore,
-        riskLevel,
-        verdict: explanation,
-        explanation,
+    await prisma.history.create({
+      data: {
+        userId: user.id,
+        tool: "advanced_ai_analysis",
+
+        input: {
+          text,
+        },
+
+        inputKey: text.slice(0, 80),
+
+        summary: {
+          trustScore,
+          riskLevel,
+          verdict: "Advanced AI behavioral analysis completed",
+        },
+
+        result: {
+          trustScore,
+          riskLevel,
+          indicators: finalIndicators,
+          explanation,
+        },
+
+        creditsUsed: creditsUsed ?? 0,
       },
-      creditsUsed: 3,
     });
 
     /* =========================
-       9️⃣ RESPONSE (UI READY)
+       9️⃣ RESPONSE
     ========================= */
     return NextResponse.json({
       trustScore,
@@ -171,9 +196,9 @@ export async function POST(req: Request) {
         indicators: finalIndicators,
         recommendation: explanation,
       },
-      creditsUsed: 3,
+      creditsUsed,
       remainingCredits:
-        user.plan === "PRO" ? "unlimited" : remainingCredits,
+        user.plan === "free" ? remainingCredits : "unlimited",
     });
 
   } catch (error) {

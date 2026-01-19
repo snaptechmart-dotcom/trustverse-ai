@@ -8,42 +8,56 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  email         String   @unique
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  email String @unique
 
-  // 🔐 AUTH (LOGIN / SIGNUP)
-  password      String
+  // 🔐 AUTH
+  password String
 
-  // 🎯 CREDITS SYSTEM
-  // ✅ FREE USER = 10 (SINGLE SOURCE OF TRUTH)
-  credits       Int      @default(10)
+  // 🎯 CREDITS
+  credits Int @default(10)
 
-  // 💳 PLAN SYSTEM
-  // ✅ DEFAULT FREE (IMPORTANT FOR NEXTAUTH + JWT)
-  plan          String   @default("free")   // free / prelaunch / essential / pro / enterprise
-  billing       String?                     // monthly / yearly
-  planExpiresAt DateTime?                   // auto expiry via verify API
+  // 💳 PLAN
+  plan          String    @default("free")
+  billing       String?
+  planExpiresAt DateTime?
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  // 🔗 RELATION
-  payments      Payment[]
+  // 🔗 RELATIONS
+  payments  Payment[]
+  histories History[]
 }
 
 model Payment {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String   @db.ObjectId
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @db.ObjectId
 
-  plan              String
-  billing           String
-  amount            Float
-  currency          String
+  plan     String
+  billing  String
+  amount   Float
+  currency String
 
-  razorpayPaymentId String   @unique
+  razorpayPaymentId String @unique
   razorpayOrderId   String
   status            String
 
-  createdAt         DateTime @default(now())
+  createdAt DateTime @default(now())
 
+  user User @relation(fields: [userId], references: [id])
+}
+
+model History {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  tool        String
+  input       Json
+  inputKey    String?
+  summary     Json?
+  result      Json
+  creditsUsed Int?
+  createdAt   DateTime @default(now())
+
+  // ✅ REQUIRED OPPOSITE RELATION (SAFE)
   user User @relation(fields: [userId], references: [id])
 }

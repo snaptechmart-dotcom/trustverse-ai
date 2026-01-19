@@ -7,10 +7,10 @@ import { useRouter } from "next/navigation";
    TYPES
 ========================= */
 type HistoryItem = {
-  _id: string;
+  id: string;
   tool: string;
-  input: string;
-  summary?: {
+  input: any;
+  result?: {
     trustScore?: number;
     riskLevel?: string;
   };
@@ -21,26 +21,28 @@ type HistoryItem = {
    TOOL LABELS
 ========================= */
 const TOOL_LABELS: Record<string, string> = {
+  phone_checker: "Phone Number Checker",
+  email_checker: "Email Address Checker",
+  profile_checker: "Profile Trust Checker",
+  business_checker: "Business / Domain Checker",
+  social_analyzer: "Social Analyzer",
+  advanced_ai_analysis: "Advanced AI Analysis",
+  trust_score: "Trust Score Analyzer",
   TRUST_SCORE: "Trust Score Analyzer",
-  PHONE_CHECK: "Phone Number Checker",
-  EMAIL_CHECK: "Email Address Checker",
-  PROFILE_CHECK: "Profile Trust Checker",
-  BUSINESS_CHECK: "Business / Domain Checker",
-  SOCIAL_CHECK: "Social Analyzer",
-  ADVANCED_AI: "Advanced AI Analysis",
 };
 
 /* =========================
    TOOL ICONS
 ========================= */
 const TOOL_ICONS: Record<string, string> = {
+  phone_checker: "📞",
+  email_checker: "📧",
+  profile_checker: "👤",
+  business_checker: "🏢",
+  social_analyzer: "🌐",
+  advanced_ai_analysis: "🤖",
+  trust_score: "🧠",
   TRUST_SCORE: "🧠",
-  PHONE_CHECK: "📞",
-  EMAIL_CHECK: "📧",
-  PROFILE_CHECK: "👤",
-  BUSINESS_CHECK: "🏢",
-  SOCIAL_CHECK: "🌐",
-  ADVANCED_AI: "🤖",
 };
 
 export default function HistoryPage() {
@@ -48,9 +50,6 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  /* =========================
-     LOAD HISTORY
-  ========================= */
   useEffect(() => {
     const loadHistory = async () => {
       try {
@@ -61,7 +60,14 @@ export default function HistoryPage() {
 
         const data = await res.json();
 
-        if (data?.success && Array.isArray(data.history)) {
+        /* =========================
+           ✅ FINAL SAFE HANDLING
+        ========================= */
+        if (Array.isArray(data)) {
+          // backward safety
+          setHistory(data);
+        } else if (data?.success && Array.isArray(data.history)) {
+          // ✅ correct current API
           setHistory(data.history);
         } else {
           setHistory([]);
@@ -77,28 +83,18 @@ export default function HistoryPage() {
     loadHistory();
   }, []);
 
-  /* =========================
-     STATES
-  ========================= */
   if (loading) {
-    return (
-      <div className="text-gray-500">
-        Loading your Trustverse AI reports…
-      </div>
-    );
+    return <div className="text-gray-500">Loading reports…</div>;
   }
 
   if (!history.length) {
     return (
       <div className="text-gray-500">
-        No reports yet. Start using Trustverse AI tools to generate reports.
+        No reports yet. Start using Trustverse AI tools.
       </div>
     );
   }
 
-  /* =========================
-     UI
-  ========================= */
   return (
     <div className="max-w-5xl space-y-6">
       <h1 className="text-2xl font-bold">
@@ -107,12 +103,12 @@ export default function HistoryPage() {
 
       {history.map((item) => {
         const trustScore =
-          typeof item.summary?.trustScore === "number"
-            ? item.summary.trustScore
+          typeof item.result?.trustScore === "number"
+            ? item.result.trustScore
             : null;
 
         const riskLevel =
-          item.summary?.riskLevel ?? "Completed";
+          item.result?.riskLevel ?? "Completed";
 
         const borderColor =
           riskLevel === "Low Risk"
@@ -125,10 +121,9 @@ export default function HistoryPage() {
 
         return (
           <div
-            key={item._id}
+            key={item.id}
             className={`bg-white border-l-4 ${borderColor} rounded-xl p-5 shadow-sm space-y-3`}
           >
-            {/* HEADER */}
             <div className="flex items-center gap-2">
               <span className="text-xl">
                 {TOOL_ICONS[item.tool] || "🧩"}
@@ -138,12 +133,13 @@ export default function HistoryPage() {
               </h3>
             </div>
 
-            {/* INPUT */}
             <p className="text-sm text-gray-700 break-words">
-              <b>Input:</b> {item.input}
+              <b>Input:</b>{" "}
+              {typeof item.input === "string"
+                ? item.input
+                : JSON.stringify(item.input)}
             </p>
 
-            {/* TRUST SCORE */}
             {trustScore !== null && (
               <p className="font-semibold">
                 Trust Score:{" "}
@@ -153,32 +149,19 @@ export default function HistoryPage() {
               </p>
             )}
 
-            {/* RISK LEVEL */}
-            <p
-              className={`text-sm font-semibold ${
-                riskLevel === "Low Risk"
-                  ? "text-green-600"
-                  : riskLevel === "Medium Risk"
-                  ? "text-yellow-600"
-                  : riskLevel === "High Risk"
-                  ? "text-red-600"
-                  : "text-gray-500"
-              }`}
-            >
+            <p className="text-sm font-semibold">
               {riskLevel}
             </p>
 
-            {/* ACTION */}
             <button
               onClick={() =>
-                router.push(`/dashboard/history/${item._id}`)
+                router.push(`/dashboard/history/${item.id}`)
               }
               className="text-blue-600 text-sm hover:underline"
             >
               View Full Report →
             </button>
 
-            {/* DATE */}
             <p className="text-xs text-gray-400">
               {new Date(item.createdAt).toLocaleString()}
             </p>

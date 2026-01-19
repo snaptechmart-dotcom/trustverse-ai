@@ -17,6 +17,7 @@
     "framer-motion": "^12.23.26",
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
+    "html2pdf.js": "^0.14.0",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^3.0.4",
     "lucide-react": "^0.559.0",
@@ -44,6 +45,7 @@
     "eslint-config-next": "15.1.8",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }
 }

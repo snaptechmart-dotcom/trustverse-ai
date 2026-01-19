@@ -1,21 +1,31 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
+import prisma from "@/lib/prisma";
 
-
-import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
-import History from "@/models/History";
+/**
+ * SOCIAL ANALYZER – PRO TOOL
+ * Cost: 2 Credits (FREE users)
+ * Input: text, platform
+ * Output: trustScore, riskLevel, indicators, recommendation
+ */
 
 export async function POST(req: Request) {
   try {
-    await dbConnect();
-
+    /* =========================
+       AUTH
+    ========================= */
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
+    /* =========================
+       INPUT
+    ========================= */
     const body = await req.json();
     const text = String(body?.text || "").trim();
     const platform = String(body?.platform || "Unknown").trim();
@@ -27,18 +37,27 @@ export async function POST(req: Request) {
       );
     }
 
-    const user = await User.findById(session.user.id);
+    /* =========================
+       USER (PRISMA)
+    ========================= */
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    });
+
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
     }
 
     /* =========================
        CREDIT LOGIC (PRO = 2)
     ========================= */
-    let creditsUsed = 2;
+    let creditsUsed = 0;
     let remainingCredits = user.credits;
 
-    if (user.plan === "FREE") {
+    if (user.plan === "free") {
       if (remainingCredits < 2) {
         return NextResponse.json(
           { error: "This is a PRO-grade analysis. 2 credits required." },
@@ -46,9 +65,16 @@ export async function POST(req: Request) {
         );
       }
 
-      user.credits = remainingCredits - 2;
-      await user.save();
-      remainingCredits = user.credits;
+      creditsUsed = 2;
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          credits: remainingCredits - 2,
+        },
+      });
+
+      remainingCredits = remainingCredits - 2;
     }
 
     /* =========================
@@ -59,14 +85,17 @@ export async function POST(req: Request) {
 
     if (lower.includes("urgent") || lower.includes("act now"))
       riskSignals.push("Urgency-driven language detected");
+
     if (lower.includes("guaranteed") || lower.includes("100%"))
       riskSignals.push("Unrealistic assurance patterns found");
+
     if (lower.includes("official") || lower.includes("verified"))
       riskSignals.push("Authority-claim language observed");
+
     if (lower.includes("exclusive") || lower.includes("limited"))
       riskSignals.push("Scarcity-based persuasion signals detected");
 
-    let trustScore = 82 + Math.floor(Math.random() * 6); // 82–87 default strong
+    let trustScore = 82 + Math.floor(Math.random() * 6); // 82–87
     let riskLevel: "Low Risk" | "Medium Risk" | "High Risk" = "Low Risk";
 
     if (riskSignals.length >= 2) {
@@ -81,10 +110,10 @@ export async function POST(req: Request) {
 
     const recommendation =
       riskLevel === "Low Risk"
-        ? "Trustverse AI™ did not detect any critical scam, impersonation, or manipulation patterns. The social profile appears behaviorally consistent and generally safe for interaction. Standard caution is always recommended for first-time engagements."
+        ? "Trustverse AI™ did not detect any critical scam, impersonation, or manipulation patterns. The social profile appears behaviorally consistent and generally safe for interaction."
         : riskLevel === "Medium Risk"
-        ? "Trustverse AI™ identified several behavioral warning signals that could indicate impersonation or deceptive intent. Independent verification is strongly advised before continuing interaction."
-        : "Trustverse AI™ detected multiple high-risk manipulation and deception indicators. This profile may be associated with scam activity or impersonation. Engagement is strongly discouraged without strict verification.";
+        ? "Trustverse AI™ identified several behavioral warning signals. Independent verification is strongly advised."
+        : "Trustverse AI™ detected multiple high-risk manipulation indicators. Engagement is strongly discouraged.";
 
     const indicators =
       riskSignals.length > 0
@@ -92,24 +121,39 @@ export async function POST(req: Request) {
         : ["No strong negative behavioral indicators detected"];
 
     /* =========================
-       SAVE HISTORY (SCHEMA SAFE)
+       SAVE HISTORY (UNIVERSAL ✅)
     ========================= */
-    await History.create({
-      userId: user._id,
-      tool: "SOCIAL_CHECK",
-      input: text,
-      inputKey: `${platform}:${text.slice(0, 40)}`,
-      summary: {
-        trustScore,
-        riskLevel,
-        verdict: recommendation,
-        explanation: recommendation,
+    await prisma.history.create({
+      data: {
+        userId: user.id,
+        tool: "social_analyzer",
+
+        input: {
+          platform,
+          text,
+        },
+
+        inputKey: platform,
+
+        summary: {
+          trustScore,
+          riskLevel,
+          verdict: "Social behavior analysis completed",
+        },
+
+        result: {
+          trustScore,
+          riskLevel,
+          indicators,
+          recommendation,
+        },
+
+        creditsUsed: creditsUsed ?? 0,
       },
-      creditsUsed: 2,
     });
 
     /* =========================
-       RESPONSE (CARD READY)
+       RESPONSE
     ========================= */
     return NextResponse.json({
       trustScore,
@@ -118,9 +162,9 @@ export async function POST(req: Request) {
         indicators,
         recommendation,
       },
-      creditsUsed: 2,
+      creditsUsed,
       remainingCredits:
-        user.plan === "PRO" ? "unlimited" : remainingCredits,
+        user.plan === "free" ? remainingCredits : "unlimited",
     });
 
   } catch (err) {
