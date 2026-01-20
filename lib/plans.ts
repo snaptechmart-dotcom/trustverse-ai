@@ -1,7 +1,8 @@
 // lib/plans.ts
-// SINGLE SOURCE OF TRUTH – DO NOT DUPLICATE LOGIC ANYWHERE
+// SINGLE SOURCE OF TRUTH — FINAL & LOCKED
 
 export type BillingCycle = "monthly" | "yearly";
+
 export type PlanName =
   | "free"
   | "prelaunch"
@@ -10,38 +11,54 @@ export type PlanName =
   | "enterprise"
   | "global";
 
-export const PLANS: Record<
-  PlanName,
-  {
-    label: string;
-    isPaid: boolean;
-    validityDays: number; // plan expiry logic (AUTO)
-    monthly?: {
-      amount: number; // INR
-      credits: number;
-    };
-    yearly?: {
-      amount: number; // INR
-      credits: number;
-    };
-  }
-> = {
-  // 🔹 FREE PLAN (DEFAULT)
+type PlanConfig = {
+  label: string;
+  isPaid: boolean;
+
+  // ⏳ MAX TIME VALIDITY (SECONDARY LIMIT)
+  validity: {
+    monthly: number; // days
+    yearly: number;  // days
+  };
+
+  monthly?: {
+    amount: number;
+    credits: number;
+  };
+
+  yearly?: {
+    amount: number;
+    credits: number;
+  };
+};
+
+export const PLANS: Record<PlanName, PlanConfig> = {
+  /* ======================
+     FREE PLAN
+  ====================== */
   free: {
     label: "Free",
     isPaid: false,
-    validityDays: 0, // no expiry logic
+    validity: {
+      monthly: 0,
+      yearly: 0,
+    },
     monthly: {
       amount: 0,
       credits: 10,
     },
   },
 
-  // 🔹 PRE-LAUNCH PLAN
+  /* ======================
+     PRELAUNCH
+  ====================== */
   prelaunch: {
     label: "Prelaunch",
     isPaid: true,
-    validityDays: 30,
+    validity: {
+      monthly: 30,
+      yearly: 365,
+    },
     monthly: {
       amount: 49,
       credits: 50,
@@ -52,11 +69,16 @@ export const PLANS: Record<
     },
   },
 
-  // 🔹 ESSENTIAL PLAN
+  /* ======================
+     ESSENTIAL
+  ====================== */
   essential: {
     label: "Essential",
     isPaid: true,
-    validityDays: 30,
+    validity: {
+      monthly: 30,
+      yearly: 365,
+    },
     monthly: {
       amount: 149,
       credits: 300,
@@ -67,11 +89,16 @@ export const PLANS: Record<
     },
   },
 
-  // 🔹 PRO PLAN
+  /* ======================
+     PRO
+  ====================== */
   pro: {
     label: "Pro",
     isPaid: true,
-    validityDays: 30,
+    validity: {
+      monthly: 30,
+      yearly: 365,
+    },
     monthly: {
       amount: 299,
       credits: 600,
@@ -82,11 +109,16 @@ export const PLANS: Record<
     },
   },
 
-  // 🔹 ENTERPRISE PLAN
+  /* ======================
+     ENTERPRISE
+  ====================== */
   enterprise: {
     label: "Enterprise",
     isPaid: true,
-    validityDays: 30,
+    validity: {
+      monthly: 30,
+      yearly: 365,
+    },
     monthly: {
       amount: 599,
       credits: 1000,
@@ -97,11 +129,16 @@ export const PLANS: Record<
     },
   },
 
-  // 🌍 GLOBAL PLAN (LIFETIME / GLOBAL ACCESS)
+  /* ======================
+     GLOBAL (NOT LIFETIME)
+  ====================== */
   global: {
     label: "Global",
     isPaid: true,
-    validityDays: 3650, // ~10 YEARS (effectively lifetime)
+    validity: {
+      monthly: 30,
+      yearly: 365,
+    },
     monthly: {
       amount: 1999,
       credits: 5000,
@@ -113,24 +150,34 @@ export const PLANS: Record<
   },
 };
 
-// 🔹 HELPER FUNCTIONS (USE EVERYWHERE – NO DUPLICATION)
-
+/* ===================================================
+   FINAL HELPER — USE EVERYWHERE (NO DUPLICATION)
+=================================================== */
 export function getPlanData(
   plan: PlanName,
   billing: BillingCycle
 ) {
-  const planConfig = PLANS[plan];
-  if (!planConfig) return null;
+  const config = PLANS[plan];
+  if (!config) return null;
 
-  const billingData = planConfig[billing];
+  const billingData = config[billing];
   if (!billingData) return null;
 
   return {
     plan,
     billing,
+
     amount: billingData.amount,
     credits: billingData.credits,
-    validityDays: planConfig.validityDays,
-    isPaid: planConfig.isPaid,
+
+    // ⏳ MAX TIME LIMIT
+    validityDays: config.validity[billing],
+
+    // 🔑 IMPORTANT
+    // Plan will expire when:
+    // 1️⃣ credits reach 0
+    // OR
+    // 2️⃣ validityDays exceed
+    isPaid: config.isPaid,
   };
 }

@@ -8,7 +8,9 @@ export async function POST(req: Request) {
   try {
     await dbConnect();
 
-    // 🔐 Logged-in user session
+    /* =========================
+       AUTH
+    ========================= */
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
@@ -18,7 +20,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🧠 Read amount from request (default = 1)
+    /* =========================
+       CREDIT AMOUNT
+    ========================= */
     let amount = 1;
     try {
       const body = await req.json();
@@ -26,12 +30,14 @@ export async function POST(req: Request) {
         amount = Number(body.amount);
       }
     } catch {
-      // no body → default 1 credit
+      // default = 1
     }
 
-    // ✅ Find correct logged-in user
+    /* =========================
+       USER
+    ========================= */
     const user = await User.findOne({
-      email: session.user.email,
+      email: session.user.email.toLowerCase(),
     });
 
     if (!user) {
@@ -41,38 +47,62 @@ export async function POST(req: Request) {
       );
     }
 
-    /* =====================================
-       🟢 UNLIMITED PLANS (NO CREDIT DEDUCT)
-       pro / enterprise users
-    ===================================== */
-    if (user.plan === "pro" || user.plan === "enterprise") {
-      return NextResponse.json({
-        success: true,
-        credits: user.credits, // unchanged
-        unlimited: true,
-      });
-    }
+    const now = new Date();
 
-    /* =====================================
-       🔴 LIMITED PLANS (free / essential)
-    ===================================== */
+    /* =========================
+       ⛔ PLAN EXPIRY CHECK (GLOBAL)
+    ========================= */
+    if (user.planExpiresAt && now > user.planExpiresAt) {
+      user.plan = "free";
+      user.billing = null;
+      user.credits = 0;
+      user.planExpiresAt = null;
+      await user.save();
 
-    // 🚫 Not enough credits
-    if (user.credits < amount) {
       return NextResponse.json(
-        { error: "Not enough credits" },
+        { error: "Plan expired. Please upgrade." },
         { status: 403 }
       );
     }
 
-    // ➖ Deduct credits safely
+    /* =========================
+       🚫 CREDIT CHECK (ALL PLANS)
+    ========================= */
+    if (user.credits < amount) {
+      // auto fallback to FREE
+      user.plan = "free";
+      user.billing = null;
+      user.credits = 0;
+      user.planExpiresAt = null;
+      await user.save();
+
+      return NextResponse.json(
+        { error: "Credits exhausted. Please upgrade." },
+        { status: 403 }
+      );
+    }
+
+    /* =========================
+       ➖ DEDUCT CREDIT
+    ========================= */
     user.credits -= amount;
+
+    /* =========================
+       🧹 AUTO RESET IF 0
+    ========================= */
+    if (user.credits <= 0) {
+      user.plan = "free";
+      user.billing = null;
+      user.planExpiresAt = null;
+      user.credits = 0;
+    }
+
     await user.save();
 
     return NextResponse.json({
       success: true,
       credits: user.credits,
-      unlimited: false,
+      plan: user.plan,
     });
   } catch (error) {
     console.error("USE CREDIT ERROR:", error);
