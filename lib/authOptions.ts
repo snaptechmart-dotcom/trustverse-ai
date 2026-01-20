@@ -13,6 +13,7 @@ export const authOptions: NextAuthOptions = {
       },
 
       async authorize(credentials) {
+        // 🔐 HARD GUARD
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
@@ -32,12 +33,11 @@ export const authOptions: NextAuthOptions = {
 
         if (!isValid) return null;
 
+        // ✅ RETURN ONLY REAL DB FIELDS
         return {
           id: user.id,
           email: user.email,
-          role: "user",
-          plan: user.plan?.toLowerCase() ?? "free",
-
+          plan: user.plan ?? "free",
           credits: user.credits ?? 0,
         };
       },
@@ -57,7 +57,6 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.email = user.email;
-        token.role = user.role;
         token.plan = user.plan;
         token.credits = user.credits;
       }
@@ -68,10 +67,8 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
-        session.user.role = token.role as string;
-        session.user.plan = (token.plan as string)?.toLowerCase();
-
-        session.user.credits = token.credits as number;
+        session.user.plan = (token.plan as string)?.toLowerCase() ?? "free";
+        session.user.credits = (token.credits as number) ?? 0;
       }
       return session;
     },
