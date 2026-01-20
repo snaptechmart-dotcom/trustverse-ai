@@ -7,19 +7,16 @@ export async function GET() {
   // 🔐 SESSION (FINAL & CORRECT)
   const session = await getServerSession(authOptions);
 
-  if (!session?.user?.email) {
+  if (!session?.user?.id) {
     return NextResponse.json(
       { error: "Unauthorized" },
       { status: 401 }
     );
   }
 
-  // ✅ NORMALIZE EMAIL (CRITICAL)
-  const email = session.user.email.toLowerCase();
-
-  // 👤 USER FROM DB
+  // 👤 USER FROM DB (✅ ID = SINGLE SOURCE OF TRUTH)
   const user = await prisma.user.findUnique({
-    where: { email },
+    where: { id: session.user.id },
     select: {
       credits: true,
       plan: true,
