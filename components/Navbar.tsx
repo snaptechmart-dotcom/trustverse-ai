@@ -32,6 +32,29 @@ export default function Navbar() {
       fetchCredits();
     }
   }, [status, pathname]);
+// ✅ Refresh on auth + route change
+useEffect(() => {
+  if (status === "authenticated") {
+    fetchCredits();
+  }
+}, [status, pathname]);
+
+// 🔁 ADD THIS EXACTLY HERE (NEW BLOCK)
+useEffect(() => {
+  const onFocus = () => {
+    if (status === "authenticated") {
+      fetchCredits();
+    }
+  };
+
+  window.addEventListener("focus", onFocus);
+  document.addEventListener("visibilitychange", onFocus);
+
+  return () => {
+    window.removeEventListener("focus", onFocus);
+    document.removeEventListener("visibilitychange", onFocus);
+  };
+}, [status]);
 
   // ✅ Outside click close
   useEffect(() => {

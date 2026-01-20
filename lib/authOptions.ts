@@ -13,7 +13,7 @@ export const authOptions: NextAuthOptions = {
       },
 
       async authorize(credentials) {
-        // 🔐 HARD GUARD
+        // 🔐 HARD GUARD (NO TS ERROR, NO RUNTIME ERROR)
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
@@ -22,6 +22,13 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email },
+          select: {
+            id: true,
+            email: true,
+            password: true,
+            plan: true,
+            credits: true,
+          },
         });
 
         if (!user || !user.password) return null;
@@ -33,7 +40,7 @@ export const authOptions: NextAuthOptions = {
 
         if (!isValid) return null;
 
-        // ✅ RETURN ONLY REAL DB FIELDS
+        // ✅ RETURN ONLY SAFE FIELDS (JWT COMPATIBLE)
         return {
           id: user.id,
           email: user.email,
@@ -53,6 +60,7 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
+    // 🔐 JWT CALLBACK (INITIAL LOGIN DATA)
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
@@ -63,13 +71,27 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
 
+    // 🔁 SESSION CALLBACK (ALWAYS FRESH DATA FROM DB)
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.email = token.email as string;
-        session.user.plan = (token.plan as string)?.toLowerCase() ?? "free";
-        session.user.credits = (token.credits as number) ?? 0;
-      }
+      if (!session.user?.email) return session;
+
+      const dbUser = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: {
+          id: true,
+          email: true,
+          plan: true,
+          credits: true,
+        },
+      });
+
+      if (!dbUser) return session;
+
+      session.user.id = dbUser.id;
+      session.user.email = dbUser.email;
+      session.user.plan = (dbUser.plan ?? "free").toLowerCase();
+      session.user.credits = dbUser.credits ?? 0;
+
       return session;
     },
   },
