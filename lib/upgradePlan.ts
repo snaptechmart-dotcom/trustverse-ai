@@ -1,42 +1,41 @@
-import User from "@/models/User";
-import { PLANS } from "@/lib/plans";
+// lib/upgradePlan.ts
+import prisma from "@/lib/prisma";
+import { PLANS, PlanName, BillingCycle } from "@/lib/plans";
 
 export async function upgradeUserPlan(
   userId: string,
-  newPlan: keyof typeof PLANS,
-  billing: "monthly" | "yearly"
+  plan: PlanName,
+  billing: BillingCycle
 ) {
-  const user = await User.findById(userId);
-  if (!user) throw new Error("User not found");
-
-  const planConfig = PLANS[newPlan];
+  const planConfig = PLANS[plan];
   if (!planConfig) throw new Error("Invalid plan");
 
-  // 🗓️ Expiry calculation
-  let expiresAt: Date | undefined = undefined;
-  if (planConfig.validityDays > 0) {
-    expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + planConfig.validityDays);
+  const billingData = planConfig[billing];
+  if (!billingData) throw new Error("Invalid billing cycle");
+
+  // 🗓️ EXPIRY LOGIC (FINAL & CORRECT)
+  let planExpiresAt: Date | null = null;
+
+  if (plan !== "free") {
+    const days = billing === "yearly" ? 365 : 30;
+    planExpiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
   }
 
-  // 🔄 Apply upgrade
-  user.plan = newPlan;
-  user.planActivatedAt = new Date();
-  user.planExpiresAt = expiresAt;
+  // ✅ UPDATE USER
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      plan,
+      billing,
+      credits: { increment: billingData.credits },
+      planExpiresAt,
+    },
+  });
 
-  // 💳 Add credits (✅ FIXED LOGIC)
-  let addedCredits = 0;
-
-  if (billing === "monthly" && planConfig.monthly) {
-    addedCredits = planConfig.monthly.credits;
-  }
-
-  if (billing === "yearly" && planConfig.yearly) {
-    addedCredits = planConfig.yearly.credits;
-  }
-
-  user.credits += addedCredits;
-
-  await user.save();
-  return user;
+  return {
+    plan,
+    billing,
+    creditsAdded: billingData.credits,
+    planExpiresAt,
+  };
 }

@@ -7,34 +7,36 @@ export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
   const { plan, billing } = await req.json();
 
   if (!plan || !billing) {
     return NextResponse.json(
-      { error: "Plan and billing required" },
+      { error: "Invalid request" },
       { status: 400 }
     );
   }
 
   try {
-    const user = await upgradeUserPlan(
+    const result = await upgradeUserPlan(
       session.user.id,
       plan,
-      billing // ✅ FIX — third argument
+      billing
     );
 
     return NextResponse.json({
       success: true,
-      message: "Plan upgraded successfully",
-      credits: user.credits,
-      plan: user.plan,
+      ...result,
     });
-  } catch (err: any) {
+  } catch (error: any) {
+    console.error("UPGRADE ERROR:", error);
     return NextResponse.json(
-      { error: err.message || "Upgrade failed" },
+      { error: error.message },
       { status: 500 }
     );
   }
