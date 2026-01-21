@@ -8,7 +8,6 @@ import Payment from "@/models/Payment";
 import User from "@/models/User";
 
 export async function POST(req: Request) {
-  // 🔐 SESSION CHECK
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
@@ -25,7 +24,6 @@ export async function POST(req: Request) {
     billing,
   } = body;
 
-  // 🔐 SIGNATURE VERIFY
   const generatedSignature = crypto
     .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
     .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -35,7 +33,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  // 🧠 PLAN DATA
   const planData = getPlanData(plan, billing);
   if (!planData || !planData.isPaid) {
     return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
@@ -43,37 +40,27 @@ export async function POST(req: Request) {
 
   await dbConnect();
 
-  const userId = session.user.id; // ✅ STRING ID
+  const userId = session.user.id;
 
-  /* ================= DEBUG CONSOLE (TEMP) ================= */
-  console.log("VERIFY API HIT:", {
-    userId,
-    plan,
-    billing,
-    creditsCalculated: planData.credits,
-    amount: planData.amount,
-  });
-  /* ======================================================= */
-
-  // 💾 SAVE PAYMENT
+  /* ✅ SAVE PAYMENT WITH CREDITS */
   await Payment.create({
     userId,
     plan,
     billing,
     amount: planData.amount,
     currency: "INR",
+    credits: planData.credits, // 🔥 THIS WAS MISSING
     razorpayOrderId: razorpay_order_id,
     razorpayPaymentId: razorpay_payment_id,
     status: "success",
   });
 
-  // 🗓️ PLAN EXPIRY
   const planExpiresAt =
     planData.validityDays > 0
       ? new Date(Date.now() + planData.validityDays * 24 * 60 * 60 * 1000)
       : null;
 
-  // 👤 UPDATE USER (CREDITS + PLAN)
+  /* ✅ UPDATE USER CREDITS */
   await User.findByIdAndUpdate(
     userId,
     {
