@@ -58,13 +58,13 @@ export default function PricingPage() {
     setLoadingPlan(planKey);
 
     try {
-      // ✅ CREATE ORDER (AUTH FIXED)
+      // ✅ CREATE ORDER
       const res = await fetch("/api/razorpay/order", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // 🔥 THIS FIXES 401
+        credentials: "include",
         body: JSON.stringify({
           plan: planKey,
           billing,
@@ -94,18 +94,36 @@ export default function PricingPage() {
         order_id: data.orderId,
         image: "/logo.png",
 
-        /**
-         * ✅ FINAL SAFE HANDLER
-         * Webhook handles:
-         * - payment save
-         * - credits
-         * - history
-         */
-        handler: function () {
-          alert(
-            "Payment successful 🎉\nCredits will be added automatically in a few seconds."
-          );
-          window.location.href = "/dashboard";
+        /* 🔥 FINAL & IMPORTANT FIX */
+        handler: async function (response: any) {
+          try {
+            const verifyRes = await fetch("/api/razorpay/verify", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              credentials: "include",
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                plan: planKey,
+                billing,
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+
+            if (verifyData.success) {
+              alert("Payment successful 🎉 Credits added!");
+              window.location.href = "/dashboard/payments";
+            } else {
+              alert("Payment done but credit not added");
+            }
+          } catch (err) {
+            console.error("VERIFY ERROR:", err);
+            alert("Payment done but verification failed");
+          }
         },
 
         theme: { color: "#0C1633" },
@@ -189,7 +207,6 @@ export default function PricingPage() {
           Trustverse Pricing
         </h1>
 
-        {/* BILLING */}
         <div className="flex justify-center gap-4 mb-4">
           <button
             onClick={() => setBilling("monthly")}
@@ -210,7 +227,6 @@ export default function PricingPage() {
           </button>
         </div>
 
-        {/* CURRENCY */}
         <div className="flex justify-center gap-4 mb-12">
           <button
             onClick={() => setCurrency("INR")}
@@ -231,7 +247,6 @@ export default function PricingPage() {
           </button>
         </div>
 
-        {/* PRE-LAUNCH */}
         <div className="mb-16">
           <Card
             title="🚀 Pre-Launch Special"
@@ -246,7 +261,6 @@ export default function PricingPage() {
           />
         </div>
 
-        {/* PLANS */}
         <div className="grid md:grid-cols-4 gap-6">
           <Card
             title="Free"
