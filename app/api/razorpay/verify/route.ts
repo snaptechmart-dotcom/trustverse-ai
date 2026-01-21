@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import mongoose from "mongoose";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { getPlanData } from "@/lib/plans";
@@ -44,11 +43,21 @@ export async function POST(req: Request) {
 
   await dbConnect();
 
-  const userObjectId = new mongoose.Types.ObjectId(session.user.id);
+  const userId = session.user.id; // ✅ STRING ID
 
-  // 💾 SAVE PAYMENT (MONGOOSE)
+  /* ================= DEBUG CONSOLE (TEMP) ================= */
+  console.log("VERIFY API HIT:", {
+    userId,
+    plan,
+    billing,
+    creditsCalculated: planData.credits,
+    amount: planData.amount,
+  });
+  /* ======================================================= */
+
+  // 💾 SAVE PAYMENT
   await Payment.create({
-    userId: userObjectId,
+    userId,
     plan,
     billing,
     amount: planData.amount,
@@ -64,9 +73,9 @@ export async function POST(req: Request) {
       ? new Date(Date.now() + planData.validityDays * 24 * 60 * 60 * 1000)
       : null;
 
-  // 👤 UPDATE USER (MONGOOSE)
+  // 👤 UPDATE USER (CREDITS + PLAN)
   await User.findByIdAndUpdate(
-    userObjectId,
+    userId,
     {
       $set: {
         plan,

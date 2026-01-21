@@ -2,27 +2,12 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import dbConnect from "@/lib/db";
 import Payment from "@/models/Payment";
-import User from "@/models/User";
 
-/* ================= CREDIT CONFIG (FINAL) ================= */
-const CREDIT_TABLE: any = {
-  prelaunch: {
-    monthly: 50,
-    yearly: 600,
-  },
-  essential: {
-    monthly: 300,
-    yearly: 3600,
-  },
-  pro: {
-    monthly: 600,
-    yearly: 8000,
-  },
-  enterprise: {
-    monthly: 1000,
-    yearly: 12000,
-  },
-};
+/* 
+  IMPORTANT:
+  - Credits webhook me add NAHI honge
+  - Credits sirf /api/razorpay/verify se add honge
+*/
 
 export async function POST(req: Request) {
   await dbConnect();
@@ -65,35 +50,27 @@ export async function POST(req: Request) {
   }
 
   /* ================= PREVENT DUPLICATE PAYMENT ================= */
-  const existing = await Payment.findOne({ razorpay_payment_id: razorpayPaymentId });
+  const existing = await Payment.findOne({
+    razorpay_payment_id: razorpayPaymentId,
+  });
+
   if (existing) {
     return NextResponse.json({ status: "already_saved" });
   }
 
-  /* ================= CALCULATE CREDITS ================= */
-  const creditsAdded =
-    CREDIT_TABLE?.[plan]?.[billing] ?? 0;
-
-  /* ================= SAVE PAYMENT ================= */
+  /* ================= SAVE PAYMENT (NO CREDIT LOGIC) ================= */
   await Payment.create({
     userId,
     plan,
     billing,
     amount,
     currency,
-    creditsAdded,
     razorpay_payment_id: razorpayPaymentId,
     razorpay_order_id: razorpayOrderId,
     status: "success",
   });
 
-  /* ================= ADD USER CREDITS ================= */
-  await User.findByIdAndUpdate(userId, {
-    $inc: { credits: creditsAdded },
-  });
-
   return NextResponse.json({
-    status: "payment_processed",
-    creditsAdded,
+    status: "payment_logged",
   });
 }

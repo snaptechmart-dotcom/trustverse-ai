@@ -2,7 +2,6 @@ import crypto from "crypto";
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Payment from "@/models/Payment";
-import User from "@/models/User";
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -25,34 +24,38 @@ export async function POST(req: Request) {
 
   await dbConnect();
 
-  const paymentId = event.payload.payment.entity.id;
+  const payment = event.payload.payment.entity;
 
-  const already = await Payment.findOne({ paymentId });
+  const razorpayPaymentId = payment.id;
+  const razorpayOrderId = payment.order_id;
+  const amount = payment.amount / 100;
+  const currency = payment.currency;
+  const notes = payment.notes || {};
+
+  const userId = notes.userId;
+  const plan = notes.plan;
+
+  if (!userId || !plan) {
+    return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
+  }
+
+  const already = await Payment.findOne({
+    razorpay_payment_id: razorpayPaymentId,
+  });
+
   if (already) {
     return NextResponse.json({ status: "duplicate" });
   }
 
-  const userId = event.payload.payment.entity.notes.userId;
-  const plan = event.payload.payment.entity.notes.plan;
-
-  const creditMap: any = {
-    prelaunch: 10,
-    essential: 100,
-    pro: 500,
-    enterprise: 2000,
-  };
-
   await Payment.create({
     userId,
-    paymentId,
     plan,
-    amount: event.payload.payment.entity.amount / 100,
-    currency: event.payload.payment.entity.currency,
+    amount,
+    currency,
+    razorpay_payment_id: razorpayPaymentId,
+    razorpay_order_id: razorpayOrderId,
+    status: "success",
   });
 
-  await User.findByIdAndUpdate(userId, {
-    $inc: { credits: creditMap[plan] },
-  });
-
-  return NextResponse.json({ status: "success" });
+  return NextResponse.json({ status: "logged" });
 }
