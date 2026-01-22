@@ -80,7 +80,7 @@ export default function PricingPage() {
     setLoadingPlan(planKey);
 
     try {
-      /* 🇮🇳 INR → RAZORPAY (UNCHANGED LOGIC) */
+      /* 🇮🇳 INR → RAZORPAY (EXACT SAME LOGIC) */
       if (currency === "INR") {
         const res = await fetch("/api/razorpay/order", {
           method: "POST",
@@ -119,9 +119,11 @@ export default function PricingPage() {
 
         const rzp = new window.Razorpay(options);
         rzp.open();
+
+        return; // ✅ IMPORTANT FIX
       }
 
-      /* 🌍 USD → PADDLE (NEW, ADDED ONLY) */
+      /* 🌍 USD → PADDLE (ONLY GLOBAL USERS) */
       if (currency === "USD") {
         const paddle = await initializePaddle({
           token: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN!,
@@ -132,8 +134,7 @@ export default function PricingPage() {
           return;
         }
 
-        const priceId =
-          PADDLE_PRICE_IDS?.[planKey]?.[billing];
+        const priceId = PADDLE_PRICE_IDS?.[planKey]?.[billing];
 
         if (!priceId) {
           alert("Paddle priceId missing");
