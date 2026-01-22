@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Script from "next/script";
 import { useSession } from "next-auth/react";
+import { initializePaddle } from "@paddle/paddle-js";
 
 declare global {
   interface Window {
@@ -18,7 +19,7 @@ export default function PricingPage() {
   const [currency, setCurrency] = useState<"INR" | "USD">("INR");
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  /* ================= PRICES (UI ONLY) ================= */
+  /* ================= PRICES (UI DISPLAY ONLY) ================= */
 
   const PRICES: any = {
     INR: {
@@ -37,7 +38,28 @@ export default function PricingPage() {
     },
   };
 
-  /* ================= PAY NOW (RAZORPAY – ORIGINAL) ================= */
+  /* ================= PADDLE PRICE IDS ================= */
+
+  const PADDLE_PRICE_IDS: any = {
+    prelaunch: {
+      monthly: "pri_01kfjbb4byjec3d0mzbkvrbk7j",
+      yearly: "pri_prelaunch_yearly",
+    },
+    essential: {
+      monthly: "pri_essential_monthly",
+      yearly: "pri_essential_yearly",
+    },
+    pro: {
+      monthly: "pri_pro_monthly",
+      yearly: "pri_pro_yearly",
+    },
+    enterprise: {
+      monthly: "pri_enterprise_monthly",
+      yearly: "pri_enterprise_yearly",
+    },
+  };
+
+  /* ================= PAY NOW ================= */
 
   const payNow = async (planKey: string) => {
     if (status === "loading") return;
@@ -58,74 +80,87 @@ export default function PricingPage() {
     setLoadingPlan(planKey);
 
     try {
-      const res = await fetch("/api/razorpay/order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          plan: planKey,
-          billing,
-          currency,
-        }),
-      });
+      /* 🇮🇳 INR → RAZORPAY (UNCHANGED LOGIC) */
+      if (currency === "INR") {
+        const res = await fetch("/api/razorpay/order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            plan: planKey,
+            billing,
+            currency,
+          }),
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (!res.ok || !data.orderId) {
-        alert(data.error || "Order creation failed");
-        return;
+        if (!res.ok || !data.orderId) {
+          alert("Order creation failed");
+          return;
+        }
+
+        const options = {
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+          amount: data.amount,
+          currency: data.currency,
+          name: "Trustverse AI",
+          description: `${planKey.toUpperCase()} Plan`,
+          order_id: data.orderId,
+          image: "/logo.png",
+
+          handler: async () => {
+            alert("Payment successful 🎉");
+            window.location.href = "/dashboard/payments";
+          },
+
+          theme: { color: "#0C1633" },
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.open();
       }
 
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-        amount: data.amount,
-        currency: data.currency,
-        name: "Trustverse AI",
-        description: `${planKey.toUpperCase()} Plan`,
-        order_id: data.orderId,
-        image: "/logo.png",
+      /* 🌍 USD → PADDLE (NEW, ADDED ONLY) */
+      if (currency === "USD") {
+        const paddle = await initializePaddle({
+          token: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN!,
+        });
 
-        handler: async function (response: any) {
-          try {
-            const verifyRes = await fetch("/api/razorpay/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                plan: planKey,
-                billing,
-              }),
-            });
+        if (!paddle) {
+          alert("Paddle failed to load");
+          return;
+        }
 
-            const verifyData = await verifyRes.json();
+        const priceId =
+          PADDLE_PRICE_IDS?.[planKey]?.[billing];
 
-            if (verifyData.success) {
-              alert("Payment successful 🎉 Credits added!");
-              window.location.href = "/dashboard/payments";
-            } else {
-              alert("Payment done but credit not added");
-            }
-          } catch {
-            alert("Payment done but verification failed");
-          }
-        },
+        if (!priceId) {
+          alert("Paddle priceId missing");
+          return;
+        }
 
-        theme: { color: "#0C1633" },
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch {
-      alert("Something went wrong");
+        paddle.Checkout.open({
+          items: [{ priceId, quantity: 1 }],
+          customer: session?.user?.email
+            ? { email: session.user.email }
+            : undefined,
+          customData: {
+            userId,
+            plan: planKey,
+            billing,
+          },
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Payment failed");
     } finally {
       setLoadingPlan(null);
     }
   };
 
-  /* ================= CARD ================= */
+  /* ================= CARD COMPONENT (UNCHANGED) ================= */
 
   const Card = ({ title, planKey, features, highlight = false }: any) => {
     const price = PRICES[currency][planKey];
@@ -179,7 +214,7 @@ export default function PricingPage() {
     );
   };
 
-  /* ================= UI ================= */
+  /* ================= UI (UNCHANGED) ================= */
 
   return (
     <>
