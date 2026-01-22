@@ -43,19 +43,19 @@ export default function PricingPage() {
   const PADDLE_PRICE_IDS: any = {
     prelaunch: {
       monthly: "pri_01kfjbb4byjec3d0mzbkvrbk7j",
-      yearly: "pri_prelaunch_yearly",
+      yearly: "pro_01kfgm2bx0n5k1rxnkcw6m8npa",
     },
     essential: {
-      monthly: "pri_essential_monthly",
-      yearly: "pri_essential_yearly",
+      monthly: "pro_01kfgm9bgqjb4peh2nzk88980j",
+      yearly: "pro_01kfgmede1mk8nr9gpbhx6nwcp",
     },
     pro: {
-      monthly: "pri_pro_monthly",
-      yearly: "pri_pro_yearly",
+      monthly: "pro_01kfgmmmkgtth833kg4swwy0b8",
+      yearly: "pro_01kfgmt4zw7bm54m4wmjn16y59",
     },
     enterprise: {
-      monthly: "pri_enterprise_monthly",
-      yearly: "pri_enterprise_yearly",
+      monthly: "pro_01kfgmzmx7fyvx2r1sqa2r4cfx",
+      yearly: "pro_01kfgn5hxgda13knt7cybzg01e",
     },
   };
 

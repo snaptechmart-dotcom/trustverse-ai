@@ -55,6 +55,12 @@ export default function RootLayout({
             gtag('config', 'G-EYPDDSPKGN');
           `}
         </Script>
+
+        {/* ✅ Paddle Checkout (SAFE ADD – NO LOGIC CHANGE) */}
+        <Script
+          src="https://cdn.paddle.com/paddle/v2/paddle.js"
+          strategy="beforeInteractive"
+        />
       </head>
 
       <body className="min-h-screen bg-white">
