@@ -10,21 +10,20 @@ datasource db {
 model User {
   id    String @id @default(auto()) @map("_id") @db.ObjectId
   email String @unique
-
-  // 🔐 AUTH
   password String
 
   // 🎯 CREDITS
   credits Int @default(10)
 
-  // 💳 PLAN
-  plan          String    @default("free")
-  billing       String?
-  planExpiresAt DateTime?
+  // 💳 PLAN & SUBSCRIPTION
+  plan               String  @default("free")
+  billing            String?
+  subscriptionStatus String  @default("INACTIVE") // ACTIVE | CANCELED | PAST_DUE
+  paddleCustomerId   String?
 
+  planExpiresAt DateTime?
   createdAt DateTime @default(now())
 
-  // 🔗 RELATIONS
   payments  Payment[]
   histories History[]
 }
@@ -38,13 +37,33 @@ model Payment {
   amount   Float
   currency String
 
-  razorpayPaymentId String @unique
-  razorpayOrderId   String
-  status            String
+  gateway String // razorpay | paddle
 
+  // Razorpay
+  razorpayPaymentId String?
+  razorpayOrderId   String?
+
+  // Paddle
+  paddleTransactionId  String?
+  paddleSubscriptionId String?
+
+  status String // success | failed | pending
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
+}
+
+model Plan {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  name    String
+  slug    String @unique
+  billing String // monthly | yearly
+  credits Int
+
+  paddleProductId String? @unique
+
+  createdAt DateTime @default(now())
 }
 
 model History {
@@ -58,6 +77,5 @@ model History {
   creditsUsed Int?
   createdAt   DateTime @default(now())
 
-  // ✅ REQUIRED OPPOSITE RELATION (SAFE)
   user User @relation(fields: [userId], references: [id])
 }
