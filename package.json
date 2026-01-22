@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@paddle/paddle-js": "^1.6.1",
     "@prisma/client": "^6.19.2",
     "axios": "^1.6.7",
     "bcryptjs": "^2.4.3",

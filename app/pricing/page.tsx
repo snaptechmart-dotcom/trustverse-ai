@@ -18,7 +18,7 @@ export default function PricingPage() {
   const [currency, setCurrency] = useState<"INR" | "USD">("INR");
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  /* ================= PRICES ================= */
+  /* ================= PRICES (UI ONLY) ================= */
 
   const PRICES: any = {
     INR: {
@@ -37,7 +37,7 @@ export default function PricingPage() {
     },
   };
 
-  /* ================= PAY NOW ================= */
+  /* ================= PAY NOW (RAZORPAY – ORIGINAL) ================= */
 
   const payNow = async (planKey: string) => {
     if (status === "loading") return;
@@ -58,12 +58,9 @@ export default function PricingPage() {
     setLoadingPlan(planKey);
 
     try {
-      // ✅ CREATE ORDER
       const res = await fetch("/api/razorpay/order", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
           plan: planKey,
@@ -74,17 +71,11 @@ export default function PricingPage() {
 
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || !data.orderId) {
         alert(data.error || "Order creation failed");
         return;
       }
 
-      if (!data.orderId) {
-        alert("Order ID missing from server");
-        return;
-      }
-
-      // ✅ RAZORPAY CHECKOUT
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
         amount: data.amount,
@@ -94,14 +85,11 @@ export default function PricingPage() {
         order_id: data.orderId,
         image: "/logo.png",
 
-        /* 🔥 FINAL & IMPORTANT FIX */
         handler: async function (response: any) {
           try {
             const verifyRes = await fetch("/api/razorpay/verify", {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
+              headers: { "Content-Type": "application/json" },
               credentials: "include",
               body: JSON.stringify({
                 razorpay_order_id: response.razorpay_order_id,
@@ -120,8 +108,7 @@ export default function PricingPage() {
             } else {
               alert("Payment done but credit not added");
             }
-          } catch (err) {
-            console.error("VERIFY ERROR:", err);
+          } catch {
             alert("Payment done but verification failed");
           }
         },
@@ -131,8 +118,7 @@ export default function PricingPage() {
 
       const rzp = new window.Razorpay(options);
       rzp.open();
-    } catch (err) {
-      console.error("PAYMENT ERROR:", err);
+    } catch {
       alert("Something went wrong");
     } finally {
       setLoadingPlan(null);
